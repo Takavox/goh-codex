@@ -3355,12 +3355,17 @@ function renderCategory(v,n){
   if(cats.length){
     h+=`<div class="sec-label">${isGateRoot?'Portes':'Sous-catégories'}</div><div class="cards">`;
     cats.forEach(c=>{
+      if(!_isAdmin() && c._hidden){
+        h+=`<div class="card card-hidden-visitor" style="pointer-events:none"><div class="chv-mark">?</div></div>`;
+        return;
+      }
       const cnt=countAll(c.id);
       const isG=c.type==='gate';
       const iconHtml=c.iconData
         ? `<img class="card-icon-img" src="${c.iconData}" alt="">`
         : `<div class="card-no-img" style="height:60px">${c.icon||'📁'}</div>`;
-      h+=`<div class="card${isG?' gate-card':''}" onclick="selectNode('${c.id}')" oncontextmenu="event.preventDefault();event.stopPropagation();showAudioInheritMenu('${c.id}',event.clientX,event.clientY)">
+      const hiddenDim = c._hidden && _isAdmin() ? ' card-admin-dim' : '';
+      h+=`<div class="card${isG?' gate-card':''}${hiddenDim}" onclick="selectNode('${c.id}')" oncontextmenu="event.preventDefault();event.stopPropagation();showAudioInheritMenu('${c.id}',event.clientX,event.clientY)">
         ${iconHtml}
         <div class="card-badge${isG?' gate':''}">${isG?'PORTE':'CATÉGORIE'}</div>
         <div class="card-name">${esc(c.name)}</div>
