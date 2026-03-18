@@ -8234,20 +8234,83 @@ function _cmpRenderTable(){
   wrap.innerHTML = h;
 }
 
+
+function _hgGateCtxMenu(e, gateId){
+  if(!_isAdmin()) return;
+  document.getElementById('_hg-gate-ctx')?.remove();
+  const c = db[gateId]; if(!c) return;
+  const isHidden = c._hidden === true;
+  const m = document.createElement('div');
+  m.id = '_hg-gate-ctx';
+  m.style.cssText = `position:fixed;left:${e.clientX}px;top:${e.clientY}px;z-index:99998;
+    background:#0e0608;border:1px solid rgba(200,40,20,.35);border-radius:6px;
+    padding:4px 0;min-width:190px;box-shadow:0 8px 28px rgba(0,0,0,.8);
+    font-family:'Cinzel',serif;font-size:10px;`;
+
+  const title = document.createElement('div');
+  title.style.cssText = 'padding:7px 14px 5px;font-size:8.5px;letter-spacing:2px;color:rgba(200,80,40,.4);border-bottom:1px solid rgba(200,40,20,.1);margin-bottom:4px;';
+  title.textContent = esc(c.name).toUpperCase().slice(0,20);
+  m.appendChild(title);
+
+  function makeRow(icon, label, fn, danger){
+    const r = document.createElement('div');
+    r.style.cssText = `padding:8px 14px;cursor:pointer;color:${danger?'rgba(220,80,80,.7)':'rgba(220,170,150,.7)'};display:flex;align-items:center;gap:8px;transition:background .12s`;
+    r.onmouseenter = ()=>r.style.background='rgba(200,40,20,.1)';
+    r.onmouseleave = ()=>r.style.background='';
+    r.innerHTML = `${icon} ${label}`;
+    r.onclick = ()=>{ m.remove(); fn(); };
+    m.appendChild(r);
+  }
+
+  makeRow(isHidden ? '👁' : '🚫', isHidden ? 'Démasquer aux visiteurs' : 'Masquer aux visiteurs', ()=>{
+    c._hidden = !c._hidden;
+    save();
+    // Re-render la vue gates
+    const root = Object.values(db).find(nd=>nd.kind==='gate-root');
+    if(root){ const vv=document.getElementById('view'); if(vv) renderGateRootImmersive(vv,root); }
+  });
+
+  // Son personnalisé
+  const sep = document.createElement('div');
+  sep.style.cssText = 'height:1px;background:rgba(200,40,20,.1);margin:4px 0;';
+  m.appendChild(sep);
+  makeRow('🎵', 'Son personnalisé', ()=>{ gateCardSoundMenu(e, gateId); });
+
+  document.body.appendChild(m);
+  requestAnimationFrame(()=>{
+    const r = m.getBoundingClientRect();
+    if(r.right > window.innerWidth) m.style.left=(e.clientX - r.width)+'px';
+    if(r.bottom > window.innerHeight) m.style.top=(e.clientY - r.height)+'px';
+  });
+  setTimeout(()=>document.addEventListener('click', function _c(ev){
+    if(!m.contains(ev.target)){ m.remove(); document.removeEventListener('click',_c); }
+  }), 10);
+}
+
 function renderGateRootImmersive(v,n){
   if(_gateAnim){cancelAnimationFrame(_gateAnim);_gateAnim=null;}
 
   const gates=(n.children||[]).map(id=>db[id]).filter(Boolean).filter(c=>c.type==='gate'||c.type==='category');
   const statusColors={Scellée:'#6acd8d',Affaiblie:'#e8c97a',Brisée:'#e05050',Inconnue:'#a89cc0'};
   const gateCards=gates.map(c=>{
+    // Visiteur + porte masquée → carte ?
+    if(!_isAdmin() && c._hidden){
+      return '<div class="hg-gate-card card-hidden-visitor" style="pointer-events:none"><div class="chv-mark">?</div></div>';
+    }
     const sc=statusColors[c.status]||'#a89cc0';
     const num=c.gateNumber?String(c.gateNumber).padStart(2,'0'):'';
-    return '<div class="hg-gate-card" onclick="gateTransition(event,\''+c.id+'\')" oncontextmenu="event.preventDefault();gateCardSoundMenu(event,\''+c.id+'\')" title="Clic droit — son personnalisé">'+
+    const hiddenStyle = c._hidden && _isAdmin() ? 'outline:2px dashed rgba(220,140,40,.5);opacity:.6;' : '';
+    const hiddenBadge = c._hidden && _isAdmin() ? '<div style="font-size:8px;letter-spacing:1px;color:rgba(220,140,40,.6);margin-top:2px">🚫 MASQUÉ</div>' : '';
+    const ctxMenu = _isAdmin()
+      ? `oncontextmenu="event.preventDefault();event.stopPropagation();_hgGateCtxMenu(event,'${c.id}')"`
+      : 'oncontextmenu="event.preventDefault()"';
+    return '<div class="hg-gate-card" style="'+hiddenStyle+'" onclick="gateTransition(event,\''+c.id+'\')" '+ctxMenu+'>'+
       '<div class="hg-gate-num">'+num+'</div>'+
       '<div class="hg-gate-name">'+esc(c.name)+(c._sfx?'<span style="font-size:9px;opacity:.5;margin-left:6px">♪</span>':'')+'</div>'+
       (c.status?'<div class="hg-gate-status" style="color:'+sc+'">◆ '+esc(c.status)+'</div>':'')+
+      hiddenBadge+
       '</div>';
-  }).join('');;
+  }).join('');
 
   // Remove old style
   const oldSt=document.getElementById('gate-root-style');if(oldSt)oldSt.remove();
