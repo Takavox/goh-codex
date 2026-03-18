@@ -3980,7 +3980,7 @@ function renderMagieImmersive(v, n){
   _startMagieCanvas();
   initCatAudio(n.id);
   _injectCatBg('magie-outer', n.id);
-  document.getElementById('magie-outer').oncontextmenu = e=>{ e.preventDefault(); _showCatBgMenu(n.id, e.clientX, e.clientY); };
+  document.getElementById('magie-outer').oncontextmenu = e=>{ if(e.target.closest('.magie-corner')) return; e.preventDefault(); _showCatBgMenu(n.id, e.clientX, e.clientY); };
 }
 
 function hexToRgb(hex){
@@ -4001,12 +4001,18 @@ function _showTriangleMenu(nodeId, x, y){
     box-shadow:0 8px 32px rgba(0,0,0,.85);backdrop-filter:blur(6px)`;
   menu.innerHTML=`
     <div style="padding:8px 16px;color:rgba(160,170,230,.5);font-size:9px;letter-spacing:2px;border-bottom:1px solid rgba(100,120,200,.15);margin-bottom:4px">◈ ${esc(n.name).toUpperCase()}</div>
+    <div id="tri-icon-change" style="padding:8px 16px;color:#d8ddf8;cursor:pointer;letter-spacing:1px"
+      onmouseenter="this.style.background='rgba(100,120,200,.15)'" onmouseleave="this.style.background=''">
+      🖼 ${n.iconData?'Changer':'Ajouter'} l'icône</div>
+    ${n.iconData?`<div id="tri-icon-rm" style="padding:8px 16px;color:#e08070;cursor:pointer;letter-spacing:1px"
+      onmouseenter="this.style.background='rgba(200,80,60,.1)'" onmouseleave="this.style.background=''">
+      🗑 Supprimer l'icône</div>`:''}
     <div id="tri-bg-load" style="padding:8px 16px;color:#d8ddf8;cursor:pointer;letter-spacing:1px"
       onmouseenter="this.style.background='rgba(100,120,200,.15)'" onmouseleave="this.style.background=''">
-      🖼 ${n._triangleImg?'Changer':'Ajouter'} l'image de fond</div>
-    ${n._triangleImg?`<div id="tri-bg-rm" style="padding:8px 16px;color:#d8ddf8;cursor:pointer;letter-spacing:1px"
-      onmouseenter="this.style.background='rgba(100,120,200,.15)'" onmouseleave="this.style.background=''">
-      🗑 Supprimer l'image</div>`:''}
+      🌄 ${n._triangleImg?'Changer':'Ajouter'} l'image de fond</div>
+    ${n._triangleImg?`<div id="tri-bg-rm" style="padding:8px 16px;color:#e08070;cursor:pointer;letter-spacing:1px"
+      onmouseenter="this.style.background='rgba(200,80,60,.1)'" onmouseleave="this.style.background=''">
+      🗑 Supprimer le fond</div>`:''}
     <div style="padding:8px 16px;color:#d8ddf8;letter-spacing:1px">
       🎨 Couleur d'accent<br>
       <input type="color" value="${n._triangleColor||'#7040c8'}" id="tri-color-inp"
@@ -4019,6 +4025,28 @@ function _showTriangleMenu(nodeId, x, y){
     </div>`;
   document.body.appendChild(menu);
 
+  // Handler icône
+  menu.querySelector('#tri-icon-change').onclick=()=>{
+    const inp=document.createElement('input');inp.type='file';inp.accept='image/*';
+    inp.onchange=e=>{
+      const file=e.target.files[0];if(!file)return;
+      _uploadToCloudinary(file, url=>{
+        n.iconData=url;
+        n.icon=`<img src='${url}' style='width:26px;height:26px;vertical-align:middle;object-fit:contain'>`;
+        save();menu.remove();
+        const magieNode=db[n.parentId];if(magieNode){const vv=document.getElementById('view');renderMagieImmersive(vv,magieNode);}
+        renderTree();
+      });
+    };inp.click();
+  };
+  const iconRmBtn=menu.querySelector('#tri-icon-rm');
+  if(iconRmBtn) iconRmBtn.onclick=()=>{
+    n.iconData=null; n.icon='🔮'; save(); menu.remove();
+    const magieNode=db[n.parentId];if(magieNode){const vv=document.getElementById('view');renderMagieImmersive(vv,magieNode);}
+    renderTree();
+  };
+
+  // Handler image de fond
   menu.querySelector('#tri-bg-load').onclick=()=>{
     const inp=document.createElement('input');inp.type='file';inp.accept='image/*';
     inp.onchange=e=>{
