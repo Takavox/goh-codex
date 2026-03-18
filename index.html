@@ -6291,7 +6291,7 @@ function _h2Render(nodeId){
       el.className='h2-period';
       el.style.cssText=`left:${x}px;width:${w}px;background:${col}`;
       el.innerHTML=`
-        ${p.img?`<div class="h2-period-bg" style="background-image:url('${p.img}')"></div>`:''}
+        ${p.img?`<div class="h2-period-bg" style="background-image:url('${p.img}');background-position:${p.imgX??50}% ${p.imgY??50}%;background-size:${p.imgZoom??100}%"></div>`:''}
         <div class="h2-period-overlay"></div>
         ${w>40?`<div class="h2-period-name">${esc(p.name||'')}</div>`:''}`;
       el.onclick=()=>_h2ShowPeriodInfo(nodeId,fi,pi);
@@ -6423,6 +6423,90 @@ function _h2ShowPeriodInfo(nodeId,fi,pi){
   _h2EditPeriod(nodeId,fi,pi);
 }
 
+
+function _h2AdjustImg(nodeId, fi, pi){
+  const n=db[nodeId];
+  const p=(n._h2frises&&n._h2frises[fi]?.periods)?n._h2frises[fi].periods[pi]:null;
+  if(!p||!p.img)return;
+  document.getElementById('_h2-adj-modal')?.remove();
+
+  const curX = p.imgX??50;
+  const curY = p.imgY??50;
+  const curZ = p.imgZoom??100;
+
+  const m=document.createElement('div');m.id='_h2-adj-modal';
+  m.style.cssText='position:fixed;inset:0;z-index:1002;background:rgba(0,0,0,.88);display:flex;align-items:center;justify-content:center;padding:20px';
+  m.innerHTML=`
+    <div style="background:#0e0a06;border:1px solid rgba(180,150,40,.3);border-radius:10px;padding:28px 24px;width:420px;max-width:95vw;font-family:'Cinzel',serif;">
+      <div style="font-size:11px;letter-spacing:3px;color:rgba(180,150,40,.7);margin-bottom:20px;text-align:center">🖼 AJUSTER L'IMAGE</div>
+
+      <!-- Prévisualisation -->
+      <div id="_h2adj-preview" style="width:100%;height:120px;border-radius:5px;border:1px solid rgba(180,150,40,.2);
+        background-image:url('${p.img}');background-size:${curZ}%;background-position:${curX}% ${curY}%;
+        background-color:#080604;margin-bottom:18px;transition:all .1s"></div>
+
+      <!-- Position X -->
+      <div style="margin-bottom:12px">
+        <div style="font-size:8px;letter-spacing:2px;color:rgba(180,150,40,.5);margin-bottom:6px">POSITION HORIZONTALE — <span id="_h2adj-xval">${curX}%</span></div>
+        <input type="range" id="_h2adj-x" min="0" max="100" value="${curX}"
+          style="width:100%;accent-color:#c8a040;cursor:pointer"
+          oninput="_h2AdjPreview()">
+      </div>
+
+      <!-- Position Y -->
+      <div style="margin-bottom:12px">
+        <div style="font-size:8px;letter-spacing:2px;color:rgba(180,150,40,.5);margin-bottom:6px">POSITION VERTICALE — <span id="_h2adj-yval">${curY}%</span></div>
+        <input type="range" id="_h2adj-y" min="0" max="100" value="${curY}"
+          style="width:100%;accent-color:#c8a040;cursor:pointer"
+          oninput="_h2AdjPreview()">
+      </div>
+
+      <!-- Zoom -->
+      <div style="margin-bottom:20px">
+        <div style="font-size:8px;letter-spacing:2px;color:rgba(180,150,40,.5);margin-bottom:6px">ZOOM — <span id="_h2adj-zval">${curZ}%</span></div>
+        <input type="range" id="_h2adj-z" min="50" max="300" value="${curZ}"
+          style="width:100%;accent-color:#c8a040;cursor:pointer"
+          oninput="_h2AdjPreview()">
+      </div>
+
+      <div style="display:flex;gap:10px">
+        <button onclick="document.getElementById('_h2-adj-modal').remove()"
+          style="flex:1;padding:9px;background:rgba(255,255,255,.04);border:1px solid rgba(180,150,40,.2);border-radius:5px;color:rgba(180,150,40,.5);font-family:'Cinzel',serif;font-size:9px;cursor:pointer;letter-spacing:1px">Annuler</button>
+        <button onclick="_h2AdjSave('${nodeId}',${fi},${pi})"
+          style="flex:1;padding:9px;background:rgba(180,150,40,.15);border:1px solid rgba(180,150,40,.45);border-radius:5px;color:#d4b060;font-family:'Cinzel',serif;font-size:9px;cursor:pointer;letter-spacing:1px">✓ Appliquer</button>
+      </div>
+    </div>`;
+
+  document.body.appendChild(m);
+  m.addEventListener('click',e=>{if(e.target===m)m.remove();});
+}
+
+function _h2AdjPreview(){
+  const x=document.getElementById('_h2adj-x')?.value??50;
+  const y=document.getElementById('_h2adj-y')?.value??50;
+  const z=document.getElementById('_h2adj-z')?.value??100;
+  const prev=document.getElementById('_h2adj-preview');
+  if(prev){
+    prev.style.backgroundPosition=x+'% '+y+'%';
+    prev.style.backgroundSize=z+'%';
+  }
+  if(document.getElementById('_h2adj-xval')) document.getElementById('_h2adj-xval').textContent=x+'%';
+  if(document.getElementById('_h2adj-yval')) document.getElementById('_h2adj-yval').textContent=y+'%';
+  if(document.getElementById('_h2adj-zval')) document.getElementById('_h2adj-zval').textContent=z+'%';
+}
+
+function _h2AdjSave(nodeId, fi, pi){
+  const n=db[nodeId];
+  const p=(n._h2frises&&n._h2frises[fi]?.periods)?n._h2frises[fi].periods[pi]:null;
+  if(!p)return;
+  p.imgX=parseInt(document.getElementById('_h2adj-x')?.value??50);
+  p.imgY=parseInt(document.getElementById('_h2adj-y')?.value??50);
+  p.imgZoom=parseInt(document.getElementById('_h2adj-z')?.value??100);
+  save();
+  document.getElementById('_h2-adj-modal')?.remove();
+  _h2Render(nodeId);
+}
+
 function _h2PeriodCtx(e,nodeId,fi,pi){
   document.getElementById('_h2-ctx')?.remove();
   const n=db[nodeId];const p=(n._h2frises[fi]?.periods||[])[pi];if(!p)return;
@@ -6430,6 +6514,7 @@ function _h2PeriodCtx(e,nodeId,fi,pi){
   m.style.cssText=`position:fixed;left:${e.clientX}px;top:${e.clientY}px;z-index:9999;background:rgba(6,4,14,.97);border:1px solid rgba(180,150,40,.3);border-radius:6px;padding:5px 0;min-width:160px;font-family:'Cinzel',serif;font-size:11px;box-shadow:0 8px 28px rgba(0,0,0,.85)`;
   m.innerHTML=`<div style="padding:6px 14px;font-size:8px;letter-spacing:2px;color:rgba(180,150,40,.4);border-bottom:1px solid rgba(180,150,40,.12);margin-bottom:4px">📅 ${esc(p.name||'Période')}</div>
     <div style="padding:8px 16px;color:#d4b060;cursor:pointer" onmouseenter="this.style.background='rgba(180,150,40,.1)'" onmouseleave="this.style.background=''" onclick="_h2EditPeriod('${nodeId}',${fi},${pi});document.getElementById('_h2-ctx')?.remove()">✎ Modifier</div>
+    ${p.img?`<div style="padding:8px 16px;color:#d4b060;cursor:pointer" onmouseenter="this.style.background='rgba(180,150,40,.1)'" onmouseleave="this.style.background=''" onclick="document.getElementById('_h2-ctx')?.remove();_h2AdjustImg('${nodeId}',${fi},${pi})">🖼 Ajuster l'image</div>`:''}
     <div style="padding:8px 16px;color:#e07070;cursor:pointer" onmouseenter="this.style.background='rgba(200,60,60,.1)'" onmouseleave="this.style.background=''" onclick="_h2DeletePeriod('${nodeId}',${fi},${pi});document.getElementById('_h2-ctx')?.remove()">✕ Supprimer</div>`;
   document.body.appendChild(m);
   requestAnimationFrame(()=>{const r=m.getBoundingClientRect();if(r.right>window.innerWidth)m.style.left=(e.clientX-r.width-4)+'px';if(r.bottom>window.innerHeight)m.style.top=(e.clientY-r.height-4)+'px';});
