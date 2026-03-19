@@ -1032,6 +1032,7 @@ const divSortState = {};
 // Category character-view sort & search state
 const catSortState = {};   // nodeId -> 'manual'|'alpha'|'age_asc'|'age_desc'|'phys'|'magic'|'intel'
 const catSearchState = {}; // nodeId -> string
+const catStatusFilter = {}; // nodeId -> ''|'Vivant'|'Décédé'|'Disparu'
 
 const ICONS=['⚔','🛡','👑','🗺','📜','🏰','⚗','🌿','💀','🌟','🔮','🗝','🐉','⚡','🌙','☀','🌊','🔥','🧙','🏹','🪄','🗡','🧝','👁','🌺','🦅','🐺','💎','🏔','🌑','⚜','🎭','🪙','🩸','🌀','🕊','🧿','📿','🗻','🏕','⛩','🩹','🦁','🦊','🌌','🔱','⚰','🕯','🧬','🌋','🏛','🎯','🧲','🪬','🛕','⚖','🦂'];
 
@@ -2967,7 +2968,9 @@ function renderCharacterGridView(v, n){
   n._childOrder = n._childOrder.filter(id=>charEnts.find(e=>e.id===id));
 
   // Apply search filter
+  const statusFilter = catStatusFilter[n.id] || '';
   let displayEnts = charEnts.filter(e=>{
+    if(statusFilter && e.charStatus !== statusFilter) return false;
     if(!searchQ) return true;
     const hay=(fullName(e)+' '+(e.subtitle||'')+' '+(e.charAge||'')).toLowerCase();
     return hay.includes(searchQ);
@@ -3008,13 +3011,28 @@ function renderCharacterGridView(v, n){
     if(_isAdmin() && e._hidden) {
       // Admin voit la carte normalement mais avec une légère teinte
     }
+    // Effet visuel selon le statut
+    const statusStyle = e.charStatus==='Décédé'
+      ? 'filter:grayscale(.85) brightness(.75);opacity:.7;'
+      : e.charStatus==='Disparu'
+      ? 'filter:sepia(.6) hue-rotate(160deg) brightness(.8);opacity:.8;'
+      : '';
+    const statusDot = e.charStatus==='Vivant'
+      ? '<span style="position:absolute;top:6px;right:6px;width:7px;height:7px;border-radius:50%;background:#6acd8d;box-shadow:0 0 5px #6acd8d"></span>'
+      : e.charStatus==='Décédé'
+      ? '<span style="position:absolute;top:6px;right:6px;font-size:10px">💀</span>'
+      : e.charStatus==='Disparu'
+      ? '<span style="position:absolute;top:6px;right:6px;font-size:10px">🌀</span>'
+      : '';
     return `<div class="cg-card${e._hidden?' cg-card-admin-hidden':''}" id="cgc-${e.id}" draggable="true"
+      style="${statusStyle}"
       ondragstart="cgDragStart(event,'${e.id}','${n.id}')"
       ondragover="cgDragOver(event,'${e.id}','${n.id}')"
       ondrop="cgDrop(event,'${e.id}','${n.id}')"
       ondragend="cgDragEnd(event)"
       onclick="selectNode('${e.id}')">
       ${img}
+      ${statusDot}
       ${sourceBadge}
       <div class="cg-info">
         <div class="cg-name">${esc(fullName(e))}</div>
@@ -3069,6 +3087,13 @@ function renderCharacterGridView(v, n){
       <div class="cg-sort-btns">
         ${sortBtns.map(b=>`<button class="cg-sort-btn${sortMode===b.key?' active':''}" onclick="catSort('${n.id}','${b.key}')">${b.label}</button>`).join('')}
       </div>
+      <div class="cg-sort-btns" style="margin-top:6px">
+        ${[{k:'',l:'Tous'},
+           {k:'Vivant',l:'🟢 Vivants'},
+           {k:'Décédé',l:'💀 Décédés'},
+           {k:'Disparu',l:'🌀 Disparus'}
+          ].map(f=>`<button class="cg-sort-btn${statusFilter===f.k?' active':''}" onclick="catFilterStatus('${n.id}','${f.k}')">${f.l}</button>`).join('')}
+      </div>
     </div>
 
     ${displayEnts.length===0?`<div class="empty">Aucun personnage trouvé.</div>`:''}
@@ -3089,6 +3114,10 @@ function renderCharacterGridView(v, n){
 
 function catSort(nodeId, mode){
   catSortState[nodeId]=mode;
+  renderContent(nodeId);
+}
+function catFilterStatus(nodeId, status){
+  catStatusFilter[nodeId]=status;
   renderContent(nodeId);
 }
 function catSearch(nodeId, q){
