@@ -1735,6 +1735,23 @@ function renderContent(id){
 let _wlcAnim = null;
 let _wlcAudioObj = null;
 let _wlcAudioURL = null;
+// Volume maître global (0 à 1) — sauvegardé dans localStorage
+let _masterVol = parseFloat(localStorage.getItem('goh_master_vol') ?? '1');
+if(isNaN(_masterVol)||_masterVol<0||_masterVol>1) _masterVol = 1;
+function _setMasterVol(v){
+  _masterVol = Math.max(0, Math.min(1, v));
+  localStorage.setItem('goh_master_vol', _masterVol.toString());
+  // Appliquer à tous les éléments audio actifs
+  ['wlc-audio','il-audio','hg-audio','gard-audio','cat-audio'].forEach(id=>{
+    const a = document.getElementById(id);
+    if(a) a.volume = _masterVol;
+  });
+  // Mettre à jour l'affichage du bouton
+  const lbl = document.getElementById('_vol-lbl');
+  if(lbl) lbl.textContent = Math.round(_masterVol*100)+'%';
+  const slider = document.getElementById('_vol-slider');
+  if(slider) slider.value = Math.round(_masterVol*100);
+}
 let _wlcAudioVol = 0.4;
 
 function initWlcAudio(){
@@ -1745,7 +1762,7 @@ function initWlcAudio(){
   const audioSrc = globalStatNames._wlcAudio || WLC_OST;
   if(!_wlcAudioURL || _wlcAudioURL !== audioSrc) _wlcAudioURL = audioSrc;
   if(audio.src !== _wlcAudioURL) audio.src = _wlcAudioURL;
-  audio.loop = true; audio.volume = _wlcAudioVol;
+  audio.loop = true; audio.volume = _wlcAudioVol * _masterVol;
   _wlcAudioObj = audio;
   window._wlcPendingPlay = true;
   if(_wlcAudioURL){
@@ -2546,7 +2563,7 @@ function initIlAudio(){
   if(ilSrc){ _ilAudioURL = ilSrc; }
   else if(!_ilAudioURL){ _ilAudioURL = null; }
   _ilAudioObj=audio;
-  audio.loop=true; audio.volume=_ilAudioVol;
+  audio.loop=true; audio.volume=_ilAudioVol * _masterVol;
   if(_ilAudioURL && audio.src !== _ilAudioURL){ audio.src = _ilAudioURL; audio.dataset.url=_ilAudioURL; }
   if(_ilAudioURL){
     audio.play().then(()=>{ _updateIlBtn('🔊'); }).catch(()=>{
@@ -2665,7 +2682,7 @@ function initCatAudio(nodeId){
     // Charger si source différente
     if(audio.src !== src){
       audio.src = src;
-      audio.volume = n._audio?.vol ?? 0.4;
+      audio.volume = (n._audio?.vol ?? 0.4) * _masterVol;
       audio.dataset.nodeId = nodeId;
       audio.load();
     }
@@ -5418,7 +5435,7 @@ function initGardAudio(){
   else if(!_gardAudioURL){ _gardAudioURL = null; }
   if(_gardAudioURL && audio.src !== _gardAudioURL) audio.src = _gardAudioURL;
   audio.loop   = true;
-  audio.volume = _gardAudioVol;
+  audio.volume = _gardAudioVol * _masterVol;
   _gardAudioObj = audio;
 
   if(_gardAudioURL){
@@ -6259,6 +6276,8 @@ function renderHistoireRootImmersive(v, n){
   if(!n._h2frises) n._h2frises = [];
 
   // État zoom/scroll
+  // Au premier chargement, on ajuste automatiquement
+  const _h2IsNew = !window._h2State;
   window._h2State = window._h2State || {pxPerYear:60, scrollX:0, scrollY:0};
   const S = window._h2State;
 
@@ -6286,6 +6305,8 @@ function renderHistoireRootImmersive(v, n){
   </div>`;
 
   _h2Render(n.id);
+  // Ajuster automatiquement au premier affichage
+  if(_h2IsNew){ requestAnimationFrame(()=>_h2ZoomFit(n.id)); }
   _h2SetupScroll(n.id);
   initCatAudio(n.id);
   _injectCatBg('h2-outer',n.id);
@@ -8385,7 +8406,7 @@ function initHGAudio(){
   else if(!_hgAudioURL){ _hgAudioURL = null; } // OST invalide en ligne, pas de son par défaut
   if(_hgAudioURL && audio.src !== _hgAudioURL) audio.src = _hgAudioURL;
   audio.loop   = true;
-  audio.volume = _hgAudioVol;
+  audio.volume = _hgAudioVol * _masterVol;
   _hgAudioObj  = audio;
 
   if(_hgAudioURL){
@@ -11230,5 +11251,32 @@ document.addEventListener('DOMContentLoaded', function(){
 // Fallback si DOMContentLoaded déjà passé
 if(document.readyState !== 'loading') _applyMode();
 </script>
+
+<div id="_vol-ctrl" style="position:fixed;bottom:22px;left:50%;transform:translateX(-50%);z-index:9000;
+  display:flex;align-items:center;gap:10px;
+  background:rgba(4,6,14,.88);border:1px solid rgba(100,120,200,.3);border-radius:30px;
+  padding:8px 16px;backdrop-filter:blur(8px);box-shadow:0 4px 20px rgba(0,0,0,.6);
+  font-family:'Cinzel',serif;user-select:none">
+  <button onclick="_setMasterVol(_masterVol-0.1)"
+    style="background:none;border:none;color:rgba(160,170,230,.7);font-size:16px;cursor:pointer;padding:0 2px;line-height:1"
+    title="Baisser le volume">🔉</button>
+  <input id="_vol-slider" type="range" min="0" max="100" value="100"
+    style="width:90px;accent-color:#8090e0;cursor:pointer"
+    oninput="_setMasterVol(this.value/100)">
+  <button onclick="_setMasterVol(_masterVol+0.1)"
+    style="background:none;border:none;color:rgba(160,170,230,.7);font-size:16px;cursor:pointer;padding:0 2px;line-height:1"
+    title="Monter le volume">🔊</button>
+  <span id="_vol-lbl" style="font-size:9px;letter-spacing:1px;color:rgba(140,155,220,.5);min-width:34px;text-align:right">100%</span>
+</div>
+<script>
+// Initialiser le slider avec la valeur sauvegardée
+(function(){
+  const s = document.getElementById('_vol-slider');
+  const l = document.getElementById('_vol-lbl');
+  if(s) s.value = Math.round(_masterVol * 100);
+  if(l) l.textContent = Math.round(_masterVol * 100) + '%';
+})();
+</script>
+
 </body>
 </html>
