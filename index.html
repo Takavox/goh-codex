@@ -1737,8 +1737,8 @@ let _wlcAnim = null;
 let _wlcAudioObj = null;
 let _wlcAudioURL = null;
 // Volume maître global (0 à 1) — sauvegardé dans localStorage
-let _masterVol = parseFloat(localStorage.getItem('goh_master_vol') ?? '1');
-if(isNaN(_masterVol)||_masterVol<0||_masterVol>1) _masterVol = 1;
+let _masterVol = parseFloat(localStorage.getItem('goh_master_vol') ?? '0.5');
+if(isNaN(_masterVol)||_masterVol<0||_masterVol>1) _masterVol = 0.5;
 function _setMasterVol(v){
   _masterVol = Math.max(0, Math.min(1, v));
   localStorage.setItem('goh_master_vol', _masterVol.toString());
@@ -11289,7 +11289,7 @@ if(document.readyState !== 'loading') _applyMode();
   <button onclick="_setMasterVol(_masterVol-0.1)"
     style="background:none;border:none;color:rgba(160,170,230,.7);font-size:16px;cursor:pointer;padding:0 2px;line-height:1"
     title="Baisser le volume">🔉</button>
-  <input id="_vol-slider" type="range" min="0" max="100" value="100"
+  <input id="_vol-slider" type="range" min="0" max="100" value="50"
     style="width:90px;accent-color:#8090e0;cursor:pointer"
     oninput="_setMasterVol(this.value/100)">
   <button onclick="_setMasterVol(_masterVol+0.1)"
@@ -11304,6 +11304,8 @@ if(document.readyState !== 'loading') _applyMode();
   const l = document.getElementById('_vol-lbl');
   if(s) s.value = Math.round(_masterVol * 100);
   if(l) l.textContent = Math.round(_masterVol * 100) + '%';
+  // Appliquer le volume initial à tous les éléments audio
+  ['wlc-audio','il-audio','hg-audio','gard-audio','cat-audio'].forEach(id=>{ const a=document.getElementById(id); if(a) a.volume=_masterVol; });
 })();
 </script>
 
