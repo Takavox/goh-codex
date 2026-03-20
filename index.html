@@ -4705,7 +4705,7 @@ function renderGeographieImmersive(v, n){
           </div>
           <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
             <span style="font-size:8px;letter-spacing:1px;min-width:50px">TAILLE</span>
-            <input type="range" id="geo-paint-radius-slider" min="1" max="15" value="2"
+            <input type="range" id="geo-paint-radius-slider" min="1" max="10" value="1"
               style="flex:1;accent-color:#c8a840;cursor:pointer"
               oninput="if(window._geoState)window._geoState.paintRadius=parseInt(this.value);document.getElementById('geo-paint-radius-val').textContent=this.value">
             <span id="geo-paint-radius-val" style="font-size:9px;color:#c8a840;min-width:16px">4</span>
@@ -4748,7 +4748,7 @@ function renderGeographieImmersive(v, n){
     view: {scale:1, tx:0, ty:0, panning:false, panStartX:0, panStartY:0, panStartTx:0, panStartTy:0},
     mode: 'nav', // 'nav' | 'poi' | 'paint'
     paintMode: 'land', // 'land' | 'water'
-    paintRadius: 4,
+    paintRadius: 1,
     grid: null, gridW: 0, gridH: 0,
     img: null, imgLoaded: false,
     pendingTarget: null,
@@ -5174,12 +5174,12 @@ function _geoCanvasMove(e,nodeId){
 function _geoPaintAt(nodeId,px,py){
   const GS=window._geoState;if(!GS||!GS.grid)return;
   const val=GS.paintMode==='land'?1:0;
-  const r=Math.ceil(GS.paintRadius/2);
+  const r = GS.paintRadius <= 1 ? 0 : Math.floor((GS.paintRadius-1)/2);
   const gx=Math.round(px*GS.gridW);
   const gy=Math.round(py*GS.gridH);
   for(let dy=-r;dy<=r;dy++){
     for(let dx=-r;dx<=r;dx++){
-      if(dx*dx+dy*dy>r*r)continue;
+      if(r>0&&dx*dx+dy*dy>r*r)continue;
       const nx=gx+dx,ny=gy+dy;
       if(nx>=0&&ny>=0&&nx<GS.gridW&&ny<GS.gridH)
         GS.grid[ny*GS.gridW+nx]=val;
