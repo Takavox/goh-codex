@@ -4253,6 +4253,17 @@ function renderSecretsImmersive(v, n){
     .sec-enig-question{font-family:'EB Garamond',serif;font-size:17px;line-height:1.8;color:#2a1808;text-align:center}
     .sec-enig-hint-btn{text-align:center;font-family:'Cinzel',serif;font-size:8.5px;letter-spacing:1px;color:rgba(80,50,20,.5);cursor:pointer;margin-top:8px;text-decoration:underline}
     @keyframes sec-shake{0%,100%{transform:translateX(0)}15%{transform:translateX(-8px) rotate(-1.5deg)}30%{transform:translateX(8px) rotate(1.5deg)}45%{transform:translateX(-6px)}60%{transform:translateX(6px)}75%{transform:translateX(-3px)}}
+    .sec-lock-inline{display:inline-flex;flex-direction:column;align-items:center;gap:3px;cursor:pointer;padding:10px 16px;border-radius:5px;border:1px dashed rgba(120,80,20,.3);background:rgba(120,80,20,.04);margin:12px auto;transition:transform .15s,background .15s;text-align:center;width:fit-content}
+    .sec-lock-inline:hover{transform:scale(1.06);background:rgba(120,80,20,.1);border-color:rgba(120,80,20,.4)}
+    .sec-lock-inline .sec-lock-icon{font-size:28px}
+    .sec-lock-inline .sec-lock-label{font-family:'Cinzel',serif;font-size:7.5px;letter-spacing:1px;color:rgba(60,30,10,.55)}
+    .sec-reveal-block{background:rgba(120,80,20,.06);border-left:3px solid rgba(120,80,20,.25);border-radius:0 4px 4px 0;padding:12px 16px;margin:14px 0}
+    .sec-reveal-header{font-family:'Cinzel',serif;font-size:9px;letter-spacing:2px;color:rgba(80,50,20,.5);margin-bottom:10px;display:flex;align-items:center;gap:6px}
+    .sec-reveal-footer{font-family:'EB Garamond',serif;font-size:10px;color:rgba(80,50,20,.3);font-style:italic;margin-top:8px;text-align:right}
+    #sec-p-content{display:flex;flex-direction:column;align-items:flex-start}
+    #sec-p-content .sec-lock-inline{align-self:center}
+    #sec-p-content .sec-reveal-block{align-self:stretch}
+
     .sec-p-btn-keep{border-color:rgba(80,80,200,.3)!important;color:#4060c0!important}
 
   `;
@@ -4392,7 +4403,7 @@ function _secCloseScroll(e){
   if(!overlay||!parchment) return;
   parchment.classList.remove('open');
   overlay.classList.remove('open');
-  // Masquer complètement après l'animation pour éviter le résidu
+  document.getElementById('_sec-float-img')?.remove();
   setTimeout(()=>{
     parchment.style.visibility='hidden';
     const inner=document.getElementById('sec-parchment-inner');
@@ -4429,47 +4440,75 @@ function _secOpenScroll(id){
 
 // ── Construire les pages du parchemin ──
 function _secBuildPages(n){
-  // Page 0 : contenu de base (charBio) + section initiale
-  const pages = [];
+  // Construire la liste des "blocs" : texte de base + verrous en ordre
+  // Un bloc = { text, lockIdx (null=base), locks (verrous qui s'affichent après ce bloc) }
+  // Chaque verrou débloqué révèle son texte INLINE à la place du verrou
+  // Les verrous non débloqués restent affichés comme icônes
+  // On pagine si le contenu dépasse MAX chars, en décalant les verrous suivants
+
+  const MAX = 1000; // chars max par page
   const baseText = n.charBio || '';
-  const baseImg = n.images && n.images[0] ? n.images[0] : null;
+  const locks = n._locks || [];
 
-  // Page de base toujours présente
-  pages.push({ text: baseText, img: baseImg, lockIdx: null });
-
-  // Ajouter les sections débloquées par chaque verrou
-  (n._locks||[]).forEach((lock,li)=>{
-    if(!lock.revealText && !lock.revealImg) return;
-    const unlocked = _secIsUnlocked(lock._id||`${n.id}_lock_${li}`);
-    if(unlocked){
-      pages.push({ text: lock.revealText||'', img: lock.revealImg||null, lockIdx: li });
-    }
-  });
-
-  // Paginer si le texte est long (>1200 chars par page)
-  const MAX = 1200;
-  const result = [];
-  pages.forEach(p=>{
-    if(!p.text || p.text.length <= MAX){
-      result.push(p);
+  // Construire le contenu linéaire : alternance texte/verrou
+  // Chaque item est soit { type:'text', text } soit { type:'lock', lockIdx }
+  const items = [];
+  items.push({ type:'text', text: baseText });
+  locks.forEach((lock, li)=>{
+    const lockId = lock._id || `${n.id}_lock_${li}`;
+    const isOpen = _secIsUnlocked(lockId);
+    if(isOpen && (lock.revealText || lock.revealImg)){
+      // Verrou ouvert : insérer le contenu révélé
+      items.push({ type:'reveal', lockIdx: li, text: lock.revealText||'', img: lock.revealImg||null });
     } else {
-      // Découper en morceaux
-      let remaining = p.text;
-      let first = true;
-      while(remaining.length > 0){
-        const chunk = remaining.slice(0, MAX);
-        remaining = remaining.slice(MAX);
-        result.push({
-          text: chunk + (remaining.length > 0 ? '…' : ''),
-          img: first ? p.img : null,
-          lockIdx: p.lockIdx,
-          continued: !first
-        });
-        first = false;
-      }
+      // Verrou fermé ou sans contenu : afficher l'icône verrou
+      items.push({ type:'lock', lockIdx: li });
     }
   });
-  return result;
+
+  // Paginer : remplir les pages en respectant MAX chars
+  const pages = [];
+  let currentPage = { items: [], charCount: 0 };
+
+  items.forEach(item=>{
+    if(item.type === 'text' || item.type === 'reveal'){
+      const text = item.text || '';
+      if(text.length === 0){
+        // Juste l'image éventuelle
+        currentPage.items.push(item);
+        return;
+      }
+      // Découper si trop long
+      let remaining = text;
+      let firstChunk = true;
+      while(remaining.length > 0){
+        const available = MAX - currentPage.charCount;
+        if(available <= 50 && currentPage.items.length > 0){
+          // Page pleine, en commencer une nouvelle
+          pages.push(currentPage);
+          currentPage = { items: [], charCount: 0 };
+        }
+        const chunk = remaining.slice(0, MAX - currentPage.charCount);
+        remaining = remaining.slice(chunk.length);
+        currentPage.items.push({
+          ...item,
+          text: chunk + (remaining.length > 0 ? '…' : ''),
+          img: firstChunk ? item.img : null
+        });
+        currentPage.charCount += chunk.length;
+        firstChunk = false;
+        if(remaining.length > 0){
+          pages.push(currentPage);
+          currentPage = { items: [], charCount: 0 };
+        }
+      }
+    } else {
+      // Verrou fermé : toujours inline, peu de place
+      currentPage.items.push(item);
+    }
+  });
+  if(currentPage.items.length > 0) pages.push(currentPage);
+  return pages;
 }
 
 // ── Rendre le parchemin (page courante) ──
@@ -4484,35 +4523,53 @@ function _secRenderParchment(id){
   const page = Math.max(0, Math.min(st.page, totalPages-1));
   st.page = page;
 
-  const locks = n._locks||[];
-  const unlockedCount = locks.filter((l,li)=>_secIsUnlocked(l._id||`${id}_lock_${li}`)).length;
-
-  // ── Verrous à afficher ──
-  let locksHTML = '';
-  if(locks.length > 0){
-    locksHTML = `<div class="sec-locks-row">`;
-    locks.forEach((lock, li)=>{
-      const lockId = lock._id || `${id}_lock_${li}`;
-      const isOpen = _secIsUnlocked(lockId);
-      locksHTML += `<div class="sec-lock${isOpen?' sec-lock-open':''}" id="sec-lock-${li}"
-        onclick="_secClickLock('${id}',${li})"
-        oncontextmenu="event.preventDefault();event.stopPropagation();_secLockCtx(event,'${id}',${li})">
-        <div class="sec-lock-icon">${isOpen ? '🔓' : '🔒'}</div>
-        <div class="sec-lock-label">${esc(lock.label||`Verrou ${li+1}`)}</div>
-      </div>`;
-    });
-    locksHTML += `</div>`;
+  // ── Image flottante hors parchemin ──
+  document.getElementById('_sec-float-img')?.remove();
+  if(n.images && n.images[0]){
+    const fi=document.createElement('div');
+    fi.id='_sec-float-img';
+    fi.style.cssText='position:fixed;right:24px;top:50%;transform:translateY(-50%);z-index:1001;'+
+      'width:150px;border-radius:6px;overflow:hidden;box-shadow:0 8px 32px rgba(0,0,0,.85);'+
+      'border:2px solid rgba(120,80,20,.35);pointer-events:all';
+    fi.innerHTML=`<img src="${n.images[0]}" style="width:100%;display:block;cursor:zoom-in" onclick="openLB('${n.images[0]}')">`;
+    document.body.appendChild(fi);
   }
 
-  // ── Contenu de la page courante ──
-  const p = pages[page] || {text:'',img:null};
-  const contentHTML = `
-    ${p.img ? `<div class="sec-p-imgs" style="margin-bottom:16px"><img src="${p.img}" onclick="openLB('${p.img}')"></div>` : ''}
-    ${p.text
-      ? `<div class="sec-p-body" id="sec-p-body-text">${esc(p.text)}</div>`
-      : `<div class="sec-p-body" style="opacity:.35;font-style:italic">Parchemin vierge…</div>`}`;
+  // ── Contenu inline de la page courante ──
+  const currentPage = pages[page] || {items:[]};
+  let contentHTML = '';
+  if(!currentPage.items || currentPage.items.length === 0){
+    contentHTML = '<div class="sec-p-body" style="opacity:.35;font-style:italic">Parchemin vierge…</div>';
+  } else {
+    currentPage.items.forEach(item=>{
+      if(item.type === 'text'){
+        contentHTML += item.text
+          ? `<div class="sec-p-body">${esc(item.text)}</div>`
+          : '<div class="sec-p-body" style="opacity:.35;font-style:italic">Parchemin vierge…</div>';
+      } else if(item.type === 'lock'){
+        const lock = (n._locks||[])[item.lockIdx];
+        if(!lock) return;
+        contentHTML += `<div class="sec-lock-inline" id="sec-lock-${item.lockIdx}"
+          onclick="_secClickLock('${id}',${item.lockIdx})"
+          oncontextmenu="event.preventDefault();event.stopPropagation();_secLockCtx(event,'${id}',${item.lockIdx})">
+          <div class="sec-lock-icon">🔒</div>
+          <div class="sec-lock-label">${esc(lock.label||`Verrou ${item.lockIdx+1}`)}</div>
+        </div>`;
+      } else if(item.type === 'reveal'){
+        const lock = (n._locks||[])[item.lockIdx];
+        contentHTML += `<div class="sec-reveal-block" id="sec-lock-${item.lockIdx}">
+          <div class="sec-reveal-header"><span>🔓</span> ${esc(lock?.label||'Révélé')}</div>
+          ${item.img ? `<img src="${item.img}" style="width:100%;max-height:180px;object-fit:cover;border-radius:4px;margin-bottom:10px;cursor:zoom-in" onclick="openLB('${item.img}')">` : ''}
+          <div class="sec-p-body" id="sec-reveal-text-${item.lockIdx}">${esc(item.text)}</div>
+          <div class="sec-reveal-footer"
+            oncontextmenu="event.preventDefault();event.stopPropagation();_secLockCtx(event,'${id}',${item.lockIdx})">
+            ↩ Clic droit pour refermer
+          </div>
+        </div>`;
+      }
+    });
+  }
 
-  // ── Pagination ──
   const prevDisabled = page === 0;
   const nextDisabled = page >= totalPages - 1;
   const paginationHTML = totalPages > 1 ? `
@@ -4522,7 +4579,6 @@ function _secRenderParchment(id){
       <button class="sec-p-page-btn${nextDisabled?' disabled':''}" onclick="if(${!nextDisabled})_secGotoPage('${id}',${page+1})">▶</button>
     </div>` : '';
 
-  // ── Boutons actions ──
   const adminBtns = _isAdmin() ? `
     <button class="sec-p-btn" onclick="_secEditModal('${id}')">✎ Modifier</button>
     <button class="sec-p-btn" onclick="_secLockManager('${id}')">🔒 Verrous</button>
@@ -4531,13 +4587,84 @@ function _secRenderParchment(id){
   inner.innerHTML = `
     <div class="sec-p-title">${esc(n.name)}</div>
     ${n.subtitle?`<div style="font-family:'EB Garamond',serif;font-size:13px;color:rgba(60,30,10,.5);font-style:italic;text-align:center;margin-bottom:14px">${esc(n.subtitle)}</div>`:''}
-    ${locksHTML}
     <div id="sec-p-content">${contentHTML}</div>
     ${paginationHTML}
     <div class="sec-p-actions">
       ${adminBtns}
       <button class="sec-p-btn sec-p-btn-keep" onclick="_secCloseScrollDirect()">✕ Refermer</button>
     </div>`;
+}
+
+
+function _secEditModal(id){
+  const n=db[id]; if(!n) return;
+  document.getElementById('_sec-modal')?.remove();
+  const m=document.createElement('div');
+  m.id='_sec-modal';
+  m.style.cssText='position:fixed;inset:0;z-index:1100;background:rgba(0,0,0,.82);display:flex;align-items:center;justify-content:center;padding:20px';
+  m.innerHTML=`<div style="background:linear-gradient(180deg,#f5e8c8,#edddb0);border-radius:4px;padding:28px;width:min(560px,96vw);max-height:90vh;overflow-y:auto;position:relative;box-shadow:0 20px 60px rgba(0,0,0,.9)">
+    <div style="font-family:'Cinzel Decorative',serif;font-size:14px;color:#3a2008;letter-spacing:2px;margin-bottom:20px;border-bottom:1px solid rgba(120,80,20,.2);padding-bottom:10px">📜 Éditer le secret</div>
+    <div style="margin-bottom:12px">
+      <label style="font-family:'Cinzel',serif;font-size:8px;letter-spacing:2px;color:rgba(80,40,10,.5);display:block;margin-bottom:5px">TITRE</label>
+      <input id="_sec-name" value="${esc(n.name)}" style="width:100%;background:rgba(255,240,200,.6);border:1px solid rgba(120,80,20,.3);border-radius:3px;padding:8px 12px;color:#2a1808;font-family:'Cinzel',serif;font-size:13px;outline:none;box-sizing:border-box">
+    </div>
+    <div style="margin-bottom:12px">
+      <label style="font-family:'Cinzel',serif;font-size:8px;letter-spacing:2px;color:rgba(80,40,10,.5);display:block;margin-bottom:5px">SOUS-TITRE <span style="opacity:.5;font-size:7px">(optionnel)</span></label>
+      <input id="_sec-sub" value="${esc(n.subtitle||'')}" style="width:100%;background:rgba(255,240,200,.6);border:1px solid rgba(120,80,20,.3);border-radius:3px;padding:8px 12px;color:#2a1808;font-family:'EB Garamond',serif;font-size:14px;outline:none;box-sizing:border-box">
+    </div>
+    <div style="margin-bottom:12px">
+      <label style="font-family:'Cinzel',serif;font-size:8px;letter-spacing:2px;color:rgba(80,40,10,.5);display:block;margin-bottom:5px">CONTENU</label>
+      <textarea id="_sec-body" rows="7" style="width:100%;background:rgba(255,240,200,.6);border:1px solid rgba(120,80,20,.3);border-radius:3px;padding:8px 12px;color:#2a1808;font-family:'EB Garamond',serif;font-size:15px;outline:none;resize:vertical;box-sizing:border-box;line-height:1.8">${esc(n.charBio||'')}</textarea>
+    </div>
+    <div style="margin-bottom:20px">
+      <label style="font-family:'Cinzel',serif;font-size:8px;letter-spacing:2px;color:rgba(80,40,10,.5);display:block;margin-bottom:8px">IMAGES</label>
+      <div id="_sec-imgs-prev" style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:8px">
+        ${(n.images||[]).map((s,i)=>`<div style="position:relative"><img src="${s}" style="height:70px;border-radius:3px;border:1px solid rgba(120,80,20,.25);object-fit:cover"><button onclick="_secRemoveImg(${i},'${id}')" style="position:absolute;top:-6px;right:-6px;background:#c03020;border:none;border-radius:50%;width:16px;height:16px;color:white;font-size:9px;cursor:pointer;display:flex;align-items:center;justify-content:center">✕</button></div>`).join('')}
+      </div>
+      <button onclick="document.getElementById('_sec-img-input').click()" style="padding:5px 14px;background:rgba(80,40,10,.1);border:1px solid rgba(120,80,20,.25);border-radius:3px;font-family:'Cinzel',serif;font-size:9px;cursor:pointer;color:#3a2008">📎 Ajouter une image</button>
+      <input type="file" id="_sec-img-input" accept="image/*" multiple style="display:none" onchange="_secAddImgs(this,'${id}')">
+    </div>
+    <div style="display:flex;gap:10px;justify-content:flex-end">
+      <button onclick="document.getElementById('_sec-modal').remove()" style="padding:8px 18px;background:rgba(80,40,10,.08);border:1px solid rgba(120,80,20,.2);border-radius:3px;font-family:'Cinzel',serif;font-size:10px;cursor:pointer;color:rgba(60,30,10,.6)">Annuler</button>
+      <button onclick="_secSave('${id}')" style="padding:8px 18px;background:rgba(120,80,20,.2);border:1px solid rgba(120,80,20,.5);border-radius:3px;font-family:'Cinzel',serif;font-size:10px;cursor:pointer;color:#3a2008">✓ Sceller le parchemin</button>
+    </div>
+  </div>`;
+  document.body.appendChild(m);
+  m.addEventListener('click',e=>{if(e.target===m)m.remove();});
+  if(!window._secPendImgs) window._secPendImgs={};
+  window._secPendImgs[id]=[...(n.images||[])];
+}
+
+function _secAddImgs(input, id){
+  if(!window._secPendImgs) window._secPendImgs={};
+  if(!window._secPendImgs[id]) window._secPendImgs[id]=[];
+  Array.from(input.files).forEach(f=>{
+    _uploadToCloudinary(f, url=>{ window._secPendImgs[id].push(url); _secRefreshImgPrev(id); });
+  });
+  input.value='';
+}
+function _secRemoveImg(idx, id){
+  if(!window._secPendImgs||!window._secPendImgs[id]) return;
+  window._secPendImgs[id].splice(idx,1); _secRefreshImgPrev(id);
+}
+function _secRefreshImgPrev(id){
+  const prev=document.getElementById('_sec-imgs-prev'); if(!prev) return;
+  const imgs=window._secPendImgs[id]||[];
+  prev.innerHTML=imgs.map((s,i)=>`<div style="position:relative"><img src="${s}" style="height:70px;border-radius:3px;border:1px solid rgba(120,80,20,.25);object-fit:cover"><button onclick="_secRemoveImg(${i},'${id}')" style="position:absolute;top:-6px;right:-6px;background:#c03020;border:none;border-radius:50%;width:16px;height:16px;color:white;font-size:9px;cursor:pointer">✕</button></div>`).join('');
+}
+function _secSave(id){
+  const n=db[id]; if(!n) return;
+  n.name=document.getElementById('_sec-name')?.value.trim()||n.name;
+  n.subtitle=document.getElementById('_sec-sub')?.value.trim()||'';
+  n.charBio=document.getElementById('_sec-body')?.value.trim()||'';
+  if(window._secPendImgs&&window._secPendImgs[id]!==undefined){
+    n.images=window._secPendImgs[id]; delete window._secPendImgs[id];
+  }
+  save();
+  document.getElementById('_sec-modal')?.remove();
+  renderTree();
+  if(window._secState?.id===id) _secRenderParchment(id);
+  else renderContent(n.parentId||id);
 }
 
 function _secGotoPage(id, page){
@@ -4551,6 +4678,7 @@ function _secCloseScrollDirect(){
   if(!overlay||!parchment) return;
   parchment.classList.remove('open');
   overlay.classList.remove('open');
+  document.getElementById('_sec-float-img')?.remove();
   setTimeout(()=>{
     parchment.style.visibility='hidden';
     const inner=document.getElementById('sec-parchment-inner');
