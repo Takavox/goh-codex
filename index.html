@@ -4718,12 +4718,12 @@ function _secLockCtx(e, secretId, lockIdx){
     r.innerHTML=`${icon} ${label}`;r.onclick=()=>{m.remove();fn();};m.appendChild(r);
   }
   if(isOpen){
-    row('🔒','Refermer le verrou',()=>{
+    row('🔒','Refaire l\'énigme',()=>{
       _secSetUnlocked(lockId, false);
       _secRenderParchment(secretId);
     });
   } else {
-    row('🔓','Ouvrir (passer l\'énigme)',()=>{ _secShowEnigma(secretId,lockIdx); });
+    if(_isAdmin()) row('🔓','Ouvrir sans énigme',()=>{ _secSetUnlocked(lockId, true); _secRenderParchment(secretId); });
   }
   document.body.appendChild(m);
   requestAnimationFrame(()=>{const r=m.getBoundingClientRect();if(r.right>window.innerWidth)m.style.left=(e.clientX-r.width)+'px';if(r.bottom>window.innerHeight)m.style.top=(e.clientY-r.height)+'px';});
@@ -4791,9 +4791,9 @@ function _secCheckAnswer(secretId, lockIdx){
   const inp=document.getElementById('_enigma-inp');
   if(!inp) return;
   const answer = inp.value.trim().toLowerCase();
-  const correct = (lock.answer||'').trim().toLowerCase();
-
-  if(answer === correct){
+  // Plusieurs bonnes réponses séparées par |
+  const acceptedAnswers = (lock.answer||'').split('|').map(a=>a.trim().toLowerCase()).filter(Boolean);
+  if(acceptedAnswers.includes(answer)){
     _secOnCorrect(secretId, lockIdx, lockId);
   } else {
     _secOnWrong(lockIdx);
@@ -4972,7 +4972,7 @@ function _secEditLock(secretId, lockIdx){
       <textarea id="_sle-question" rows="3" style="${inpStyle};resize:vertical" placeholder="Pour 'mot manquant' : Le roi de ___ fut le premier…">${esc(lock.question||'')}</textarea>
 
       <label style="${lblStyle}">RÉPONSE CORRECTE</label>
-      <input id="_sle-answer" value="${esc(lock.answer||'')}" style="${inpStyle}" placeholder="Réponse exacte (insensible à la casse)">
+      <input id="_sle-answer" value="${esc(lock.answer||'')}" style="${inpStyle}" placeholder="Réponse(s) — séparer par | pour plusieurs acceptées">
 
       <label style="${lblStyle}">INDICE (optionnel)</label>
       <input id="_sle-hint" value="${esc(lock.hint||'')}" style="${inpStyle}" placeholder="Un indice pour aider…">
