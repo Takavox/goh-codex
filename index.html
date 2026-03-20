@@ -4262,7 +4262,6 @@ function renderSecretsImmersive(v, n){
     .sec-reveal-footer{font-family:'EB Garamond',serif;font-size:10px;color:rgba(80,50,20,.3);font-style:italic;margin-top:8px;text-align:right}
     #sec-p-content{display:block}
     #sec-p-content .sec-lock-inline{display:flex;flex-direction:column;align-items:center;margin:12px auto}
-    #sec-p-content .sec-reveal-block{clear:left}
 
     .sec-p-btn-keep{border-color:rgba(80,80,200,.3)!important;color:#4060c0!important}
 
@@ -4596,24 +4595,28 @@ function _secRenderParchment(id){
     <button class="sec-p-btn" onclick="_secLockManager('${id}')">🔒 Verrous</button>
     <button class="sec-p-btn del" onclick="if(confirm('Supprimer ce secret ?')){_secCloseScrollDirect();doDelete('${id}')}">🗑</button>` : '';
 
-  // Poche image en haut à gauche du parchemin
-  const imgPocket = (n.images && n.images[0]) ? `
-    <div style="float:left;margin:0 16px 12px 0;position:relative">
-      <div style="width:100px;height:120px;border-radius:4px 4px 40px 4px;overflow:hidden;
-        border:2px solid rgba(120,80,20,.35);box-shadow:2px 4px 12px rgba(0,0,0,.4),inset 0 0 8px rgba(120,80,20,.08);
+  // Poche image : superposée en haut à gauche, hors flux du contenu
+  const hasImg = !!(n.images && n.images[0]);
+  const imgPocket = hasImg ? `
+    <div id="sec-img-pocket" style="position:absolute;top:32px;left:36px;z-index:2;pointer-events:all">
+      <div style="width:90px;height:110px;border-radius:4px 4px 36px 4px;overflow:hidden;
+        border:2px solid rgba(120,80,20,.35);box-shadow:2px 4px 12px rgba(0,0,0,.4);
         background:rgba(120,80,20,.06)">
         <img src="${n.images[0]}" style="width:100%;height:100%;object-fit:cover;cursor:zoom-in;display:block"
           onclick="openLB('${n.images[0]}')">
       </div>
-      <div style="position:absolute;bottom:-6px;right:-4px;width:18px;height:18px;border-radius:50%;
+      <div style="position:absolute;bottom:-5px;right:-3px;width:14px;height:14px;border-radius:50%;
         background:linear-gradient(135deg,rgba(160,100,20,.9),rgba(80,40,10,.9));
-        border:1px solid rgba(200,150,40,.4);box-shadow:1px 2px 4px rgba(0,0,0,.4)"></div>
+        border:1px solid rgba(200,150,40,.3)"></div>
     </div>` : '';
 
   inner.innerHTML = `
-    <div class="sec-p-title">${esc(n.name)}</div>
-    ${n.subtitle?`<div style="font-family:'EB Garamond',serif;font-size:13px;color:rgba(60,30,10,.5);font-style:italic;text-align:center;margin-bottom:14px">${esc(n.subtitle)}</div>`:''}
-    <div id="sec-p-content">${imgPocket}${contentHTML}</div>
+    <div style="position:relative">
+      ${imgPocket}
+      <div class="sec-p-title" style="${hasImg?'padding-left:110px;':''}">${esc(n.name)}</div>
+      ${n.subtitle?`<div style="font-family:'EB Garamond',serif;font-size:13px;color:rgba(60,30,10,.5);font-style:italic;text-align:center;margin-bottom:14px;${hasImg?'padding-left:110px;':''}">${esc(n.subtitle)}</div>`:''}
+    </div>
+    <div id="sec-p-content">${contentHTML}</div>
     ${paginationHTML}
     <div class="sec-p-actions">
       ${adminBtns}
