@@ -4344,7 +4344,7 @@ function renderSecretsImmersive(v, n){
   initCatAudio(n.id);
 
   const secO=document.getElementById('sec-outer');
-  if(secO) secO.oncontextmenu=e=>{e.preventDefault();e.stopPropagation();_showCatBgMenu(n.id,e.clientX,e.clientY);};
+  if(secO) secO.oncontextmenu=e=>{ if(e.target.closest('#sec-parchment-overlay,#sec-parchment,.sec-scroll-row,.sec-lock-inline,.sec-reveal-block')) return; e.preventDefault();e.stopPropagation();_showCatBgMenu(n.id,e.clientX,e.clientY); };
 }
 
 // ── Créer un nouveau secret (bypass openNewEntryModal) ──
