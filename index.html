@@ -4274,18 +4274,34 @@ function renderSecretsImmersive(v, n){
   const entries=children.filter(c=>c.type==='entry');
   const cats=children.filter(c=>c.type==='category');
 
-  // Couleurs de cire selon index
-  const waxColors=['#c0281a','#8b1a1a','#1a4a8b','#1a6b2a','#6b2a8b','#8b6b1a','#2a6b6b','#8b3a1a'];
-  const waxIcons=['🜁','☩','✦','⚔','🔮','⚜','🜂','⚡'];
-
   let scrollsHTML = '';
   entries.forEach((e,i)=>{
-    const col = waxColors[i % waxColors.length];
-    const ico = waxIcons[i % waxIcons.length];
+    // Sceau dynamique : rouge=aucun ouvert, jaune=partiel, vert=tout ouvert
+    const locks = e._locks||[];
+    const total = locks.length;
+    const opened = locks.filter((l,li)=>localStorage.getItem('goh_lock_'+(l._id||`${e.id}_lock_${li}`)) === '1').length;
+    const sealColor = total===0 ? '#c0281a'
+      : opened===0 ? '#c0281a'
+      : opened===total ? '#2a7a2a'
+      : '#b87a10';
+    const sealGlow = total===0 ? 'rgba(200,40,20,.4)'
+      : opened===0 ? 'rgba(200,40,20,.4)'
+      : opened===total ? 'rgba(40,160,40,.5)'
+      : 'rgba(200,140,20,.5)';
+    const sealSymbol = total===0 ? '✦'
+      : opened===0 ? '🔒'
+      : opened===total ? '🔓'
+      : '🔑';
+    const sealSVG = `<svg width="38" height="38" viewBox="0 0 38 38" xmlns="http://www.w3.org/2000/svg">
+      <circle cx="19" cy="19" r="18" fill="${sealColor}" stroke="rgba(0,0,0,.25)" stroke-width="1.5"/>
+      <circle cx="19" cy="19" r="14" fill="none" stroke="rgba(255,255,255,.15)" stroke-width="1"/>
+      <circle cx="19" cy="19" r="10" fill="none" stroke="rgba(255,255,255,.1)" stroke-width=".8"/>
+      <text x="19" y="24" text-anchor="middle" font-size="13" fill="rgba(255,255,255,.9)">${sealSymbol}</text>
+    </svg>`;
     scrollsHTML += `<div class="sec-scroll-row" onclick="_secOpenScroll('${e.id}')" oncontextmenu="event.preventDefault();event.stopPropagation();_secScrollCtx(event,'${e.id}')">
       <div class="sec-scroll-cap left" style="height:54px"></div>
       <div class="sec-scroll-body">
-        <div class="sec-wax-seal" style="background:${col}">${ico}</div>
+        <div class="sec-wax-seal" style="background:${sealColor};box-shadow:0 2px 8px ${sealGlow},inset 0 1px 0 rgba(255,255,255,.15)">${sealSVG}</div>
         <div style="flex:1;min-width:0">
           <div class="sec-scroll-name">${esc(e.name)}</div>
           ${e.subtitle?`<div class="sec-scroll-sub">${esc(e.subtitle)}</div>`:''}
@@ -4516,6 +4532,30 @@ function _secBuildPages(n){
 }
 
 // ── Rendre le parchemin (page courante) ──
+
+function _fiSavePos(id){
+  const fi=document.getElementById('_sec-float-img');if(!fi)return;
+  const rot=parseFloat((fi.style.transform||'rotate(0deg)').replace(/[^0-9.-]/g,''))||0;
+  const w=parseInt(fi.style.width)||150;
+  localStorage.setItem('goh_fi_'+id, JSON.stringify({
+    x:parseInt(fi.style.left),y:parseInt(fi.style.top),rot,w
+  }));
+}
+function _fiAdjustRot(id,delta){
+  const fi=document.getElementById('_sec-float-img');if(!fi)return;
+  const cur=parseFloat((fi.style.transform||'rotate(0deg)').replace(/[^0-9.-]/g,''))||0;
+  const newRot=cur+delta;
+  fi.style.transform=`rotate(${newRot}deg)`;
+  _fiSavePos(id);
+}
+function _fiAdjustSize(id,delta){
+  const fi=document.getElementById('_sec-float-img');if(!fi)return;
+  const cur=parseInt(fi.style.width)||150;
+  const newW=Math.max(60,Math.min(400,cur+delta));
+  fi.style.width=newW+'px';
+  _fiSavePos(id);
+}
+
 function _secRenderParchment(id){
   const n=db[id]; if(!n) return;
   const inner=document.getElementById('sec-parchment-inner');
@@ -4530,12 +4570,69 @@ function _secRenderParchment(id){
   // ── Image flottante hors parchemin ──
   document.getElementById('_sec-float-img')?.remove();
   if(n.images && n.images[0]){
+    // Charger position/rotation sauvegardée
+    const _fiKey = 'goh_fi_'+id;
+    const _fiSaved = JSON.parse(localStorage.getItem(_fiKey)||'{}');
+    const _fiX = _fiSaved.x ?? (window.innerWidth - 180);
+    const _fiY = _fiSaved.y ?? (window.innerHeight/2 - 80);
+    const _fiRot = _fiSaved.rot ?? 0;
+    const _fiW = _fiSaved.w ?? 150;
+
     const fi=document.createElement('div');
     fi.id='_sec-float-img';
-    fi.style.cssText='position:fixed;right:24px;top:50%;transform:translateY(-50%);z-index:1001;'+
-      'width:150px;border-radius:6px;overflow:hidden;box-shadow:0 8px 32px rgba(0,0,0,.85);'+
-      'border:2px solid rgba(120,80,20,.35);pointer-events:all';
-    fi.innerHTML=`<img src="${n.images[0]}" style="width:100%;display:block;cursor:zoom-in" onclick="openLB('${n.images[0]}')">`;
+    fi.style.cssText=`position:fixed;left:${_fiX}px;top:${_fiY}px;z-index:1001;`+
+      `width:${_fiW}px;border-radius:6px;overflow:visible;pointer-events:all;`+
+      `transform:rotate(${_fiRot}deg);filter:drop-shadow(0 8px 20px rgba(0,0,0,.85))`;
+
+    const imgEl = document.createElement('img');
+    imgEl.src = n.images[0];
+    imgEl.style.cssText = 'width:100%;display:block;border-radius:6px;border:2px solid rgba(120,80,20,.4);cursor:zoom-in';
+    imgEl.onclick = ()=>openLB(n.images[0]);
+    fi.appendChild(imgEl);
+
+    // Boutons admin
+    if(_isAdmin()){
+      const ctrl = document.createElement('div');
+      ctrl.style.cssText = 'display:flex;gap:4px;justify-content:center;margin-top:5px';
+      const btnStyle = 'padding:3px 7px;background:rgba(8,5,2,.88);border:1px solid rgba(120,80,20,.35);border-radius:4px;'+
+        'font-family:Cinzel,serif;font-size:9px;color:rgba(200,160,80,.8);cursor:pointer';
+      // Rotation -
+      const bRotL=document.createElement('button'); bRotL.textContent='↺'; bRotL.style.cssText=btnStyle;
+      bRotL.onclick=e=>{e.stopPropagation();_fiAdjustRot(id,-15);};
+      // Rotation +
+      const bRotR=document.createElement('button'); bRotR.textContent='↻'; bRotR.style.cssText=btnStyle;
+      bRotR.onclick=e=>{e.stopPropagation();_fiAdjustRot(id,15);};
+      // Taille -
+      const bSmall=document.createElement('button'); bSmall.textContent='−'; bSmall.style.cssText=btnStyle;
+      bSmall.onclick=e=>{e.stopPropagation();_fiAdjustSize(id,-20);};
+      // Taille +
+      const bBig=document.createElement('button'); bBig.textContent='+'; bBig.style.cssText=btnStyle;
+      bBig.onclick=e=>{e.stopPropagation();_fiAdjustSize(id,20);};
+      ctrl.append(bRotL,bRotR,bSmall,bBig);
+      fi.appendChild(ctrl);
+
+      // Drag pour déplacer
+      let _fiDragging=false,_fiDx=0,_fiDy=0;
+      imgEl.style.cursor='grab';
+      fi.addEventListener('mousedown',e=>{
+        if(e.button!==0||e.target.tagName==='BUTTON') return;
+        e.preventDefault(); _fiDragging=true;
+        const r=fi.getBoundingClientRect();
+        _fiDx=e.clientX-r.left; _fiDy=e.clientY-r.top;
+        imgEl.style.cursor='grabbing';
+      });
+      document.addEventListener('mousemove',function _fimove(e){
+        if(!_fiDragging) return;
+        fi.style.left=(e.clientX-_fiDx)+'px';
+        fi.style.top=(e.clientY-_fiDy)+'px';
+      });
+      document.addEventListener('mouseup',function _fiup(){
+        if(!_fiDragging) return;
+        _fiDragging=false; imgEl.style.cursor='grab';
+        _fiSavePos(id);
+      });
+    }
+
     document.body.appendChild(fi);
   }
 
