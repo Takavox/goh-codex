@@ -5249,19 +5249,26 @@ function _geoNavigateToPoint(nodeId,px,py){
   const GS=window._geoState;if(!GS)return;
   const boat=GS.boat;
   const n=db[nodeId];
-  // Grille déjà chargée dans GS.grid à l'init
-  const x0=Math.round(boat.x*GS.gridW);
-  const y0=Math.round(boat.y*GS.gridH);
-  const x1=Math.round(px*GS.gridW);
-  const y1=Math.round(py*GS.gridH);
-  // Vérifier que la destination n'est pas sur la terre
+  // Toujours recharger la grille depuis la DB
+  if(n&&n._geoGridData){
+    try{
+      const raw=n._geoGridData;const gW=n._geoGridW||80,gH=n._geoGridH||50;
+      let g;if(raw instanceof Uint8Array){g=raw;}else if(Array.isArray(raw)){g=new Uint8Array(raw);}
+      else{g=new Uint8Array(gW*gH);Object.keys(raw).forEach(k=>{g[+k]=raw[k];});}
+      GS.grid=g;GS.gridW=gW;GS.gridH=gH;
+    }catch(e){}
+  }
+  const x0=Math.max(0,Math.min(GS.gridW-1,Math.round(boat.x*GS.gridW)));
+  const y0=Math.max(0,Math.min(GS.gridH-1,Math.round(boat.y*GS.gridH)));
+  const x1=Math.max(0,Math.min(GS.gridW-1,Math.round(px*GS.gridW)));
+  const y1=Math.max(0,Math.min(GS.gridH-1,Math.round(py*GS.gridH)));
   if(GS.grid&&GS.grid[y1*GS.gridW+x1]===1){
     _geoShowHint('Impossible — zone de terre');
     return;
   }
-  let path=_geoAstar(GS.grid,GS.gridW,GS.gridH,x0,y0,x1,y1);
+  let path=GS.grid?_geoAstar(GS.grid,GS.gridW,GS.gridH,x0,y0,x1,y1):null;
   if(!path) path=[[x1,y1]];
-  if(path.length>4) path=path.filter((_,i)=>i%2===0||i===path.length-1);
+  // Pas de simplification — respecter les obstacles
   boat.path=path;
   boat.pathIdx=0;
   boat.moving=true;
@@ -5387,26 +5394,33 @@ function _geoNavigateTo(nodeId,poiIdx){
   const n=db[nodeId];if(!n)return;
   const poi=(n._geoPois||[])[poiIdx];if(!poi)return;
 
-  // Grille déjà chargée dans GS.grid à l'init
+  // Toujours recharger la grille depuis la DB (au cas où elle a été modifiée)
+  if(n._geoGridData){
+    try{
+      const raw=n._geoGridData;
+      const gW=n._geoGridW||80, gH=n._geoGridH||50;
+      let g;
+      if(raw instanceof Uint8Array){ g=raw; }
+      else if(Array.isArray(raw)){ g=new Uint8Array(raw); }
+      else{ g=new Uint8Array(gW*gH); Object.keys(raw).forEach(k=>{g[+k]=raw[k];}); }
+      GS.grid=g; GS.gridW=gW; GS.gridH=gH;
+    }catch(e){}
+  }
 
   const boat=GS.boat;
-  const x0=Math.round(boat.x*GS.gridW);
-  const y0=Math.round(boat.y*GS.gridH);
-  const x1=Math.round(poi.x*GS.gridW);
-  const y1=Math.round(poi.y*GS.gridH);
+  const x0=Math.max(0,Math.min(GS.gridW-1,Math.round(boat.x*GS.gridW)));
+  const y0=Math.max(0,Math.min(GS.gridH-1,Math.round(boat.y*GS.gridH)));
+  const x1=Math.max(0,Math.min(GS.gridW-1,Math.round(poi.x*GS.gridW)));
+  const y1=Math.max(0,Math.min(GS.gridH-1,Math.round(poi.y*GS.gridH)));
 
-  let path=_geoAstar(GS.grid,GS.gridW,GS.gridH,x0,y0,x1,y1);
+  // Debug : compter les cases de terre
+  const landCount=GS.grid?Array.from(GS.grid).filter(v=>v===1).length:0;
+  console.log(`[Geo] Grid ${GS.gridW}x${GS.gridH}, terre=${landCount} cases, de (${x0},${y0}) vers (${x1},${y1})`);
 
-  if(!path){
-    // Pas de chemin → aller directement
-    path=[[x1,y1]];
-  }
+  let path=GS.grid?_geoAstar(GS.grid,GS.gridW,GS.gridH,x0,y0,x1,y1):null;
+  if(!path){ path=[[x1,y1]]; console.warn('[Geo] Pas de chemin A* trouvé, trajet direct'); }
 
-  // Lisser le chemin (Douglas-Peucker simplifié)
-  if(path.length>4){
-    path=path.filter((_,i)=>i%2===0||i===path.length-1);
-  }
-
+  // Ne PAS simplifier le chemin — garder tous les points pour éviter de couper à travers la terre
   boat.path=path;
   boat.pathIdx=0;
   boat.moving=true;
@@ -5415,12 +5429,10 @@ function _geoNavigateTo(nodeId,poiIdx){
 
   GS.pendingNodeId=poi.linkId||null;
 
-  // Highlight POI destination
   document.querySelectorAll('.geo-poi').forEach(el=>el.classList.remove('geo-poi-dest'));
   const poiEl=document.getElementById(`geo-poi-${poiIdx}`);
   if(poiEl)poiEl.classList.add('geo-poi-dest');
 
-  // Hint
   _geoShowHint(poi.name?`Cap sur ${poi.name}…`:'Navigation en cours…');
 }
 
