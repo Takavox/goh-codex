@@ -682,8 +682,7 @@ body.visitor-mode .msub-btn-row{ display:none !important; }
 /* Gates of Hades : + Nouvelle Porte + Modifier */
 body.visitor-mode .hg-btn-row{ display:none !important; }
 
-/* Royaume / Geographie : + Nouveau Lieu + Modifier */
-body.visitor-mode .geo-btn-row{ display:none !important; }
+
 
 /* Monde (world immersive) : + Sous-categorie + Modifier */
 body.visitor-mode .il-btn-row{ display:none !important; }
@@ -3302,14 +3301,8 @@ function renderCategory(v,n){
     return;
   }
 
-  // ── Special immersive render for Royaumes & Nations ──
-  if(n.name==='Royaumes & Nations'||n.kind==='world-root'){
-    renderRoyaumesImmersive(v,n);
-    return;
-  }
-
-  // ── Special immersive render for Géographie ──
-  if(n.name==='Géographie'){
+  // ── Special immersive render for Royaumes & Nations / Géographie / Pays ──
+  if(n.name==='Royaumes & Nations'||n.kind==='world-root'||n.name==='Géographie'){
     renderGeographieImmersive(v,n);
     return;
   }
@@ -4540,92 +4533,6 @@ function startSecretsCanvas(){
 // ════════════════════════════════════════════
 let _geoAnim = null;
 
-function renderRoyaumesImmersive(v, n){
-  if(_geoAnim){cancelAnimationFrame(_geoAnim);_geoAnim=null;}
-  const children=(n.children||[]).map(id=>db[id]).filter(Boolean);
-  const cats=children.filter(c=>c.type==='category'||c.type==='gate');
-  const ents=children.filter(c=>c.type==='entry');
-
-  const oldS=document.getElementById('geo-style');if(oldS)oldS.remove();
-  const s=document.createElement('style');s.id='geo-style';
-  s.textContent=`
-    #geo-outer{position:relative;width:100%;min-height:calc(100vh - 90px);overflow:hidden;background:#06050e}
-    #geo-canvas{position:absolute;top:0;left:0;pointer-events:none;z-index:1}
-    #geo-ui{position:relative;z-index:2;display:flex;flex-direction:column;align-items:center;padding:50px 30px 80px}
-    .geo-title{font-family:'Cinzel Decorative',serif;font-size:clamp(18px,2.5vw,34px);color:#e8e0c8;text-shadow:0 0 40px rgba(180,150,80,.5),0 2px 8px rgba(0,0,0,.9);letter-spacing:10px;margin-bottom:8px;text-align:center}
-    .geo-rule{width:280px;height:1px;margin:0 auto 6px;background:linear-gradient(90deg,transparent,rgba(180,150,80,.6),transparent)}
-    .geo-sub{font-family:'EB Garamond',serif;font-size:13px;color:rgba(200,185,140,.5);font-style:italic;letter-spacing:3px;text-align:center;margin-bottom:40px}
-    .geo-globe-wrap{position:relative;width:min(520px,88vw);height:min(520px,88vw);margin:0 auto 50px;flex-shrink:0}
-    .geo-globe-shadow{position:absolute;bottom:-28px;left:50%;transform:translateX(-50%);width:65%;height:28px;background:radial-gradient(ellipse,rgba(0,0,0,.55) 0%,transparent 70%);filter:blur(8px)}
-    #geo-globe-canvas{width:100%;height:100%;border-radius:50%;display:block;cursor:pointer}
-    .geo-globe-ring{position:absolute;inset:-8px;border-radius:50%;border:1px solid rgba(180,150,80,.22);pointer-events:none;animation:geoRingPulse 4s ease-in-out infinite}
-    .geo-globe-ring2{position:absolute;inset:-20px;border-radius:50%;border:1px solid rgba(180,150,80,.08);pointer-events:none;animation:geoRingPulse 4s ease-in-out infinite .9s}
-    @keyframes geoRingPulse{0%,100%{opacity:.4;transform:scale(1)}50%{opacity:.9;transform:scale(1.012)}}
-    .geo-kingdoms-overlay{position:absolute;inset:0;border-radius:50%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;padding:18%;pointer-events:none;z-index:2}
-    .geo-kingdoms-list{display:flex;flex-direction:column;gap:8px;width:100%;pointer-events:all}
-    .geo-kingdom-btn{display:flex;align-items:center;gap:10px;background:rgba(6,4,14,.78);border:1px solid rgba(180,150,80,.35);border-radius:7px;padding:10px 14px;cursor:pointer;transition:all .2s;backdrop-filter:blur(6px);box-shadow:0 2px 12px rgba(0,0,0,.6)}
-    .geo-kingdom-btn:hover{border-color:rgba(210,180,100,.7);background:rgba(14,10,26,.92);transform:scale(1.04);box-shadow:0 4px 20px rgba(0,0,0,.7),0 0 14px rgba(180,150,60,.15)}
-    .geo-kingdom-btn-icon{flex-shrink:0;width:28px;text-align:center}
-    .geo-kingdom-btn-text{flex:1;min-width:0}
-    .geo-kingdom-btn-name{font-family:'Cinzel',serif;font-size:11px;letter-spacing:1px;color:#e0d4a8;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-    .geo-kingdom-btn-sub{font-family:'EB Garamond',serif;font-size:10px;color:rgba(180,160,110,.5);font-style:italic;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-    .geo-kingdom-btn-arrow{font-size:16px;color:rgba(200,175,100,.4);flex-shrink:0;transition:transform .2s,color .2s}
-    .geo-kingdom-btn:hover .geo-kingdom-btn-arrow{transform:translateX(3px);color:rgba(220,195,120,.8)}
-    .geo-btn-row{margin-top:20px;display:flex;gap:12px;flex-wrap:wrap;justify-content:center}
-  `;
-  document.head.appendChild(s);
-
-  v.style.padding='0';v.style.overflow='auto';
-
-  // Kingdom navigation buttons
-  let kingdomBtns='';
-  [...cats,...ents].forEach(c=>{
-    const iconHtml = c.iconData
-      ? `<img src="${c.iconData}" style="width:32px;height:32px;object-fit:contain;border-radius:3px">`
-      : `<span style="font-size:26px">${c.icon||'🗺'}</span>`;
-    kingdomBtns+=`
-      <div class="geo-kingdom-btn" onclick="selectNode('${c.id}')">
-        <div class="geo-kingdom-btn-icon">${iconHtml}</div>
-        <div class="geo-kingdom-btn-text">
-          <div class="geo-kingdom-btn-name">${esc(c.name)}</div>
-          ${c.subtitle?`<div class="geo-kingdom-btn-sub">${esc(c.subtitle)}</div>`:''}
-        </div>
-        <div class="geo-kingdom-btn-arrow">›</div>
-      </div>`;
-  });
-
-  v.innerHTML=`<div id="geo-outer">
-    <canvas id="geo-canvas"></canvas>
-    <div id="geo-ui">
-      <div class="geo-title">${esc(n.name)}</div>
-      <div class="geo-rule"></div>
-      <div class="geo-sub">${esc(n.subtitle||"Royaumes et territoires du monde")}</div>
-      <div class="geo-globe-wrap" id="geo-globe-wrap">
-        <canvas id="geo-globe-canvas" onclick="_carteOpenGlobeLB()" title="Cliquer pour agrandir"></canvas>
-        <div class="geo-globe-ring"></div>
-        <div class="geo-globe-ring2"></div>
-        <div class="geo-globe-shadow"></div>
-      </div>
-      ${kingdomBtns?`<div class="geo-kingdoms-overlay"><div class="geo-kingdoms-list">${kingdomBtns}</div></div>`:''}
-      <div class="geo-btn-row">
-        <button class="btn p" onclick="openNewCatModal('${n.id}','world')" style="border-color:#4a4020;color:#c8a850">👑 + Nouveau Royaume</button>
-        <button class="btn p" onclick="openNewEntryModal('${n.id}','map')" style="border-color:#3a3020;color:#a08840">🗺 + Nouveau Lieu</button>
-        <button class="btn" onclick="openEditModal('${n.id}')">✎ Modifier</button>
-      </div>
-    </div>
-  </div>`;
-
-  startGeoBackground();
-  requestAnimationFrame(startGeoGlobe);
-  initCatAudio(n.id);
-  _injectCatBg('geo-outer', n.id);
-  // Clic droit sur le globe → menu image globe ; ailleurs → menu fond général
-  const _geoGlobe = document.getElementById('geo-globe-canvas');
-  if(_geoGlobe) _geoGlobe.oncontextmenu = e=>{ e.preventDefault(); e.stopPropagation(); _showGeoGlobeMenu(n.id, e.clientX, e.clientY); };
-  document.getElementById('geo-outer').oncontextmenu = e=>{ e.preventDefault(); _showCatBgMenu(n.id, e.clientX, e.clientY); };
-}
-
-
 function renderGeographieImmersive(v, n){
   if(_geoAnim){cancelAnimationFrame(_geoAnim);_geoAnim=null;}
 
@@ -4691,13 +4598,19 @@ function renderGeographieImmersive(v, n){
       </div>
     </div>`;
 
-  // Afficher boutons admin
-  if(_isAdmin()){
-    document.getElementById('geo-admin-sep').style.display='';
-    document.getElementById('geo-btn-land').style.display='';
-    document.getElementById('geo-btn-size').style.display='';
-    document.getElementById('geo-btn-map').style.display='';
-  }
+  // Afficher boutons admin (requestAnimationFrame pour s'assurer que le DOM est prêt)
+  requestAnimationFrame(()=>{
+    if(_isAdmin()){
+      const sep=document.getElementById('geo-admin-sep');
+      const bl=document.getElementById('geo-btn-land');
+      const bs=document.getElementById('geo-btn-size');
+      const bm=document.getElementById('geo-btn-map');
+      if(sep)sep.style.display='';
+      if(bl)bl.style.display='';
+      if(bs)bs.style.display='';
+      if(bm)bm.style.display='';
+    }
+  });
 
   // State
   // Charger la grille sauvegardée si disponible
@@ -10557,69 +10470,7 @@ function _brootCtxMenu(e, id){
 }
 
 
-function _showGeoGlobeMenu(nodeId, x, y){
-  if(!_isAdmin()) return;
-  document.getElementById('_geo-globe-menu')?.remove();
-  const n = db[nodeId]; if(!n) return;
-  const hasGlobe = !!n._globeImage;
 
-  const m = document.createElement('div');
-  m.id = '_geo-globe-menu';
-  m.style.cssText = `position:fixed;left:${x}px;top:${y}px;z-index:9999;
-    background:rgba(6,5,14,.97);border:1px solid rgba(180,150,80,.35);border-radius:7px;
-    padding:6px 0;min-width:220px;font-family:'Cinzel',serif;font-size:11px;
-    box-shadow:0 8px 32px rgba(0,0,0,.85);backdrop-filter:blur(6px)`;
-
-  const _ggmLabel = hasGlobe ? '🔄 Changer l\'image du globe' : '🌍 Ajouter une image au globe';
-  m.innerHTML = `
-    <div style="padding:7px 14px;font-size:8.5px;letter-spacing:2.5px;text-transform:uppercase;color:rgba(180,150,80,.45);border-bottom:1px solid rgba(180,150,80,.15);margin-bottom:4px">🌍 Image du Globe</div>
-    <div id="_ggm-load" style="padding:9px 16px;color:#e0d4a8;cursor:pointer;letter-spacing:1px"
-      onmouseenter="this.style.background='rgba(180,150,80,.12)'" onmouseleave="this.style.background=''">
-      ${_ggmLabel}
-    </div>
-    ${hasGlobe ? `
-    <div id="_ggm-remove" style="padding:9px 16px;color:#e07878;cursor:pointer;letter-spacing:1px"
-      onmouseenter="this.style.background='rgba(200,80,80,.12)'" onmouseleave="this.style.background=''">
-      🗑 Restaurer la carte par défaut
-    </div>` : ''}
-    <div style="border-top:1px solid rgba(180,150,80,.12);margin-top:4px">
-      <div style="padding:8px 16px;color:rgba(180,160,100,.4);cursor:pointer;font-size:10px"
-        onmouseenter="this.style.background='rgba(180,150,80,.08)'" onmouseleave="this.style.background=''"
-        onclick="document.getElementById('_geo-globe-menu')?.remove()">✕ Fermer</div>
-    </div>`;
-
-  document.body.appendChild(m);
-
-  requestAnimationFrame(()=>{
-    const r=m.getBoundingClientRect();
-    if(r.right>window.innerWidth)  m.style.left=(x-r.width-6)+'px';
-    if(r.bottom>window.innerHeight) m.style.top=(y-r.height-6)+'px';
-  });
-
-  m.querySelector('#_ggm-load').onclick = ()=>{
-    m.remove();
-    const inp=document.createElement('input');inp.type='file';inp.accept='image/*';
-    inp.onchange=e=>{
-      const file=e.target.files[0];if(!file)return;
-      _uploadToCloudinary(file, url=>{
-        n._globeImage=url;
-        save();
-        renderContent(nodeId);
-      });
-    };
-    inp.click();
-  };
-
-  const removeBtn = m.querySelector('#_ggm-remove');
-  if(removeBtn) removeBtn.onclick=()=>{
-    m.remove();
-    delete n._globeImage;
-    save();
-    renderContent(nodeId);
-  };
-
-  setTimeout(()=>document.addEventListener('click',function _c(){m.remove();document.removeEventListener('click',_c);}),0);
-}
 
 
 function _secOpenScrollEntry(v, n){
@@ -11069,19 +10920,7 @@ function _cartePoiImgClear(){
 }
 
 
-function _carteOpenGlobeLB(){
-  const gc = document.getElementById('geo-globe-canvas');
-  if(!gc) return;
-  // Essayer de capturer le canvas
-  try {
-    const src = gc.toDataURL('image/png');
-    openLB(src);
-  } catch(e) {
-    // Si le canvas est tainted (CORS), fallback sur ILLUMIA_MAP
-    const n = db[cur];
-    openLB((n && n._globeImage) || ILLUMIA_MAP);
-  }
-}
+
 
 function exportData(withImages=true){
   let payload;
