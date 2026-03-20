@@ -4647,6 +4647,28 @@ function _showGeoSoundMenu(x, y){
   setTimeout(()=>document.addEventListener('click',function _c(e){if(!menu.contains(e.target)){menu.remove();document.removeEventListener('click',_c);}},10));
 }
 
+
+// Charger la grille d'un nœud en Uint8Array de façon robuste
+function _geoLoadGridFromNode(n){
+  if(!n||!n._geoGridData) return null;
+  const raw=n._geoGridData;
+  const W=n._geoGridW||80, H=n._geoGridH||50;
+  try{
+    if(raw instanceof Uint8Array && raw.length===W*H) return raw;
+    if(Array.isArray(raw) && raw.length===W*H) return new Uint8Array(raw);
+    // Objet JSON {0:v, 1:v, ...} — cas Supabase
+    const arr=new Uint8Array(W*H);
+    const keys=Object.keys(raw);
+    keys.forEach(k=>{ const i=parseInt(k); if(i>=0&&i<W*H) arr[i]=raw[k]?1:0; });
+    // Vérifier que des données ont bien été copiées
+    if(arr.some(v=>v===1)) return arr;
+    // Dernière tentative : valeurs numérotées
+    const arr2=new Uint8Array(W*H);
+    for(let i=0;i<W*H;i++){ if(raw[i]!==undefined) arr2[i]=raw[i]?1:0; }
+    return arr2;
+  }catch(e){ console.warn('Grid load error',e); return null; }
+}
+
 function renderGeographieImmersive(v, n){
   if(_geoAnim){cancelAnimationFrame(_geoAnim);_geoAnim=null;}
 
@@ -4707,7 +4729,7 @@ function renderGeographieImmersive(v, n){
         <div id="geo-toolbar">
           <span style="font-family:'Cinzel Decorative',serif;font-size:10px;color:rgba(200,175,120,.6);letter-spacing:2px">🗺</span>
           <div class="geo-tb-sep"></div>
-          <button class="geo-tb-btn" id="geo-btn-poi" onclick="_geoTogglePOIMode('${nodeId}')">📍 Ajouter un point</button>
+          ${_isAdmin()?`<button class="geo-tb-btn" id="geo-btn-poi" onclick="_geoTogglePOIMode('${nodeId}')">📍 Ajouter un point</button>`:''}
           <span id="geo-grid-dbg" style="font-family:'Cinzel',serif;font-size:8px;color:rgba(180,140,40,.5);letter-spacing:1px"></span>
           <div class="geo-tb-sep" id="geo-admin-sep" style="display:none"></div>
           <button class="geo-tb-btn" id="geo-btn-land" style="display:none" onclick="_geoToggleLandMode('${nodeId}')">🏔 Terre/Eau</button>
@@ -4765,21 +4787,11 @@ function renderGeographieImmersive(v, n){
   // State
   // Charger la grille sauvegardée si disponible
   // Charger la grille sauvegardée — gère tableau JS ou objet JSON (après Supabase)
-  let savedGrid = null;
   const savedGridW = n._geoGridW || 80;
   const savedGridH = n._geoGridH || 50;
-  if(n._geoGridData){
-    try{
-      const raw = n._geoGridData;
-      if(raw instanceof Uint8Array){ savedGrid=raw; }
-      else if(Array.isArray(raw)){ savedGrid=new Uint8Array(raw); }
-      else { // objet {0:v,1:v,...} depuis JSON
-        const arr=new Uint8Array(savedGridW*savedGridH);
-        Object.keys(raw).forEach(k=>{ arr[+k]=raw[k]; });
-        savedGrid=arr;
-      }
-    }catch(e){ console.warn('Geo grid load error',e); }
-  }
+  const savedGrid = _geoLoadGridFromNode(n);
+  if(savedGrid) console.log('[Geo] Grille chargée:', Array.from(savedGrid).filter(v=>v===1).length,'cases terre');
+  else console.log('[Geo] Aucune grille sauvegardée');
 
   const GS = {
     nodeId, mapImg,
@@ -5255,14 +5267,7 @@ function _geoNavigateToPoint(nodeId,px,py){
   const boat=GS.boat;
   const n=db[nodeId];
   // Toujours recharger la grille depuis la DB
-  if(n&&n._geoGridData){
-    try{
-      const raw=n._geoGridData;const gW=n._geoGridW||80,gH=n._geoGridH||50;
-      let g;if(raw instanceof Uint8Array){g=raw;}else if(Array.isArray(raw)){g=new Uint8Array(raw);}
-      else{g=new Uint8Array(gW*gH);Object.keys(raw).forEach(k=>{g[+k]=raw[k];});}
-      GS.grid=g;GS.gridW=gW;GS.gridH=gH;
-    }catch(e){}
-  }
+  if(n){ const _fg=_geoLoadGridFromNode(n); if(_fg){GS.grid=_fg;GS.gridW=n._geoGridW||80;GS.gridH=n._geoGridH||50;} }
   const x0=Math.max(0,Math.min(GS.gridW-1,Math.round(boat.x*GS.gridW)));
   const y0=Math.max(0,Math.min(GS.gridH-1,Math.round(boat.y*GS.gridH)));
   const x1=Math.max(0,Math.min(GS.gridW-1,Math.round(px*GS.gridW)));
@@ -5399,18 +5404,9 @@ function _geoNavigateTo(nodeId,poiIdx){
   const n=db[nodeId];if(!n)return;
   const poi=(n._geoPois||[])[poiIdx];if(!poi)return;
 
-  // Toujours recharger la grille depuis la DB (au cas où elle a été modifiée)
-  if(n._geoGridData){
-    try{
-      const raw=n._geoGridData;
-      const gW=n._geoGridW||80, gH=n._geoGridH||50;
-      let g;
-      if(raw instanceof Uint8Array){ g=raw; }
-      else if(Array.isArray(raw)){ g=new Uint8Array(raw); }
-      else{ g=new Uint8Array(gW*gH); Object.keys(raw).forEach(k=>{g[+k]=raw[k];}); }
-      GS.grid=g; GS.gridW=gW; GS.gridH=gH;
-    }catch(e){}
-  }
+  // Toujours recharger la grille depuis la DB
+  const _freshGrid = _geoLoadGridFromNode(n);
+  if(_freshGrid){ GS.grid=_freshGrid; GS.gridW=n._geoGridW||80; GS.gridH=n._geoGridH||50; }
 
   const boat=GS.boat;
   const x0=Math.max(0,Math.min(GS.gridW-1,Math.round(boat.x*GS.gridW)));
