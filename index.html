@@ -4537,9 +4537,8 @@ function _fiSavePos(id){
   const fi=document.getElementById('_sec-float-img');if(!fi)return;
   const rot=parseFloat((fi.style.transform||'rotate(0deg)').replace(/[^0-9.-]/g,''))||0;
   const w=parseInt(fi.style.width)||150;
-  localStorage.setItem('goh_fi_'+id, JSON.stringify({
-    x:parseInt(fi.style.left),y:parseInt(fi.style.top),rot,w
-  }));
+  const pos={x:parseInt(fi.style.left),y:parseInt(fi.style.top),rot,w};
+  const n=db[id];if(n){n._floatImgPos=pos;save();}
 }
 function _fiAdjustRot(id,delta){
   const fi=document.getElementById('_sec-float-img');if(!fi)return;
@@ -4571,8 +4570,7 @@ function _secRenderParchment(id){
   document.getElementById('_sec-float-img')?.remove();
   if(n.images && n.images[0]){
     // Charger position/rotation sauvegardée
-    const _fiKey = 'goh_fi_'+id;
-    const _fiSaved = JSON.parse(localStorage.getItem(_fiKey)||'{}');
+    const _fiSaved = db[id]?._floatImgPos || {};
     const _fiX = _fiSaved.x ?? (window.innerWidth - 180);
     const _fiY = _fiSaved.y ?? (window.innerHeight/2 - 80);
     const _fiRot = _fiSaved.rot ?? 0;
