@@ -4628,172 +4628,669 @@ function renderRoyaumesImmersive(v, n){
 
 function renderGeographieImmersive(v, n){
   if(_geoAnim){cancelAnimationFrame(_geoAnim);_geoAnim=null;}
-  const children=(n.children||[]).map(id=>db[id]).filter(Boolean);
-  const cats=children.filter(c=>c.type==='category'||c.type==='gate');
-  const ents=children.filter(c=>c.type==='entry');
 
   const oldS=document.getElementById('geo-style');if(oldS)oldS.remove();
   const s=document.createElement('style');s.id='geo-style';
   s.textContent=`
-    #geo-outer{position:relative;width:100%;min-height:calc(100vh - 90px);overflow:hidden;background:#06050e}
-    #geo-canvas{position:absolute;top:0;left:0;pointer-events:none;z-index:1}
-    #geo-ui{position:relative;z-index:2;display:flex;flex-direction:column;align-items:center;padding:50px 30px 80px}
-    .geo-title{font-family:'Cinzel Decorative',serif;font-size:clamp(18px,2.5vw,34px);color:#e8e0c8;text-shadow:0 0 40px rgba(180,150,80,.5),0 2px 8px rgba(0,0,0,.9);letter-spacing:10px;margin-bottom:8px;text-align:center}
-    .geo-rule{width:280px;height:1px;margin:0 auto 6px;background:linear-gradient(90deg,transparent,rgba(180,150,80,.6),transparent)}
-    .geo-sub{font-family:'EB Garamond',serif;font-size:13px;color:rgba(200,185,140,.5);font-style:italic;letter-spacing:3px;text-align:center;margin-bottom:40px}
-    .geo-globe-wrap{position:relative;width:min(440px,75vw);height:min(440px,75vw);margin:0 auto 50px;flex-shrink:0}
-    .geo-globe-shadow{position:absolute;bottom:-28px;left:50%;transform:translateX(-50%);width:65%;height:28px;background:radial-gradient(ellipse,rgba(0,0,0,.55) 0%,transparent 70%);filter:blur(8px)}
-    #geo-globe-canvas{width:100%;height:100%;border-radius:50%;display:block;cursor:pointer}
-    .geo-globe-ring{position:absolute;inset:-8px;border-radius:50%;border:1px solid rgba(180,150,80,.22);pointer-events:none;animation:geoRingPulse 4s ease-in-out infinite}
-    .geo-globe-ring2{position:absolute;inset:-20px;border-radius:50%;border:1px solid rgba(180,150,80,.08);pointer-events:none;animation:geoRingPulse 4s ease-in-out infinite .9s}
-    @keyframes geoRingPulse{0%,100%{opacity:.4;transform:scale(1)}50%{opacity:.9;transform:scale(1.012)}}
-    .geo-map-card{width:100%;max-width:1000px;border:1px solid rgba(180,150,80,.28);border-radius:8px;overflow:hidden;background:rgba(10,8,20,.85);box-shadow:0 0 60px rgba(0,0,0,.65),0 0 30px rgba(100,80,30,.1);margin-bottom:40px;cursor:zoom-in}
-    .geo-map-img{width:100%;display:block;max-height:72vh;object-fit:contain}
-    .geo-map-bar{padding:10px 20px;display:flex;align-items:center;justify-content:space-between;background:rgba(0,0,0,.45);border-top:1px solid rgba(180,150,80,.12)}
-    .geo-map-label{font-family:'Cinzel',serif;font-size:9px;letter-spacing:2px;text-transform:uppercase;color:rgba(200,180,120,.55)}
-    .geo-map-hint{font-family:'EB Garamond',serif;font-size:11px;color:rgba(180,160,100,.4);font-style:italic}
-    .geo-grid{width:100%;max-width:1000px;display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:16px;margin-bottom:30px}
-    .geo-card{background:rgba(18,14,28,.88);border:1px solid rgba(180,150,80,.16);border-radius:6px;padding:16px;cursor:pointer;transition:transform .25s,border-color .25s,box-shadow .25s}
-    .geo-card:hover{transform:translateY(-4px);border-color:rgba(200,170,100,.38);box-shadow:0 8px 30px rgba(0,0,0,.5),0 0 16px rgba(180,150,60,.07)}
-    .geo-card-icon{font-size:22px;margin-bottom:8px}
-    .geo-card-name{font-family:'Cinzel',serif;font-size:10px;letter-spacing:1px;color:#d8cca8;margin-bottom:4px}
-    .geo-card-sub{font-family:'EB Garamond',serif;font-size:12px;color:rgba(180,160,120,.5);font-style:italic}
-    .geo-btn-row{margin-top:20px;display:flex;gap:12px;flex-wrap:wrap;justify-content:center}
+    #geo-outer{position:relative;width:100%;height:calc(100vh - 90px);overflow:hidden;background:#040810;user-select:none}
+    #geo-map-canvas{position:absolute;inset:0;width:100%;height:100%;display:block}
+    #geo-ui-overlay{position:absolute;inset:0;pointer-events:none;z-index:10}
+    .geo-poi{position:absolute;transform:translate(-50%,-50%);cursor:pointer;pointer-events:all;z-index:20;transition:transform .15s}
+    .geo-poi:hover{transform:translate(-50%,-50%) scale(1.25)}
+    .geo-poi-dot{width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:16px;border:2px solid rgba(255,255,255,.4);box-shadow:0 2px 12px rgba(0,0,0,.8),0 0 0 4px rgba(0,0,0,.5);background:rgba(20,10,5,.85);animation:geo-poi-pulse 2.5s ease-in-out infinite}
+    @keyframes geo-poi-pulse{0%,100%{box-shadow:0 2px 12px rgba(0,0,0,.8),0 0 0 4px rgba(0,0,0,.5),0 0 0 0 rgba(200,160,60,.4)}50%{box-shadow:0 2px 12px rgba(0,0,0,.8),0 0 0 4px rgba(0,0,0,.5),0 0 0 8px rgba(200,160,60,0)}}
+    .geo-poi-label{position:absolute;top:36px;left:50%;transform:translateX(-50%);white-space:nowrap;font-family:'Cinzel',serif;font-size:9px;color:#f0e0a0;background:rgba(6,4,0,.92);padding:3px 8px;border-radius:3px;pointer-events:none;opacity:0;transition:opacity .15s;border:1px solid rgba(180,140,40,.3)}
+    .geo-poi:hover .geo-poi-label{opacity:1}
+    .geo-poi-dest{animation:geo-poi-pulse 1s ease-in-out infinite!important}
+    #geo-toolbar{position:absolute;top:14px;left:50%;transform:translateX(-50%);z-index:30;display:flex;gap:8px;align-items:center;background:rgba(4,6,14,.88);border:1px solid rgba(180,140,40,.25);border-radius:24px;padding:7px 16px;pointer-events:all;backdrop-filter:blur(6px)}
+    .geo-tb-btn{padding:5px 12px;background:rgba(180,140,40,.1);border:1px solid rgba(180,140,40,.25);border-radius:4px;color:#c8a840;font-family:'Cinzel',serif;font-size:8.5px;letter-spacing:1px;cursor:pointer;transition:all .15s}
+    .geo-tb-btn:hover{background:rgba(180,140,40,.22);border-color:rgba(200,160,60,.5)}
+    .geo-tb-btn.active{background:rgba(180,140,40,.3);border-color:#c8a840;color:#f0d060}
+    .geo-tb-sep{width:1px;height:20px;background:rgba(180,140,40,.2)}
+    #geo-paint-panel{position:absolute;bottom:20px;left:50%;transform:translateX(-50%);z-index:30;background:rgba(4,6,14,.92);border:1px solid rgba(180,140,40,.3);border-radius:8px;padding:12px 18px;pointer-events:all;font-family:'Cinzel',serif;font-size:9px;color:rgba(200,175,120,.7);text-align:center;display:none}
+    #geo-hint{position:absolute;bottom:20px;left:50%;transform:translateX(-50%);z-index:25;background:rgba(4,6,14,.88);border:1px solid rgba(180,140,40,.3);border-radius:20px;padding:7px 20px;font-family:'Cinzel',serif;font-size:9px;color:#c8a840;letter-spacing:1px;pointer-events:none;opacity:0;transition:opacity .3s}
+    #geo-boat-size-panel{position:absolute;right:20px;top:60px;z-index:30;background:rgba(4,6,14,.92);border:1px solid rgba(180,140,40,.3);border-radius:8px;padding:14px 18px;pointer-events:all;font-family:'Cinzel',serif;font-size:9px;color:rgba(200,175,120,.7);display:none;min-width:160px}
   `;
   document.head.appendChild(s);
 
-  v.style.padding='0';v.style.overflow='auto';
-  let cardsHTML='';
-  [...cats,...ents].forEach(c=>{
-    cardsHTML+=`<div class="geo-card" onclick="selectNode('${c.id}')">
-      <div class="geo-card-icon">${c.icon||'🗺'}</div>
-      <div class="geo-card-name">${esc(c.name)}</div>
-      ${c.subtitle?`<div class="geo-card-sub">${esc(c.subtitle)}</div>`:''}
-    </div>`;
-  });
+  const nodeId = n.id;
+  const pois = n._geoPois || [];
+  const mapImg = n._carteImg || ILLUMIA_MAP;
+  const landPolygons = n._geoLandPolys || [];
+  const boatSize = n._geoBoatSize || 40;
 
-  v.innerHTML=`<div id="geo-outer">
-    <canvas id="geo-canvas"></canvas>
-    <div id="geo-ui">
-      <div class="geo-title">Géographie</div>
-      <div class="geo-rule"></div>
-      <div class="geo-sub">${esc(n.subtitle||"Terres et territoires d'Iluminia")}</div>
-      <div class="geo-globe-wrap" id="geo-globe-wrap">
-        <canvas id="geo-globe-canvas" onclick="_carteOpenGlobeLB()" title="Cliquer pour agrandir"></canvas>
-        <div class="geo-globe-ring"></div>
-        <div class="geo-globe-ring2"></div>
-        <div class="geo-globe-shadow"></div>
-      </div>
-      <div class="geo-map-card" onclick="openLB(ILLUMIA_MAP)">
-        <img class="geo-map-img" src="${ILLUMIA_MAP}" alt="Carte d'Iluminia">
-        <div class="geo-map-bar">
-          <span class="geo-map-label">🗺 Carte du Monde — Iluminia</span>
-          <span class="geo-map-hint">Cliquer pour agrandir</span>
+  v.style.padding='0';v.style.overflow='hidden';
+  v.innerHTML=`
+    <div id="geo-outer">
+      <canvas id="geo-map-canvas"></canvas>
+      <div id="geo-ui-overlay">
+        <div id="geo-toolbar">
+          <span style="font-family:'Cinzel Decorative',serif;font-size:10px;color:rgba(200,175,120,.6);letter-spacing:2px">🗺</span>
+          <div class="geo-tb-sep"></div>
+          <button class="geo-tb-btn" id="geo-btn-poi" onclick="_geoTogglePOIMode('${nodeId}')">📍 Ajouter un point</button>
+          <div class="geo-tb-sep" id="geo-admin-sep" style="display:none"></div>
+          <button class="geo-tb-btn" id="geo-btn-land" style="display:none" onclick="_geoToggleLandMode('${nodeId}')">🏔 Terre/Eau</button>
+          <button class="geo-tb-btn" id="geo-btn-size" style="display:none" onclick="_geoToggleSizePanel('${nodeId}')">⚓ Taille bateau</button>
+          <button class="geo-tb-btn" id="geo-btn-map" style="display:none" onclick="_geoLoadMap('${nodeId}')">🖼 Carte</button>
         </div>
+        <div id="geo-paint-panel">
+          <div style="margin-bottom:8px;letter-spacing:1.5px">MODE PEINTURE TERRE</div>
+          <div style="display:flex;gap:8px;justify-content:center">
+            <button class="geo-tb-btn active" id="geo-paint-land" onclick="_geoSetPaintMode('land')">🏔 Terre</button>
+            <button class="geo-tb-btn" id="geo-paint-water" onclick="_geoSetPaintMode('water')">🌊 Eau</button>
+            <button class="geo-tb-btn" onclick="_geoClearAllLand('${nodeId}')">🗑 Effacer tout</button>
+          </div>
+          <div style="margin-top:8px;opacity:.5;font-size:8px">Peindre sur la carte pour définir la terre</div>
+        </div>
+        <div id="geo-boat-size-panel">
+          <div style="margin-bottom:10px;letter-spacing:1.5px">TAILLE DU BATEAU</div>
+          <input type="range" id="geo-size-slider" min="20" max="120" value="${boatSize}" style="width:100%;accent-color:#c8a840;cursor:pointer" oninput="_geoSetBoatSize('${nodeId}',this.value)">
+          <div style="text-align:center;margin-top:6px;font-size:11px;color:#c8a840" id="geo-size-val">${boatSize}px</div>
+        </div>
+        <div id="geo-hint"></div>
       </div>
-      ${cardsHTML?`<div class="geo-grid">${cardsHTML}</div>`:''}
-      <div class="geo-btn-row">
-        <button class="btn p" onclick="openNewEntryModal('${n.id}','map')" style="border-color:#4a4020;color:#c8a850">🗺 + Nouveau Lieu</button>
-        <button class="btn" onclick="openEditModal('${n.id}')">✎ Modifier</button>
-      </div>
-    </div>
-  </div>`;
+    </div>`;
 
-  startGeoBackground();
-  requestAnimationFrame(startGeoGlobe);
+  // Afficher boutons admin
+  if(_isAdmin()){
+    document.getElementById('geo-admin-sep').style.display='';
+    document.getElementById('geo-btn-land').style.display='';
+    document.getElementById('geo-btn-size').style.display='';
+    document.getElementById('geo-btn-map').style.display='';
+  }
+
+  // State
+  // Charger la grille sauvegardée si disponible
+  const savedGrid = n._geoGridData ? new Uint8Array(n._geoGridData) : null;
+  const savedGridW = n._geoGridW || 80;
+  const savedGridH = n._geoGridH || 50;
+
+  const GS = {
+    nodeId, mapImg,
+    pois, landPolygons,
+    boat: {x:0.1, y:0.5, angle: 0, targetX:null, targetY:null, path:[], pathIdx:0, moving:false, speed:0.0015, size: boatSize},
+    mode: 'nav', // 'nav' | 'poi' | 'paint'
+    paintMode: 'land', // 'land' | 'water'
+    paintRadius: 18,
+    grid: null, gridW: 0, gridH: 0,
+    img: null, imgLoaded: false,
+    pendingTarget: null,
+    pendingNodeId: null,
+    wake: [], // sillage
+  };
+  window._geoState = GS;
+
+  _geoRenderPois(nodeId);
+
+  // Charger image et démarrer
+  const img = new Image();
+  img.onload = () => {
+    GS.img = img;
+    GS.imgLoaded = true;
+    _geoBuildGrid(GS);
+    // Appliquer la grille sauvegardée si disponible
+    if(savedGrid){
+      GS.grid = savedGrid;
+      GS.gridW = savedGridW;
+      GS.gridH = savedGridH;
+      GS.gridLoaded = true;
+    }
+    _geoStartLoop(nodeId);
+  };
+  img.src = mapImg;
+
+  document.getElementById('geo-outer').addEventListener('click', e => _geoCanvasClick(e, nodeId));
+  document.getElementById('geo-outer').addEventListener('mousemove', e => _geoCanvasMove(e, nodeId));
+  document.getElementById('geo-outer').addEventListener('mouseup', () => { if(window._geoState) window._geoState._painting = false; });
+  document.getElementById('geo-outer').addEventListener('mousedown', e => { if(window._geoState?.mode==='paint') window._geoState._painting = true; });
 }
 
-function startGeoBackground(){
-  const canvas=document.getElementById('geo-canvas');
+// ── Grille pathfinding ──
+function _geoBuildGrid(GS){
+  const W=80, H=50; // résolution grille
+  GS.gridW=W; GS.gridH=H;
+  GS.grid = new Uint8Array(W*H); // 0=eau, 1=terre
+  // Appliquer les polygones de terre
+  (GS.landPolygons||[]).forEach(poly=>{
+    if(poly.type==='land') _geoFillPoly(GS.grid,W,H,poly.points,1);
+    else if(poly.type==='water') _geoFillPoly(GS.grid,W,H,poly.points,0);
+  });
+}
+
+function _geoFillPoly(grid,W,H,points,val){
+  if(!points||points.length<3) return;
+  // Scanline fill
+  const minY=Math.max(0,Math.floor(Math.min(...points.map(p=>p[1]*H))));
+  const maxY=Math.min(H-1,Math.ceil(Math.max(...points.map(p=>p[1]*H))));
+  for(let y=minY;y<=maxY;y++){
+    const intersections=[];
+    const n=points.length;
+    for(let i=0;i<n;i++){
+      const j=(i+1)%n;
+      const y0=points[i][1]*H, y1=points[j][1]*H;
+      if((y0<=y&&y<y1)||(y1<=y&&y<y0)){
+        const x=points[i][0]*W+(y-y0)/(y1-y0)*(points[j][0]*W-points[i][0]*W);
+        intersections.push(x);
+      }
+    }
+    intersections.sort((a,b)=>a-b);
+    for(let k=0;k<intersections.length-1;k+=2){
+      const x0=Math.max(0,Math.floor(intersections[k]));
+      const x1=Math.min(W-1,Math.floor(intersections[k+1]));
+      for(let x=x0;x<=x1;x++) grid[y*W+x]=val;
+    }
+  }
+}
+
+// ── Pathfinding A* ──
+function _geoAstar(grid,W,H,x0,y0,x1,y1){
+  const key=(x,y)=>y*W+x;
+  const h=(x,y)=>Math.abs(x-x1)+Math.abs(y-y1);
+  const open=[[h(x0,y0),0,x0,y0,null]]; // [f,g,x,y,parent]
+  const cameFrom=new Map();
+  const gScore=new Map();
+  gScore.set(key(x0,y0),0);
+  const dirs=[[1,0],[-1,0],[0,1],[0,-1],[1,1],[1,-1],[-1,1],[-1,-1]];
+  let iters=0;
+  while(open.length&&iters++<5000){
+    open.sort((a,b)=>a[0]-b[0]);
+    const [,g,cx,cy]=open.shift();
+    if(cx===x1&&cy===y1){
+      // Reconstruire chemin
+      const path=[[x1,y1]];
+      let k=key(x1,y1);
+      while(cameFrom.has(k)){
+        const [px,py]=cameFrom.get(k);
+        path.push([px,py]);
+        k=key(px,py);
+      }
+      return path.reverse();
+    }
+    for(const [dx,dy] of dirs){
+      const nx=cx+dx,ny=cy+dy;
+      if(nx<0||ny<0||nx>=W||ny>=H) continue;
+      if(grid[ny*W+nx]===1) continue; // terre
+      const ng=g+(Math.abs(dx)+Math.abs(dy)===2?1.414:1);
+      const k=key(nx,ny);
+      if(!gScore.has(k)||ng<gScore.get(k)){
+        gScore.set(k,ng);
+        cameFrom.set(k,[cx,cy]);
+        open.push([ng+h(nx,ny),ng,nx,ny]);
+      }
+    }
+  }
+  return null; // pas de chemin
+}
+
+// ── Loop principal ──
+function _geoStartLoop(nodeId){
+  const canvas=document.getElementById('geo-map-canvas');
   if(!canvas)return;
   const outer=document.getElementById('geo-outer');
+  canvas.width=outer.offsetWidth;
+  canvas.height=outer.offsetHeight;
   const ctx=canvas.getContext('2d');
-  function sz(){canvas.width=outer.offsetWidth;canvas.height=Math.max(outer.scrollHeight,outer.offsetHeight,600);}
-  sz();
-  const ro=new ResizeObserver(sz);ro.observe(outer);
-  let stars=[];
-  function mkStars(W,H){stars=[];for(let i=0;i<220;i++)stars.push({x:Math.random()*W,y:Math.random()*H*.65,r:.3+Math.random()*1.5,a:.12+Math.random()*.7,ph:Math.random()*Math.PI*2});}
-  const PTS=[];
-  function mkP(init){const W=canvas.width,H=canvas.height;return{x:Math.random()*W,y:init?Math.random()*H:-10,vx:(Math.random()-.5)*.3,vy:.12+Math.random()*.28,a:.08+Math.random()*.22,life:0,max:400+Math.random()*500,r:1.5+Math.random()*2.5};}
-  for(let i=0;i<45;i++)PTS.push(mkP(true));
-  let t=0,lastW=0,lastH=0;
-  (function frame(){
+  const ro=new ResizeObserver(()=>{canvas.width=outer.offsetWidth;canvas.height=outer.offsetHeight;});
+  ro.observe(outer);
+  let t=0;
+
+  function frame(){
     _geoAnim=requestAnimationFrame(frame);
-    if(!document.getElementById('geo-canvas')){cancelAnimationFrame(_geoAnim);ro.disconnect();return;}
+    const GS=window._geoState;
+    if(!GS||!document.getElementById('geo-map-canvas')){cancelAnimationFrame(_geoAnim);ro.disconnect();return;}
     const W=canvas.width,H=canvas.height;
-    if(W!==lastW||H!==lastH){mkStars(W,H);lastW=W;lastH=H;}
     ctx.clearRect(0,0,W,H);
-    const bg=ctx.createLinearGradient(0,0,0,H);
-    bg.addColorStop(0,'#03020b');bg.addColorStop(.35,'#060412');bg.addColorStop(.7,'#0b0918');bg.addColorStop(1,'#050410');
-    ctx.fillStyle=bg;ctx.fillRect(0,0,W,H);
-    // Nebulae
-    const nb1=ctx.createRadialGradient(W*.12,H*.2,0,W*.12,H*.2,W*.4);nb1.addColorStop(0,'rgba(50,25,90,.14)');nb1.addColorStop(1,'rgba(0,0,0,0)');ctx.fillStyle=nb1;ctx.fillRect(0,0,W,H);
-    const nb2=ctx.createRadialGradient(W*.88,H*.5,0,W*.88,H*.5,W*.32);nb2.addColorStop(0,'rgba(25,50,80,.1)');nb2.addColorStop(1,'rgba(0,0,0,0)');ctx.fillStyle=nb2;ctx.fillRect(0,0,W,H);
-    const nb3=ctx.createRadialGradient(W*.5,H*.8,0,W*.5,H*.8,W*.25);nb3.addColorStop(0,'rgba(60,40,20,.08)');nb3.addColorStop(1,'rgba(0,0,0,0)');ctx.fillStyle=nb3;ctx.fillRect(0,0,W,H);
-    stars.forEach(st=>{const tw=.6+.4*Math.sin(t*.042+st.ph);ctx.beginPath();ctx.arc(st.x,st.y,st.r,0,Math.PI*2);ctx.fillStyle=`rgba(230,218,195,${st.a*tw})`;ctx.fill();});
-    PTS.forEach((p,i)=>{
-      p.x+=p.vx+Math.sin(t*.007+i*.5)*.18;p.y+=p.vy;p.life++;
-      if(p.y>H+10||p.life>p.max){PTS[i]=mkP(false);return;}
-      const fd=Math.min(p.life/60,1)*Math.pow(1-p.life/p.max,.4);const a=p.a*fd;if(a<.01)return;
-      ctx.beginPath();ctx.arc(p.x,p.y,p.r,0,Math.PI*2);ctx.fillStyle=`rgba(200,165,90,${a})`;ctx.fill();
+
+    // Fond sombre
+    ctx.fillStyle='#040c18';
+    ctx.fillRect(0,0,W,H);
+
+    // Carte
+    if(GS.imgLoaded){
+      ctx.drawImage(GS.img,0,0,W,H);
+      // Overlay sombre pour lisibilité
+      ctx.fillStyle='rgba(0,5,20,.18)';
+      ctx.fillRect(0,0,W,H);
+    }
+
+    // Afficher grille terre si mode paint (admin)
+    if(GS.mode==='paint'&&GS.grid){
+      const gW=GS.gridW,gH=GS.gridH;
+      const cw=W/gW,ch=H/gH;
+      for(let gy=0;gy<gH;gy++){
+        for(let gx=0;gx<gW;gx++){
+          if(GS.grid[gy*gW+gx]===1){
+            ctx.fillStyle='rgba(200,100,40,.35)';
+            ctx.fillRect(gx*cw,gy*ch,cw,ch);
+          }
+        }
+      }
+    }
+
+    // Déplacer bateau
+    const boat=GS.boat;
+    if(boat.moving && boat.path && boat.path.length){
+      const target=boat.path[boat.pathIdx];
+      const tx=target[0]/GS.gridW*W, ty=target[1]/GS.gridH*H;
+      const bx=boat.x*W, by=boat.y*H;
+      const dx=tx-bx, dy=ty-by;
+      const dist=Math.sqrt(dx*dx+dy*dy);
+      const speed=boat.speed*W;
+      if(dist<speed+1){
+        boat.pathIdx++;
+        if(boat.pathIdx>=boat.path.length){
+          boat.moving=false;
+          boat.path=[];
+          // Arrivé à destination
+          if(GS.pendingNodeId){
+            const nid=GS.pendingNodeId;
+            GS.pendingNodeId=null;
+            setTimeout(()=>selectNode(nid),400);
+          }
+        }
+      } else {
+        const nx=dx/dist*speed, ny=dy/dist*speed;
+        // Sillage
+        GS.wake.push({x:boat.x,y:boat.y,a:.6,t:0});
+        boat.x+=nx/W;
+        boat.y+=ny/H;
+        boat.angle=Math.atan2(dy,dx)+Math.PI/2;
+      }
+    }
+
+    // Dessiner sillage
+    GS.wake=GS.wake.filter(w=>w.a>0.01);
+    GS.wake.forEach(w=>{
+      w.a*=0.92; w.t++;
+      const r=(w.t*0.5+3);
+      ctx.beginPath();
+      ctx.arc(w.x*W,w.y*H,r,0,Math.PI*2);
+      ctx.fillStyle=`rgba(180,220,255,${w.a*0.3})`;
+      ctx.fill();
     });
+
+    // Dessiner bateau
+    _geoDrawBoat(ctx,boat.x*W,boat.y*H,boat.angle,boat.size,boat.moving,t);
+
     t++;
-  })();
+  }
+  frame();
 }
 
-function startGeoGlobe(){
-  const gc=document.getElementById('geo-globe-canvas');
-  if(!gc)return;
-  const wrap=document.getElementById('geo-globe-wrap');
-  const S=wrap.offsetWidth||440;
-  gc.width=S;gc.height=S;
-  const ctx=gc.getContext('2d');
-  const cx=S/2,cy=S/2,R=S/2-3;
-  const mapImg=new Image();
-  const _geoNode=db[cur]; 
-  mapImg.src=(_geoNode&&_geoNode._globeImage)||ILLUMIA_MAP;
-  let angle=0,globeRunning=true;
-  function drawGlobe(){
-    if(!document.getElementById('geo-globe-canvas')){globeRunning=false;return;}
-    requestAnimationFrame(drawGlobe);
-    ctx.clearRect(0,0,S,S);
-    ctx.save();
-    ctx.beginPath();ctx.arc(cx,cy,R,0,Math.PI*2);ctx.clip();
-    // Ocean base
-    const og=ctx.createRadialGradient(cx-R*.2,cy-R*.2,R*.05,cx,cy,R);
-    og.addColorStop(0,'#3a7090');og.addColorStop(.5,'#1e4a68');og.addColorStop(1,'#0d2535');
-    ctx.fillStyle=og;ctx.fillRect(0,0,S,S);
-    if(mapImg.complete&&mapImg.naturalWidth>0){
-      const scale=(S*1.25)/mapImg.naturalWidth;
-      const dw=mapImg.naturalWidth*scale,dh=mapImg.naturalHeight*scale;
-      const ox=(S-dw)/2,oy=(S-dh)/2;
-      const off=(angle*.18)%dw;
-      ctx.globalAlpha=.9;
-      ctx.drawImage(mapImg,-off+ox,oy,dw,dh);
-      if(-off+ox+dw<S)ctx.drawImage(mapImg,-off+ox+dw,oy,dw,dh);
-      ctx.globalAlpha=1;
+function _geoDrawBoat(ctx,x,y,angle,size,moving,t){
+  ctx.save();
+  ctx.translate(x,y);
+  ctx.rotate(angle);
+  const s=size/40; // scale factor
+
+  // Ombre
+  ctx.shadowColor='rgba(0,0,0,.5)';
+  ctx.shadowBlur=8*s;
+
+  // Coque principale
+  ctx.beginPath();
+  ctx.moveTo(0,-18*s);
+  ctx.bezierCurveTo(7*s,-14*s, 9*s,-2*s, 8*s,10*s);
+  ctx.lineTo(6*s,16*s);
+  ctx.lineTo(-6*s,16*s);
+  ctx.bezierCurveTo(-9*s,10*s, -9*s,-2*s, -7*s,-14*s);
+  ctx.closePath();
+  ctx.fillStyle='#4a3820';
+  ctx.fill();
+  ctx.strokeStyle='#8a6838';
+  ctx.lineWidth=1.2*s;
+  ctx.stroke();
+
+  // Pont
+  ctx.beginPath();
+  ctx.moveTo(-5*s,-4*s);
+  ctx.lineTo(5*s,-4*s);
+  ctx.lineTo(6*s,8*s);
+  ctx.lineTo(-6*s,8*s);
+  ctx.closePath();
+  ctx.fillStyle='#6a5030';
+  ctx.fill();
+
+  // Mât
+  ctx.strokeStyle='#7a5a28';
+  ctx.lineWidth=2*s;
+  ctx.beginPath();
+  ctx.moveTo(0,6*s);
+  ctx.lineTo(0,-28*s);
+  ctx.stroke();
+
+  // Vergue
+  ctx.lineWidth=1.5*s;
+  ctx.beginPath();
+  ctx.moveTo(-12*s,-22*s);
+  ctx.lineTo(12*s,-22*s);
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.moveTo(-9*s,-14*s);
+  ctx.lineTo(9*s,-14*s);
+  ctx.stroke();
+
+  // Voile principale (gonflée si mouvement)
+  const sailBulge = moving ? 4*s : 1*s;
+  ctx.beginPath();
+  ctx.moveTo(0,-22*s);
+  ctx.bezierCurveTo(sailBulge+10*s,-18*s, sailBulge+10*s,-10*s, 0,-8*s);
+  ctx.bezierCurveTo(-2*s,-10*s, -2*s,-18*s, 0,-22*s);
+  ctx.fillStyle='rgba(240,225,190,.92)';
+  ctx.fill();
+  ctx.strokeStyle='rgba(180,150,100,.6)';
+  ctx.lineWidth=0.8*s;
+  ctx.stroke();
+
+  // Voile 2
+  ctx.beginPath();
+  ctx.moveTo(0,-14*s);
+  ctx.bezierCurveTo(sailBulge+8*s,-11*s, sailBulge+8*s,-5*s, 0,-2*s);
+  ctx.bezierCurveTo(-2*s,-5*s, -2*s,-11*s, 0,-14*s);
+  ctx.fillStyle='rgba(230,210,170,.85)';
+  ctx.fill();
+  ctx.stroke();
+
+  // Fanion au sommet
+  const fanionWave = Math.sin(t*0.08)*2*s;
+  ctx.beginPath();
+  ctx.moveTo(0,-28*s);
+  ctx.lineTo(7*s+fanionWave,-24*s);
+  ctx.lineTo(0,-21*s);
+  ctx.fillStyle='#c84020';
+  ctx.fill();
+
+  // Vagues sous le bateau si en mouvement
+  if(moving){
+    ctx.globalAlpha=0.4;
+    ctx.strokeStyle='rgba(180,220,255,.8)';
+    ctx.lineWidth=1.5*s;
+    for(let i=0;i<3;i++){
+      const wy=10*s+i*4*s;
+      const phase=t*0.1+i*1.2;
+      ctx.beginPath();
+      ctx.moveTo(-10*s,wy);
+      for(let wx=-10*s;wx<=10*s;wx+=2){
+        ctx.lineTo(wx,wy+Math.sin(wx*0.3+phase)*1.5*s);
+      }
+      ctx.stroke();
     }
-    // Atmosphere dark edges
-    const atm=ctx.createRadialGradient(cx,cy,R*.6,cx,cy,R);
-    atm.addColorStop(0,'rgba(10,30,60,0)');atm.addColorStop(.65,'rgba(8,20,50,.18)');atm.addColorStop(1,'rgba(4,10,30,.55)');
-    ctx.fillStyle=atm;ctx.fillRect(0,0,S,S);
-    // Specular light (top-left highlight)
-    const hl=ctx.createRadialGradient(cx-R*.38,cy-R*.38,0,cx-R*.1,cy-R*.08,R*.85);
-    hl.addColorStop(0,'rgba(255,248,220,.2)');hl.addColorStop(.25,'rgba(255,240,180,.07)');hl.addColorStop(1,'rgba(0,0,0,0)');
-    ctx.fillStyle=hl;ctx.fillRect(0,0,S,S);
-    ctx.restore();
-    // Atmosphere halo outside circle
-    const halo=ctx.createRadialGradient(cx,cy,R*.9,cx,cy,R+18);
-    halo.addColorStop(0,'rgba(80,160,230,.18)');halo.addColorStop(.5,'rgba(40,100,180,.07)');halo.addColorStop(1,'rgba(0,0,0,0)');
-    ctx.beginPath();ctx.arc(cx,cy,R+18,0,Math.PI*2);ctx.fillStyle=halo;ctx.fill();
-    // Gold border
-    ctx.beginPath();ctx.arc(cx,cy,R,0,Math.PI*2);
-    ctx.strokeStyle='rgba(180,148,70,.3)';ctx.lineWidth=1.5;ctx.stroke();
-    angle+=.5;
+    ctx.globalAlpha=1;
   }
-  mapImg.onload=drawGlobe;
-  if(mapImg.complete&&mapImg.naturalWidth>0)drawGlobe();
+
+  ctx.shadowBlur=0;
+  ctx.restore();
 }
+
+// ── Gestion clic sur la carte ──
+function _geoCanvasClick(e,nodeId){
+  const GS=window._geoState;if(!GS) return;
+  const rect=e.currentTarget.getBoundingClientRect();
+  const px=(e.clientX-rect.left)/rect.width;
+  const py=(e.clientY-rect.top)/rect.height;
+
+  if(GS.mode==='poi'&&_isAdmin()){
+    _geoAddPoiModal(nodeId,px,py);
+    _geoSetMode('nav');
+    return;
+  }
+  if(GS.mode==='paint'&&_isAdmin()){
+    _geoPaintAt(nodeId,px,py);
+    return;
+  }
+}
+
+function _geoCanvasMove(e,nodeId){
+  const GS=window._geoState;if(!GS)return;
+  if(GS.mode==='paint'&&GS._painting&&_isAdmin()){
+    const rect=e.currentTarget.getBoundingClientRect();
+    const px=(e.clientX-rect.left)/rect.width;
+    const py=(e.clientY-rect.top)/rect.height;
+    _geoPaintAt(nodeId,px,py);
+  }
+}
+
+function _geoPaintAt(nodeId,px,py){
+  const GS=window._geoState;if(!GS||!GS.grid)return;
+  const val=GS.paintMode==='land'?1:0;
+  const r=Math.ceil(GS.paintRadius/2);
+  const gx=Math.round(px*GS.gridW);
+  const gy=Math.round(py*GS.gridH);
+  for(let dy=-r;dy<=r;dy++){
+    for(let dx=-r;dx<=r;dx++){
+      if(dx*dx+dy*dy>r*r)continue;
+      const nx=gx+dx,ny=gy+dy;
+      if(nx>=0&&ny>=0&&nx<GS.gridW&&ny<GS.gridH)
+        GS.grid[ny*GS.gridW+nx]=val;
+    }
+  }
+  // Sauvegarder la grille dans le nœud
+  const n=db[nodeId];if(n){
+    n._geoGridData=Array.from(GS.grid);
+    n._geoGridW=GS.gridW;
+    n._geoGridH=GS.gridH;
+    save();
+  }
+}
+
+function _geoClearAllLand(nodeId){
+  const GS=window._geoState;if(!GS||!GS.grid)return;
+  GS.grid.fill(0);
+  const n=db[nodeId];if(n){n._geoGridData=null;save();}
+}
+
+// ── Navigation vers un POI ──
+function _geoNavigateTo(nodeId,poiIdx){
+  const GS=window._geoState;if(!GS)return;
+  const n=db[nodeId];if(!n)return;
+  const poi=(n._geoPois||[])[poiIdx];if(!poi)return;
+
+  // Charger grille sauvegardée si disponible
+  if(n._geoGridData&&n._geoGridW&&n._geoGridH&&!GS.gridLoaded){
+    GS.grid=new Uint8Array(n._geoGridData);
+    GS.gridW=n._geoGridW;GS.gridH=n._geoGridH;
+    GS.gridLoaded=true;
+  }
+
+  const boat=GS.boat;
+  const x0=Math.round(boat.x*GS.gridW);
+  const y0=Math.round(boat.y*GS.gridH);
+  const x1=Math.round(poi.x*GS.gridW);
+  const y1=Math.round(poi.y*GS.gridH);
+
+  let path=_geoAstar(GS.grid,GS.gridW,GS.gridH,x0,y0,x1,y1);
+
+  if(!path){
+    // Pas de chemin → aller directement
+    path=[[x1,y1]];
+  }
+
+  // Lisser le chemin (Douglas-Peucker simplifié)
+  if(path.length>4){
+    path=path.filter((_,i)=>i%2===0||i===path.length-1);
+  }
+
+  boat.path=path;
+  boat.pathIdx=0;
+  boat.moving=true;
+  boat.targetX=poi.x;
+  boat.targetY=poi.y;
+
+  GS.pendingNodeId=poi.linkId||null;
+
+  // Highlight POI destination
+  document.querySelectorAll('.geo-poi').forEach(el=>el.classList.remove('geo-poi-dest'));
+  const poiEl=document.getElementById(`geo-poi-${poiIdx}`);
+  if(poiEl)poiEl.classList.add('geo-poi-dest');
+
+  // Hint
+  _geoShowHint(poi.name?`Cap sur ${poi.name}…`:'Navigation en cours…');
+}
+
+function _geoShowHint(msg){
+  const h=document.getElementById('geo-hint');if(!h)return;
+  h.textContent=msg;h.style.opacity='1';
+  clearTimeout(h._ht);
+  h._ht=setTimeout(()=>h.style.opacity='0',3000);
+}
+
+// ── Rendu des POIs ──
+function _geoRenderPois(nodeId){
+  const n=db[nodeId];if(!n)return;
+  document.querySelectorAll('.geo-poi').forEach(el=>el.remove());
+  const overlay=document.getElementById('geo-ui-overlay');if(!overlay)return;
+  (n._geoPois||[]).forEach((p,i)=>{
+    const el=document.createElement('div');
+    el.className='geo-poi';
+    el.id=`geo-poi-${i}`;
+    el.style.left=(p.x*100)+'%';
+    el.style.top=(p.y*100)+'%';
+    el.innerHTML=`<div class="geo-poi-dot" style="border-color:${p.color||'rgba(200,160,60,.8)'}">${p.icon||'📍'}</div><div class="geo-poi-label">${esc(p.name||'')}</div>`;
+    el.onclick=e=>{e.stopPropagation();_geoNavigateTo(nodeId,i);};
+    if(_isAdmin()){
+      el.oncontextmenu=e=>{e.preventDefault();e.stopPropagation();_geoPoiCtx(e,nodeId,i);};
+    }
+    overlay.appendChild(el);
+  });
+}
+
+// ── Mode toggle ──
+function _geoSetMode(mode){
+  const GS=window._geoState;if(!GS)return;
+  GS.mode=mode;
+  const paintPanel=document.getElementById('geo-paint-panel');
+  const poiBtn=document.getElementById('geo-btn-poi');
+  const landBtn=document.getElementById('geo-btn-land');
+  if(paintPanel)paintPanel.style.display=mode==='paint'?'block':'none';
+  if(poiBtn)poiBtn.classList.toggle('active',mode==='poi');
+  if(landBtn)landBtn.classList.toggle('active',mode==='paint');
+}
+
+function _geoTogglePOIMode(nodeId){
+  const GS=window._geoState;if(!GS)return;
+  const newMode=GS.mode==='poi'?'nav':'poi';
+  _geoSetMode(newMode);
+  if(newMode==='poi')_geoShowHint('Cliquez sur la carte pour placer un point d\'intérêt');
+}
+
+function _geoToggleLandMode(nodeId){
+  const GS=window._geoState;if(!GS)return;
+  // Charger grille existante si dispo
+  const n=db[nodeId];
+  if(n&&n._geoGridData&&!GS.gridLoaded){
+    GS.grid=new Uint8Array(n._geoGridData);
+    GS.gridW=n._geoGridW||80;GS.gridH=n._geoGridH||50;
+    GS.gridLoaded=true;
+  }
+  const newMode=GS.mode==='paint'?'nav':'paint';
+  _geoSetMode(newMode);
+  if(newMode==='paint')_geoShowHint('Peindre la terre (orange) — les zones non peintes sont de l\'eau');
+}
+
+function _geoSetPaintMode(mode){
+  const GS=window._geoState;if(!GS)return;
+  GS.paintMode=mode;
+  document.getElementById('geo-paint-land')?.classList.toggle('active',mode==='land');
+  document.getElementById('geo-paint-water')?.classList.toggle('active',mode==='water');
+}
+
+function _geoToggleSizePanel(nodeId){
+  const panel=document.getElementById('geo-boat-size-panel');
+  if(panel)panel.style.display=panel.style.display==='none'?'block':'none';
+}
+
+function _geoSetBoatSize(nodeId,val){
+  const v=parseInt(val);
+  const GS=window._geoState;if(GS)GS.boat.size=v;
+  const n=db[nodeId];if(n){n._geoBoatSize=v;save();}
+  const lbl=document.getElementById('geo-size-val');if(lbl)lbl.textContent=v+'px';
+}
+
+function _geoLoadMap(nodeId){
+  const inp=document.createElement('input');inp.type='file';inp.accept='image/*';
+  inp.onchange=e=>{
+    const f=e.target.files[0];if(!f)return;
+    _uploadToCloudinary(f,url=>{
+      const n=db[nodeId];if(!n)return;
+      n._carteImg=url;
+      save();
+      // Recharger la vue
+      const vv=document.getElementById('view');
+      renderGeographieImmersive(vv,n);
+    });
+  };
+  inp.click();
+}
+
+// ── Modal d'ajout de POI ──
+function _geoAddPoiModal(nodeId,px,py){
+  document.getElementById('_geo-poi-modal')?.remove();
+  const m=document.createElement('div');m.id='_geo-poi-modal';
+  m.style.cssText='position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.8);display:flex;align-items:center;justify-content:center';
+  m.innerHTML=`
+    <div style="background:#0e0a02;border:1px solid rgba(180,140,40,.3);border-radius:8px;padding:26px;width:340px;font-family:'Cinzel',serif">
+      <div style="font-size:11px;letter-spacing:2px;color:rgba(200,175,120,.7);margin-bottom:18px;text-align:center">📍 NOUVEAU POINT D'INTÉRÊT</div>
+      <input id="_gpoi-name" placeholder="Nom" style="width:100%;box-sizing:border-box;background:rgba(255,255,255,.05);border:1px solid rgba(180,140,40,.25);border-radius:4px;padding:9px 12px;color:#e8d8a0;font-family:'EB Garamond',serif;font-size:14px;margin-bottom:10px;outline:none">
+      <div style="margin-bottom:10px">
+        <div style="font-size:8px;letter-spacing:1.5px;color:rgba(180,140,40,.5);margin-bottom:6px">ICÔNE</div>
+        <div style="display:flex;flex-wrap:wrap;gap:6px">
+          ${['⚓','🏰','🌊','🗺','🏔','🏝','⚔','🔮','🌅','🛡'].map(ic=>`<span style="font-size:20px;cursor:pointer;padding:4px;border-radius:4px;border:1px solid rgba(180,140,40,.15)" onclick="document.getElementById('_gpoi-icon').value='${ic}';this.parentElement.querySelectorAll('span').forEach(s=>s.style.background='');this.style.background='rgba(180,140,40,.2)'">${ic}</span>`).join('')}
+        </div>
+        <input id="_gpoi-icon" value="⚓" style="display:none">
+      </div>
+      <div style="margin-bottom:14px">
+        <div style="font-size:8px;letter-spacing:1.5px;color:rgba(180,140,40,.5);margin-bottom:6px">LIER À UNE SOUS-CATÉGORIE</div>
+        <select id="_gpoi-link" style="width:100%;background:rgba(255,255,255,.05);border:1px solid rgba(180,140,40,.25);border-radius:4px;padding:7px;color:#e8d8a0;font-family:'Cinzel',serif;font-size:10px">
+          <option value="">— Aucun lien —</option>
+          ${(db[nodeId]?.children||[]).map(cid=>db[cid]).filter(Boolean).map(c=>`<option value="${c.id}">${esc(c.name)}</option>`).join('')}
+        </select>
+      </div>
+      <div style="display:flex;gap:10px">
+        <button onclick="document.getElementById('_geo-poi-modal').remove()" style="flex:1;padding:9px;background:rgba(255,255,255,.04);border:1px solid rgba(180,140,40,.2);border-radius:4px;color:rgba(180,140,40,.5);font-family:'Cinzel',serif;font-size:9px;cursor:pointer">Annuler</button>
+        <button onclick="_geoSavePoi('${nodeId}',${px},${py})" style="flex:1;padding:9px;background:rgba(180,140,40,.15);border:1px solid rgba(180,140,40,.4);border-radius:4px;color:#d4b060;font-family:'Cinzel',serif;font-size:9px;cursor:pointer">✓ Placer</button>
+      </div>
+    </div>`;
+  document.body.appendChild(m);
+  m.addEventListener('click',e=>{if(e.target===m)m.remove();});
+  setTimeout(()=>document.getElementById('_gpoi-name')?.focus(),50);
+}
+
+function _geoSavePoi(nodeId,px,py){
+  const n=db[nodeId];if(!n)return;
+  const name=document.getElementById('_gpoi-name')?.value.trim()||'Point';
+  const icon=document.getElementById('_gpoi-icon')?.value||'⚓';
+  const linkId=document.getElementById('_gpoi-link')?.value||null;
+  if(!n._geoPois)n._geoPois=[];
+  n._geoPois.push({x:px,y:py,name,icon,linkId:linkId||null,color:'rgba(200,160,60,.8)'});
+  save();
+  document.getElementById('_geo-poi-modal')?.remove();
+  _geoRenderPois(nodeId);
+}
+
+// ── Clic droit sur POI (admin) ──
+function _geoPoiCtx(e,nodeId,idx){
+  document.getElementById('_geo-poi-ctx')?.remove();
+  const n=db[nodeId];const p=(n._geoPois||[])[idx];if(!p)return;
+  const m=document.createElement('div');m.id='_geo-poi-ctx';
+  m.style.cssText=`position:fixed;left:${e.clientX}px;top:${e.clientY}px;z-index:99999;background:#0e0a02;border:1px solid rgba(180,140,40,.3);border-radius:6px;padding:4px 0;min-width:160px;box-shadow:0 8px 28px rgba(0,0,0,.8);font-family:'Cinzel',serif;font-size:10px`;
+  const title=document.createElement('div');title.style.cssText='padding:7px 14px 5px;font-size:8px;letter-spacing:2px;color:rgba(180,140,40,.4);border-bottom:1px solid rgba(180,140,40,.1);margin-bottom:4px';
+  title.textContent=p.name||'Point d\'intérêt';m.appendChild(title);
+  function row(icon,label,fn,danger){
+    const r=document.createElement('div');
+    r.style.cssText=`padding:8px 14px;cursor:pointer;color:${danger?'rgba(220,80,80,.7)':'rgba(220,195,140,.7)'};display:flex;align-items:center;gap:8px`;
+    r.onmouseenter=()=>r.style.background='rgba(180,140,40,.1)';
+    r.onmouseleave=()=>r.style.background='';
+    r.innerHTML=`${icon} ${label}`;r.onclick=()=>{m.remove();fn();};m.appendChild(r);
+  }
+  row('✕','Supprimer',()=>{
+    n._geoPois.splice(idx,1);save();_geoRenderPois(nodeId);
+  },true);
+  document.body.appendChild(m);
+  requestAnimationFrame(()=>{const r=m.getBoundingClientRect();if(r.right>window.innerWidth)m.style.left=(e.clientX-r.width)+'px';if(r.bottom>window.innerHeight)m.style.top=(e.clientY-r.height)+'px';});
+  setTimeout(()=>document.addEventListener('click',function _c(ev){if(!m.contains(ev.target)){m.remove();document.removeEventListener('click',_c);}},10));
+}
+
+
 
 // ════════════════════════════════════════════
 //  DIVISION SUBCATEGORY — Logo + Organigramme
