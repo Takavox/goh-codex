@@ -5206,12 +5206,7 @@ function _geoNavigateToPoint(nodeId,px,py){
   const GS=window._geoState;if(!GS)return;
   const boat=GS.boat;
   const n=db[nodeId];
-  // Charger grille si disponible
-  if(n&&n._geoGridData&&!GS.gridLoaded){
-    GS.grid=new Uint8Array(n._geoGridData);
-    GS.gridW=n._geoGridW||80;GS.gridH=n._geoGridH||50;
-    GS.gridLoaded=true;
-  }
+  // Grille déjà chargée dans GS.grid à l'init
   const x0=Math.round(boat.x*GS.gridW);
   const y0=Math.round(boat.y*GS.gridH);
   const x1=Math.round(px*GS.gridW);
@@ -5240,12 +5235,7 @@ function _geoNavigateTo(nodeId,poiIdx){
   const n=db[nodeId];if(!n)return;
   const poi=(n._geoPois||[])[poiIdx];if(!poi)return;
 
-  // Charger grille sauvegardée si disponible
-  if(n._geoGridData&&n._geoGridW&&n._geoGridH&&!GS.gridLoaded){
-    GS.grid=new Uint8Array(n._geoGridData);
-    GS.gridW=n._geoGridW;GS.gridH=n._geoGridH;
-    GS.gridLoaded=true;
-  }
+  // Grille déjà chargée dans GS.grid à l'init
 
   const boat=GS.boat;
   const x0=Math.round(boat.x*GS.gridW);
@@ -5338,11 +5328,7 @@ function _geoToggleLandMode(nodeId){
   const GS=window._geoState;if(!GS)return;
   // Charger grille existante si dispo
   const n=db[nodeId];
-  if(n&&n._geoGridData&&!GS.gridLoaded){
-    GS.grid=new Uint8Array(n._geoGridData);
-    GS.gridW=n._geoGridW||80;GS.gridH=n._geoGridH||50;
-    GS.gridLoaded=true;
-  }
+  // Grille déjà en mémoire
   const newMode=GS.mode==='paint'?'nav':'paint';
   _geoSetMode(newMode);
   if(newMode==='paint')_geoShowHint('Peindre la terre (orange) — les zones non peintes sont de l\'eau');
