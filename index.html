@@ -1696,10 +1696,10 @@ function nodeHasOwnImmersiveAudio(n){
 
 function _stopAllAudio(){
   // Couper et masquer TOUS les audios et boutons
-  ['cat-audio','il-audio','hg-audio','gard-audio','wlc-audio'].forEach(aid=>{
+  ['cat-audio','il-audio','hg-audio','gard-audio','wlc-audio','geo-audio'].forEach(aid=>{
     const a=document.getElementById(aid); if(a&&!a.paused) a.pause();
   });
-  ['cat-sound-btn','il-sound-btn','hg-sound-btn','gard-sound-btn','wlc-sound-btn'].forEach(bid=>{
+  ['cat-sound-btn','il-sound-btn','hg-sound-btn','gard-sound-btn','wlc-sound-btn','geo-sound-btn'].forEach(bid=>{
     const b=document.getElementById(bid); if(b) b.style.display='none';
   });
 }
@@ -1742,7 +1742,7 @@ function _setMasterVol(v){
   _masterVol = Math.max(0, Math.min(1, v));
   localStorage.setItem('goh_master_vol', _masterVol.toString());
   // Appliquer à tous les éléments audio actifs
-  ['wlc-audio','il-audio','hg-audio','gard-audio','cat-audio'].forEach(id=>{
+  ['wlc-audio','il-audio','hg-audio','gard-audio','cat-audio','geo-audio'].forEach(id=>{
     const a = document.getElementById(id);
     if(a) a.volume = _masterVol;
   });
@@ -4533,6 +4533,120 @@ function startSecretsCanvas(){
 // ════════════════════════════════════════════
 let _geoAnim = null;
 
+
+// ════════════════════════════════════════════
+//  GEO (PAYS) — Audio System
+// ════════════════════════════════════════════
+let _geoAudioObj = null;
+let _geoAudioURL  = null;
+let _geoAudioVol  = 0.4;
+
+function initGeoAudio(){
+  let audio = document.getElementById('geo-audio');
+  if(!audio){
+    audio = document.createElement('audio');
+    audio.id='geo-audio'; audio.loop=true; audio.style.display='none';
+    document.body.appendChild(audio);
+  }
+  const geoSrc = globalStatNames._geoAudio || null;
+  if(geoSrc){ _geoAudioURL = geoSrc; }
+  else if(!_geoAudioURL){ _geoAudioURL = null; }
+  if(_geoAudioURL && audio.src !== _geoAudioURL) audio.src = _geoAudioURL;
+  audio.loop = true;
+  audio.volume = _geoAudioVol * _masterVol;
+  _geoAudioObj = audio;
+
+  let btn = document.getElementById('geo-sound-btn');
+  if(!btn){
+    btn = document.createElement('button');
+    btn.id = 'geo-sound-btn';
+    btn.title = "Son d'ambiance — clic droit pour options";
+    btn.style.cssText = 'position:fixed;bottom:22px;right:74px;z-index:999;background:rgba(4,6,14,.88);border:1px solid rgba(180,140,40,.35);border-radius:50%;width:42px;height:42px;display:none;align-items:center;justify-content:center;cursor:pointer;font-size:18px;backdrop-filter:blur(4px);transition:border-color .2s';
+    btn.onclick = ()=>toggleGeoSound();
+    btn.oncontextmenu = (e)=>{ e.preventDefault(); _showGeoSoundMenu(e.clientX, e.clientY); };
+    btn.textContent = '🔊';
+    document.body.appendChild(btn);
+  } else {
+    btn.onclick = ()=>toggleGeoSound();
+    btn.oncontextmenu = (e)=>{ e.preventDefault(); _showGeoSoundMenu(e.clientX, e.clientY); };
+  }
+  btn.style.display = 'flex';
+
+  if(_geoAudioURL){
+    audio.play().then(()=>{ _updateGeoBtn('🔊'); }).catch(()=>{
+      _updateGeoBtn('🔇');
+      if(!window._audioPendingPlay) window._audioPendingPlay=[];
+      window._audioPendingPlay.push(()=>{
+        const a = document.getElementById('geo-audio');
+        if(a && a.paused){ a.play().then(()=>_updateGeoBtn('🔊')).catch(()=>{}); }
+      });
+    });
+  } else { _updateGeoBtn('🎵'); }
+
+  if(!document.getElementById('geo-audio-input')){
+    const inp = document.createElement('input');
+    inp.type='file'; inp.accept='audio/*';
+    inp.style.display='none'; inp.id='geo-audio-input';
+    inp.onchange = _geoLoadFile;
+    document.body.appendChild(inp);
+  }
+}
+
+function _geoLoadFile(e){
+  const file = e.target.files[0]; if(!file) return;
+  _uploadToCloudinary(file, url=>{
+    _geoAudioURL = url;
+    globalStatNames._geoAudio = url;
+    save();
+    _geoAudioObj = document.getElementById('geo-audio');
+    if(!_geoAudioObj) return;
+    _geoAudioObj.src = url;
+    _geoAudioObj.loop = true; _geoAudioObj.volume = _geoAudioVol * _masterVol;
+    _geoAudioObj.play().catch(()=>{});
+    _updateGeoBtn('🔊');
+  });
+  e.target.value = '';
+}
+
+function _updateGeoBtn(icon){
+  const btn = document.getElementById('geo-sound-btn');
+  if(btn) btn.textContent = icon;
+}
+
+function toggleGeoSound(){
+  const audio = document.getElementById('geo-audio'); if(!audio) return;
+  if(!_geoAudioURL || !audio.src || audio.src === window.location.href){
+    if(!globalStatNames._geoAudio) return;
+    audio.src = globalStatNames._geoAudio; _geoAudioURL = globalStatNames._geoAudio;
+    audio.loop = true; audio.volume = _geoAudioVol * _masterVol;
+  }
+  if(audio.paused){ audio.play().catch(()=>{}); _updateGeoBtn('🔊'); }
+  else { audio.pause(); _updateGeoBtn('🔇'); }
+}
+
+function _showGeoSoundMenu(x, y){
+  if(!_isAdmin()) return;
+  document.getElementById('geo-snd-ctx')?.remove();
+  const menu = document.createElement('div');
+  menu.id = 'geo-snd-ctx';
+  menu.style.cssText = `position:fixed;left:${x}px;top:${y}px;z-index:9999;
+    background:rgba(6,4,14,.97);border:1px solid rgba(180,140,40,.3);border-radius:6px;
+    padding:5px 0;min-width:200px;font-family:'Cinzel',serif;font-size:11px;
+    box-shadow:0 8px 28px rgba(0,0,0,.85)`;
+  menu.innerHTML = `
+    <div style="padding:7px 14px;font-size:8px;letter-spacing:2px;color:rgba(180,140,40,.4);border-bottom:1px solid rgba(180,140,40,.12);margin-bottom:4px">SON — PAYS</div>
+    <div style="padding:8px 16px;color:#d4b060;cursor:pointer" onmouseenter="this.style.background='rgba(180,140,40,.1)'" onmouseleave="this.style.background=''" onclick="document.getElementById('geo-audio-input')?.click();document.getElementById('geo-snd-ctx')?.remove()">🎵 Charger un fichier</div>
+    ${globalStatNames._geoAudio ? `<div style="padding:8px 16px;color:#e07878;cursor:pointer" onmouseenter="this.style.background='rgba(200,60,60,.1)'" onmouseleave="this.style.background=''" onclick="delete globalStatNames._geoAudio;_geoAudioURL=null;const a=document.getElementById('geo-audio');if(a){a.pause();a.src=''};_updateGeoBtn('🎵');save();document.getElementById('geo-snd-ctx')?.remove()">🗑 Supprimer le son</div>` : ''}
+    <div style="padding:8px 16px;color:rgba(180,140,40,.4);cursor:pointer" onmouseenter="this.style.background='rgba(180,140,40,.08)'" onmouseleave="this.style.background=''" onclick="document.getElementById('geo-snd-ctx')?.remove()">✕ Fermer</div>`;
+  document.body.appendChild(menu);
+  requestAnimationFrame(()=>{
+    const r=menu.getBoundingClientRect();
+    if(r.right>window.innerWidth) menu.style.left=(x-r.width-4)+'px';
+    if(r.bottom>window.innerHeight) menu.style.top=(y-r.height-4)+'px';
+  });
+  setTimeout(()=>document.addEventListener('click',function _c(e){if(!menu.contains(e.target)){menu.remove();document.removeEventListener('click',_c);}},10));
+}
+
 function renderGeographieImmersive(v, n){
   if(_geoAnim){cancelAnimationFrame(_geoAnim);_geoAnim=null;}
 
@@ -4543,6 +4657,8 @@ function renderGeographieImmersive(v, n){
     #geo-map-canvas{position:absolute;inset:0;width:100%;height:100%;display:block}
     #geo-ui-overlay{position:absolute;inset:0;pointer-events:none;z-index:10}
     .geo-poi{position:absolute;transform:translate(-50%,-50%);cursor:pointer;pointer-events:all;z-index:20;transition:transform .15s}
+    .admin-mode .geo-poi{cursor:grab}
+    .admin-mode .geo-poi:active{cursor:grabbing}
     .geo-poi:hover{transform:translate(-50%,-50%) scale(1.25)}
     .geo-poi-dot{width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:16px;border:2px solid rgba(255,255,255,.4);box-shadow:0 2px 12px rgba(0,0,0,.8),0 0 0 4px rgba(0,0,0,.5);background:rgba(20,10,5,.85);animation:geo-poi-pulse 2.5s ease-in-out infinite}
     @keyframes geo-poi-pulse{0%,100%{box-shadow:0 2px 12px rgba(0,0,0,.8),0 0 0 4px rgba(0,0,0,.5),0 0 0 0 rgba(200,160,60,.4)}50%{box-shadow:0 2px 12px rgba(0,0,0,.8),0 0 0 4px rgba(0,0,0,.5),0 0 0 8px rgba(200,160,60,0)}}
@@ -4582,12 +4698,19 @@ function renderGeographieImmersive(v, n){
         </div>
         <div id="geo-paint-panel">
           <div style="margin-bottom:8px;letter-spacing:1.5px">MODE PEINTURE TERRE</div>
-          <div style="display:flex;gap:8px;justify-content:center">
+          <div style="display:flex;gap:8px;justify-content:center;margin-bottom:10px">
             <button class="geo-tb-btn active" id="geo-paint-land" onclick="_geoSetPaintMode('land')">🏔 Terre</button>
             <button class="geo-tb-btn" id="geo-paint-water" onclick="_geoSetPaintMode('water')">🌊 Eau</button>
             <button class="geo-tb-btn" onclick="_geoClearAllLand('${nodeId}')">🗑 Effacer tout</button>
           </div>
-          <div style="margin-top:8px;opacity:.5;font-size:8px">Peindre sur la carte pour définir la terre</div>
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
+            <span style="font-size:8px;letter-spacing:1px;min-width:50px">TAILLE</span>
+            <input type="range" id="geo-paint-radius-slider" min="1" max="15" value="4"
+              style="flex:1;accent-color:#c8a840;cursor:pointer"
+              oninput="if(window._geoState)window._geoState.paintRadius=parseInt(this.value);document.getElementById('geo-paint-radius-val').textContent=this.value">
+            <span id="geo-paint-radius-val" style="font-size:9px;color:#c8a840;min-width:16px">4</span>
+          </div>
+          <div style="opacity:.5;font-size:8px">Peindre sur la carte pour définir la terre</div>
         </div>
         <div id="geo-boat-size-panel">
           <div style="margin-bottom:10px;letter-spacing:1.5px">TAILLE DU BATEAU</div>
@@ -4624,7 +4747,7 @@ function renderGeographieImmersive(v, n){
     boat: {x:0.1, y:0.5, angle: 0, targetX:null, targetY:null, path:[], pathIdx:0, moving:false, speed:0.0015, size: boatSize},
     mode: 'nav', // 'nav' | 'poi' | 'paint'
     paintMode: 'land', // 'land' | 'water'
-    paintRadius: 18,
+    paintRadius: 4,
     grid: null, gridW: 0, gridH: 0,
     img: null, imgLoaded: false,
     pendingTarget: null,
@@ -4633,7 +4756,17 @@ function renderGeographieImmersive(v, n){
   };
   window._geoState = GS;
 
+  // Auto-créer POI Royaume de Pyli s'il n'existe pas encore
+  if(!n._geoPois || !n._geoPois.find(p=>p._pyliAuto)){
+    const pyliChild = (n.children||[]).map(id=>db[id]).filter(Boolean).find(c=>c.name&&c.name.toLowerCase().includes('pyli'));
+    if(pyliChild){
+      if(!n._geoPois) n._geoPois=[];
+      n._geoPois.push({x:0.5,y:0.5,name:'Royaume de Pyli',icon:'👑',linkId:pyliChild.id,color:'rgba(200,160,60,.8)',_pyliAuto:true});
+      save();
+    }
+  }
   _geoRenderPois(nodeId);
+  initGeoAudio();
 
   // Charger image et démarrer
   const img = new Image();
@@ -4652,10 +4785,11 @@ function renderGeographieImmersive(v, n){
   };
   img.src = mapImg;
 
-  document.getElementById('geo-outer').addEventListener('click', e => _geoCanvasClick(e, nodeId));
-  document.getElementById('geo-outer').addEventListener('mousemove', e => _geoCanvasMove(e, nodeId));
-  document.getElementById('geo-outer').addEventListener('mouseup', () => { if(window._geoState) window._geoState._painting = false; });
-  document.getElementById('geo-outer').addEventListener('mousedown', e => { if(window._geoState?.mode==='paint') window._geoState._painting = true; });
+  const _geoIsUI = e => e.target.closest('#geo-toolbar,#geo-paint-panel,#geo-boat-size-panel,#_vol-ctrl,#_geo-poi-modal');
+  document.getElementById('geo-outer').addEventListener('click', e => { if(!_geoIsUI(e)) _geoCanvasClick(e, nodeId); });
+  document.getElementById('geo-outer').addEventListener('mousemove', e => { if(!_geoIsUI(e)) _geoCanvasMove(e, nodeId); });
+  document.getElementById('geo-outer').addEventListener('mouseup', e => { if(window._geoState && !_geoIsUI(e)) window._geoState._painting = false; });
+  document.getElementById('geo-outer').addEventListener('mousedown', e => { if(window._geoState?.mode==='paint' && !_geoIsUI(e)) window._geoState._painting = true; });
 }
 
 // ── Grille pathfinding ──
@@ -5061,7 +5195,38 @@ function _geoRenderPois(nodeId){
     el.innerHTML=`<div class="geo-poi-dot" style="border-color:${p.color||'rgba(200,160,60,.8)'}">${p.icon||'📍'}</div><div class="geo-poi-label">${esc(p.name||'')}</div>`;
     el.onclick=e=>{e.stopPropagation();_geoNavigateTo(nodeId,i);};
     if(_isAdmin()){
+      // Clic droit → menu (déplacer + supprimer)
       el.oncontextmenu=e=>{e.preventDefault();e.stopPropagation();_geoPoiCtx(e,nodeId,i);};
+      // Drag pour déplacer
+      el.addEventListener('mousedown', e=>{
+        if(e.button!==0) return;
+        e.stopPropagation();
+        let moved=false;
+        const startX=e.clientX, startY=e.clientY;
+        const onMove=mv=>{
+          const dx=Math.abs(mv.clientX-startX),dy=Math.abs(mv.clientY-startY);
+          if(!moved&&(dx>4||dy>4)) moved=true;
+          if(!moved) return;
+          const rect=overlay.getBoundingClientRect();
+          const px=(mv.clientX-rect.left)/rect.width;
+          const py=(mv.clientY-rect.top)/rect.height;
+          el.style.left=(Math.max(0,Math.min(1,px))*100)+'%';
+          el.style.top=(Math.max(0,Math.min(1,py))*100)+'%';
+        };
+        const onUp=up=>{
+          document.removeEventListener('mousemove',onMove);
+          document.removeEventListener('mouseup',onUp);
+          if(!moved) return; // c'était un clic simple → navigation
+          const rect=overlay.getBoundingClientRect();
+          const px=(up.clientX-rect.left)/rect.width;
+          const py=(up.clientY-rect.top)/rect.height;
+          n._geoPois[i].x=Math.max(0,Math.min(1,px));
+          n._geoPois[i].y=Math.max(0,Math.min(1,py));
+          save();
+        };
+        document.addEventListener('mousemove',onMove);
+        document.addEventListener('mouseup',onUp);
+      });
     }
     overlay.appendChild(el);
   });
