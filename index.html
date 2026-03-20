@@ -4239,6 +4239,22 @@ function renderSecretsImmersive(v, n){
     .sec-seal-cracking{animation:sealCrack .35s ease-in forwards}
     /* Modal édition parchemin */
     #sec-edit-modal{position:fixed;inset:0;z-index:1100;background:rgba(0,0,0,.8);display:flex;align-items:center;justify-content:center;padding:20px}
+    .sec-locks-row{display:flex;flex-wrap:wrap;gap:12px;justify-content:center;margin:16px 0 20px;padding:14px;background:rgba(120,80,20,.06);border-radius:6px;border:1px solid rgba(120,80,20,.12)}
+    .sec-lock{display:flex;flex-direction:column;align-items:center;gap:4px;cursor:pointer;transition:transform .15s,opacity .15s;padding:8px 12px;border-radius:5px;border:1px solid rgba(120,80,20,.15);background:rgba(120,80,20,.05)}
+    .sec-lock:hover{transform:scale(1.08);background:rgba(120,80,20,.12);border-color:rgba(120,80,20,.3)}
+    .sec-lock-open{opacity:.45;cursor:default}.sec-lock-open:hover{transform:none}
+    .sec-lock-icon{font-size:26px;line-height:1}
+    .sec-lock-label{font-family:'Cinzel',serif;font-size:7.5px;letter-spacing:1px;color:rgba(60,30,10,.55);text-align:center;max-width:70px}
+    .sec-p-pagination{display:flex;align-items:center;justify-content:center;gap:14px;margin:16px 0 8px;padding-top:12px;border-top:1px solid rgba(120,80,20,.12)}
+    .sec-p-page-btn{padding:6px 16px;background:rgba(80,40,10,.12);border:1px solid rgba(120,80,20,.3);border-radius:4px;font-family:'Cinzel',serif;font-size:14px;cursor:pointer;color:#3a2008}
+    .sec-p-page-btn:hover:not(.disabled){background:rgba(80,40,10,.22)}
+    .sec-p-page-btn.disabled{opacity:.28;cursor:default}
+    .sec-p-page-info{font-family:'Cinzel',serif;font-size:9px;letter-spacing:1.5px;color:rgba(60,30,10,.45)}
+    .sec-enig-question{font-family:'EB Garamond',serif;font-size:17px;line-height:1.8;color:#2a1808;text-align:center}
+    .sec-enig-hint-btn{text-align:center;font-family:'Cinzel',serif;font-size:8.5px;letter-spacing:1px;color:rgba(80,50,20,.5);cursor:pointer;margin-top:8px;text-decoration:underline}
+    @keyframes sec-shake{0%,100%{transform:translateX(0)}15%{transform:translateX(-8px) rotate(-1.5deg)}30%{transform:translateX(8px) rotate(1.5deg)}45%{transform:translateX(-6px)}60%{transform:translateX(6px)}75%{transform:translateX(-3px)}}
+    .sec-p-btn-keep{border-color:rgba(80,80,200,.3)!important;color:#4060c0!important}
+
   `;
   document.head.appendChild(s);
 
@@ -4364,122 +4380,577 @@ function _secOpenScroll(id){
   });
 }
 
+// ════════════════════════════════════════════════════════════
+//  SECRETS — Système de verrous + énigmes + pages
+// ════════════════════════════════════════════════════════════
+
+// ── Fix résidu visuel à la fermeture ──
 function _secCloseScroll(e){
   if(e && e.target !== document.getElementById('sec-parchment-overlay')) return;
   const overlay=document.getElementById('sec-parchment-overlay');
   const parchment=document.getElementById('sec-parchment');
   if(!overlay||!parchment) return;
   parchment.classList.remove('open');
-  setTimeout(()=>overlay.classList.remove('open'),450);
+  overlay.classList.remove('open');
+  // Masquer complètement après l'animation pour éviter le résidu
+  setTimeout(()=>{
+    parchment.style.visibility='hidden';
+    const inner=document.getElementById('sec-parchment-inner');
+    if(inner) inner.innerHTML='';
+  }, 460);
 }
 
-// ── Menu clic droit sur un rouleau ──
-function _secScrollCtx(e, id){
-  document.getElementById('_sec-ctx')?.remove();
+// ── État courant du parchemin ouvert ──
+window._secState = null; // { id, page }
+
+// ── Stockage des verrous débloqués (localStorage, par utilisateur) ──
+function _secIsUnlocked(lockId){
+  return localStorage.getItem('goh_lock_'+lockId)==='1';
+}
+function _secSetUnlocked(lockId, val){
+  if(val) localStorage.setItem('goh_lock_'+lockId,'1');
+  else localStorage.removeItem('goh_lock_'+lockId);
+}
+
+// ── Ouvrir un parchemin ──
+function _secOpenScroll(id){
   const n=db[id]; if(!n) return;
-  const m=document.createElement('div');
-  m.id='_sec-ctx';
+  window._secState = {id, page:0};
+  const overlay=document.getElementById('sec-parchment-overlay');
+  const parchment=document.getElementById('sec-parchment');
+  if(!overlay||!parchment) return;
+  parchment.style.visibility='visible';
+  _secRenderParchment(id);
+  requestAnimationFrame(()=>{
+    overlay.classList.add('open');
+    requestAnimationFrame(()=>parchment.classList.add('open'));
+  });
+}
+
+// ── Construire les pages du parchemin ──
+function _secBuildPages(n){
+  // Page 0 : contenu de base (charBio) + section initiale
+  const pages = [];
+  const baseText = n.charBio || '';
+  const baseImg = n.images && n.images[0] ? n.images[0] : null;
+
+  // Page de base toujours présente
+  pages.push({ text: baseText, img: baseImg, lockIdx: null });
+
+  // Ajouter les sections débloquées par chaque verrou
+  (n._locks||[]).forEach((lock,li)=>{
+    if(!lock.revealText && !lock.revealImg) return;
+    const unlocked = _secIsUnlocked(lock._id||`${n.id}_lock_${li}`);
+    if(unlocked){
+      pages.push({ text: lock.revealText||'', img: lock.revealImg||null, lockIdx: li });
+    }
+  });
+
+  // Paginer si le texte est long (>1200 chars par page)
+  const MAX = 1200;
+  const result = [];
+  pages.forEach(p=>{
+    if(!p.text || p.text.length <= MAX){
+      result.push(p);
+    } else {
+      // Découper en morceaux
+      let remaining = p.text;
+      let first = true;
+      while(remaining.length > 0){
+        const chunk = remaining.slice(0, MAX);
+        remaining = remaining.slice(MAX);
+        result.push({
+          text: chunk + (remaining.length > 0 ? '…' : ''),
+          img: first ? p.img : null,
+          lockIdx: p.lockIdx,
+          continued: !first
+        });
+        first = false;
+      }
+    }
+  });
+  return result;
+}
+
+// ── Rendre le parchemin (page courante) ──
+function _secRenderParchment(id){
+  const n=db[id]; if(!n) return;
+  const inner=document.getElementById('sec-parchment-inner');
+  if(!inner) return;
+  const st=window._secState; if(!st||st.id!==id) return;
+
+  const pages = _secBuildPages(n);
+  const totalPages = pages.length;
+  const page = Math.max(0, Math.min(st.page, totalPages-1));
+  st.page = page;
+
+  const locks = n._locks||[];
+  const unlockedCount = locks.filter((l,li)=>_secIsUnlocked(l._id||`${id}_lock_${li}`)).length;
+
+  // ── Verrous à afficher ──
+  let locksHTML = '';
+  if(locks.length > 0){
+    locksHTML = `<div class="sec-locks-row">`;
+    locks.forEach((lock, li)=>{
+      const lockId = lock._id || `${id}_lock_${li}`;
+      const isOpen = _secIsUnlocked(lockId);
+      locksHTML += `<div class="sec-lock${isOpen?' sec-lock-open':''}" id="sec-lock-${li}"
+        onclick="_secClickLock('${id}',${li})"
+        oncontextmenu="event.preventDefault();event.stopPropagation();_secLockCtx(event,'${id}',${li})">
+        <div class="sec-lock-icon">${isOpen ? '🔓' : '🔒'}</div>
+        <div class="sec-lock-label">${esc(lock.label||`Verrou ${li+1}`)}</div>
+      </div>`;
+    });
+    locksHTML += `</div>`;
+  }
+
+  // ── Contenu de la page courante ──
+  const p = pages[page] || {text:'',img:null};
+  const contentHTML = `
+    ${p.img ? `<div class="sec-p-imgs" style="margin-bottom:16px"><img src="${p.img}" onclick="openLB('${p.img}')"></div>` : ''}
+    ${p.text
+      ? `<div class="sec-p-body" id="sec-p-body-text">${esc(p.text)}</div>`
+      : `<div class="sec-p-body" style="opacity:.35;font-style:italic">Parchemin vierge…</div>`}`;
+
+  // ── Pagination ──
+  const prevDisabled = page === 0;
+  const nextDisabled = page >= totalPages - 1;
+  const paginationHTML = totalPages > 1 ? `
+    <div class="sec-p-pagination">
+      <button class="sec-p-page-btn${prevDisabled?' disabled':''}" onclick="if(${!prevDisabled})_secGotoPage('${id}',${page-1})">◀</button>
+      <span class="sec-p-page-info">${page+1} / ${totalPages}</span>
+      <button class="sec-p-page-btn${nextDisabled?' disabled':''}" onclick="if(${!nextDisabled})_secGotoPage('${id}',${page+1})">▶</button>
+    </div>` : '';
+
+  // ── Boutons actions ──
+  const adminBtns = _isAdmin() ? `
+    <button class="sec-p-btn" onclick="_secEditModal('${id}')">✎ Modifier</button>
+    <button class="sec-p-btn" onclick="_secLockManager('${id}')">🔒 Verrous</button>
+    <button class="sec-p-btn del" onclick="if(confirm('Supprimer ce secret ?')){_secCloseScrollDirect();doDelete('${id}')}">🗑</button>` : '';
+
+  inner.innerHTML = `
+    <div class="sec-p-title">${esc(n.name)}</div>
+    ${n.subtitle?`<div style="font-family:'EB Garamond',serif;font-size:13px;color:rgba(60,30,10,.5);font-style:italic;text-align:center;margin-bottom:14px">${esc(n.subtitle)}</div>`:''}
+    ${locksHTML}
+    <div id="sec-p-content">${contentHTML}</div>
+    ${paginationHTML}
+    <div class="sec-p-actions">
+      ${adminBtns}
+      <button class="sec-p-btn sec-p-btn-keep" onclick="_secCloseScrollDirect()">✕ Refermer</button>
+    </div>`;
+}
+
+function _secGotoPage(id, page){
+  if(window._secState) window._secState.page = page;
+  _secRenderParchment(id);
+}
+
+function _secCloseScrollDirect(){
+  const overlay=document.getElementById('sec-parchment-overlay');
+  const parchment=document.getElementById('sec-parchment');
+  if(!overlay||!parchment) return;
+  parchment.classList.remove('open');
+  overlay.classList.remove('open');
+  setTimeout(()=>{
+    parchment.style.visibility='hidden';
+    const inner=document.getElementById('sec-parchment-inner');
+    if(inner) inner.innerHTML='';
+  }, 460);
+}
+
+// ── Clic sur un verrou ──
+function _secClickLock(secretId, lockIdx){
+  const n=db[secretId]; if(!n) return;
+  const lock=(n._locks||[])[lockIdx]; if(!lock) return;
+  const lockId = lock._id || `${secretId}_lock_${lockIdx}`;
+  if(_secIsUnlocked(lockId)) return; // déjà ouvert, rien
+  _secShowEnigma(secretId, lockIdx);
+}
+
+// ── Clic droit sur un verrou (refermer) ──
+function _secLockCtx(e, secretId, lockIdx){
+  document.getElementById('_sec-lock-ctx')?.remove();
+  const n=db[secretId]; if(!n) return;
+  const lock=(n._locks||[])[lockIdx]; if(!lock) return;
+  const lockId = lock._id || `${secretId}_lock_${lockIdx}`;
+  const isOpen = _secIsUnlocked(lockId);
+  const m=document.createElement('div');m.id='_sec-lock-ctx';
   m.style.cssText=`position:fixed;left:${e.clientX}px;top:${e.clientY}px;z-index:9999;
     background:rgba(8,5,2,.97);border:1px solid rgba(160,100,30,.35);border-radius:6px;
-    padding:5px 0;min-width:170px;font-family:'Cinzel',serif;font-size:11px;
+    padding:5px 0;min-width:175px;font-family:'Cinzel',serif;font-size:10px;
     box-shadow:0 8px 28px rgba(0,0,0,.85)`;
-  m.innerHTML=`
-    <div style="padding:6px 14px;font-size:8px;letter-spacing:2px;color:rgba(160,100,30,.45);border-bottom:1px solid rgba(160,100,30,.12);margin-bottom:4px">📜 ${esc(n.name)}</div>
-    <div style="padding:8px 16px;color:#c8a060;cursor:pointer" onmouseenter="this.style.background='rgba(160,100,30,.12)'" onmouseleave="this.style.background=''" onclick="_secOpenScroll('${id}');document.getElementById('_sec-ctx')?.remove()">👁 Lire le parchemin</div>
-    <div style="padding:8px 16px;color:#c8a060;cursor:pointer" onmouseenter="this.style.background='rgba(160,100,30,.12)'" onmouseleave="this.style.background=''" onclick="_secEditModal('${id}');document.getElementById('_sec-ctx')?.remove()">✎ Modifier</div>
-    <div style="padding:8px 16px;color:#e07070;cursor:pointer" onmouseenter="this.style.background='rgba(200,60,60,.12)'" onmouseleave="this.style.background=''" onclick="doDelete('${id}');document.getElementById('_sec-ctx')?.remove()">✕ Supprimer</div>
-  `;
-  document.body.appendChild(m);
-  requestAnimationFrame(()=>{const r=m.getBoundingClientRect();if(r.right>window.innerWidth)m.style.left=(e.clientX-r.width-4)+'px';if(r.bottom>window.innerHeight)m.style.top=(e.clientY-r.height-4)+'px';});
-  setTimeout(()=>document.addEventListener('click',function _c(){m.remove();document.removeEventListener('click',_c);}),0);
-}
-
-// ── Modal d'édition dédié pour les secrets ──
-function _secEditModal(id){
-  const n=db[id]; if(!n) return;
-  document.getElementById('_sec-modal')?.remove();
-
-  const m=document.createElement('div');
-  m.id='_sec-modal';
-  m.style.cssText='position:fixed;inset:0;z-index:1100;background:rgba(0,0,0,.82);display:flex;align-items:center;justify-content:center;padding:20px';
-
-  m.innerHTML=`<div style="background:linear-gradient(180deg,#f5e8c8,#edddb0);border-radius:4px;padding:28px;width:min(560px,96vw);max-height:90vh;overflow-y:auto;position:relative;box-shadow:0 20px 60px rgba(0,0,0,.9)">
-    <div style="font-family:'Cinzel Decorative',serif;font-size:14px;color:#3a2008;letter-spacing:2px;margin-bottom:20px;border-bottom:1px solid rgba(120,80,20,.2);padding-bottom:10px">📜 Éditer le secret</div>
-
-    <div style="margin-bottom:12px">
-      <label style="font-family:'Cinzel',serif;font-size:8px;letter-spacing:2px;color:rgba(80,40,10,.5);display:block;margin-bottom:5px">TITRE</label>
-      <input id="_sec-name" value="${esc(n.name)}" style="width:100%;background:rgba(255,240,200,.6);border:1px solid rgba(120,80,20,.3);border-radius:3px;padding:8px 12px;color:#2a1808;font-family:'Cinzel',serif;font-size:13px;outline:none;box-sizing:border-box">
-    </div>
-
-    <div style="margin-bottom:12px">
-      <label style="font-family:'Cinzel',serif;font-size:8px;letter-spacing:2px;color:rgba(80,40,10,.5);display:block;margin-bottom:5px">SOUS-TITRE <span style="opacity:.5;font-size:7px">(optionnel)</span></label>
-      <input id="_sec-sub" value="${esc(n.subtitle||'')}" style="width:100%;background:rgba(255,240,200,.6);border:1px solid rgba(120,80,20,.3);border-radius:3px;padding:8px 12px;color:#2a1808;font-family:'EB Garamond',serif;font-size:14px;outline:none;box-sizing:border-box">
-    </div>
-
-    <div style="margin-bottom:12px">
-      <label style="font-family:'Cinzel',serif;font-size:8px;letter-spacing:2px;color:rgba(80,40,10,.5);display:block;margin-bottom:5px">CONTENU</label>
-      <textarea id="_sec-body" rows="7" style="width:100%;background:rgba(255,240,200,.6);border:1px solid rgba(120,80,20,.3);border-radius:3px;padding:8px 12px;color:#2a1808;font-family:'EB Garamond',serif;font-size:15px;outline:none;resize:vertical;box-sizing:border-box;line-height:1.8">${esc(n.charBio||'')}</textarea>
-    </div>
-
-    <div style="margin-bottom:20px">
-      <label style="font-family:'Cinzel',serif;font-size:8px;letter-spacing:2px;color:rgba(80,40,10,.5);display:block;margin-bottom:8px">IMAGES</label>
-      <div id="_sec-imgs-prev" style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:8px">
-        ${(n.images||[]).map((s,i)=>`<div style="position:relative"><img src="${s}" style="height:70px;border-radius:3px;border:1px solid rgba(120,80,20,.25);object-fit:cover"><button onclick="_secRemoveImg(${i},'${id}')" style="position:absolute;top:-6px;right:-6px;background:#c03020;border:none;border-radius:50%;width:16px;height:16px;color:white;font-size:9px;cursor:pointer;display:flex;align-items:center;justify-content:center">✕</button></div>`).join('')}
-      </div>
-      <button onclick="document.getElementById('_sec-img-input').click()" style="padding:5px 14px;background:rgba(80,40,10,.1);border:1px solid rgba(120,80,20,.25);border-radius:3px;font-family:'Cinzel',serif;font-size:9px;cursor:pointer;color:#3a2008">📎 Ajouter une image</button>
-      <input type="file" id="_sec-img-input" accept="image/*" multiple style="display:none" onchange="_secAddImgs(this,'${id}')">
-    </div>
-
-    <div style="display:flex;gap:10px;justify-content:flex-end">
-      <button onclick="document.getElementById('_sec-modal').remove()" style="padding:8px 18px;background:rgba(80,40,10,.08);border:1px solid rgba(120,80,20,.2);border-radius:3px;font-family:'Cinzel',serif;font-size:10px;cursor:pointer;color:rgba(60,30,10,.6)">Annuler</button>
-      <button onclick="_secSave('${id}')" style="padding:8px 18px;background:rgba(120,80,20,.2);border:1px solid rgba(120,80,20,.5);border-radius:3px;font-family:'Cinzel',serif;font-size:10px;cursor:pointer;color:#3a2008">✓ Sceller le parchemin</button>
-    </div>
-  </div>`;
-
-  document.body.appendChild(m);
-  m.addEventListener('click',e=>{if(e.target===m)m.remove();});
-  if(!window._secPendImgs) window._secPendImgs={};
-  window._secPendImgs[id]=[...(n.images||[])];
-}
-
-function _secAddImgs(input, id){
-  if(!window._secPendImgs) window._secPendImgs={};
-  if(!window._secPendImgs[id]) window._secPendImgs[id]=[];
-  Array.from(input.files).forEach(f=>{
-    _uploadToCloudinary(f, url=>{
-      window._secPendImgs[id].push(url);
-      _secRefreshImgPrev(id);
+  const title=document.createElement('div');
+  title.style.cssText='padding:7px 14px 5px;font-size:8px;letter-spacing:2px;color:rgba(160,100,30,.45);border-bottom:1px solid rgba(160,100,30,.12);margin-bottom:4px';
+  title.textContent=lock.label||`Verrou ${lockIdx+1}`;m.appendChild(title);
+  function row(icon,label,fn,danger){
+    const r=document.createElement('div');
+    r.style.cssText=`padding:8px 14px;cursor:pointer;color:${danger?'rgba(220,80,80,.7)':'rgba(200,160,80,.7)'};display:flex;gap:8px;align-items:center`;
+    r.onmouseenter=()=>r.style.background='rgba(160,100,30,.12)';
+    r.onmouseleave=()=>r.style.background='';
+    r.innerHTML=`${icon} ${label}`;r.onclick=()=>{m.remove();fn();};m.appendChild(r);
+  }
+  if(isOpen){
+    row('🔒','Refermer le verrou',()=>{
+      _secSetUnlocked(lockId, false);
+      _secRenderParchment(secretId);
     });
-  });
-  input.value='';
+  } else {
+    row('🔓','Ouvrir (passer l\'énigme)',()=>{ _secShowEnigma(secretId,lockIdx); });
+  }
+  document.body.appendChild(m);
+  requestAnimationFrame(()=>{const r=m.getBoundingClientRect();if(r.right>window.innerWidth)m.style.left=(e.clientX-r.width)+'px';if(r.bottom>window.innerHeight)m.style.top=(e.clientY-r.height)+'px';});
+  setTimeout(()=>document.addEventListener('click',function _c(ev){if(!m.contains(ev.target)){m.remove();document.removeEventListener('click',_c);}},10));
 }
 
-function _secRemoveImg(idx, id){
-  if(!window._secPendImgs||!window._secPendImgs[id]) return;
-  window._secPendImgs[id].splice(idx,1);
-  _secRefreshImgPrev(id);
+// ── Afficher l'énigme ──
+function _secShowEnigma(secretId, lockIdx){
+  document.getElementById('_sec-enigma-modal')?.remove();
+  const n=db[secretId]; if(!n) return;
+  const lock=(n._locks||[])[lockIdx]; if(!lock) return;
+  const lockId = lock._id || `${secretId}_lock_${lockIdx}`;
+
+  const m=document.createElement('div');m.id='_sec-enigma-modal';
+  m.style.cssText='position:fixed;inset:0;z-index:1200;background:rgba(0,0,0,.88);display:flex;align-items:center;justify-content:center;padding:20px';
+
+  let inputHTML = '';
+  if(lock.type==='missing_word'){
+    // Mettre en évidence le mot manquant avec un input inline
+    const question = (lock.question||'').replace(/___/g,
+      `<span style="display:inline-block;border-bottom:2px solid rgba(120,80,20,.6);min-width:80px;padding:0 4px">
+        <input id="_enigma-inp" autocomplete="off" style="background:none;border:none;outline:none;font-family:'EB Garamond',serif;font-size:17px;color:#2a1808;width:100px;text-align:center" placeholder="???">
+       </span>`);
+    inputHTML = `<div class="sec-enig-question" style="line-height:2">${question}</div>`;
+  } else {
+    inputHTML = `
+      <div class="sec-enig-question">${esc(lock.question||'Quelle est la réponse ?')}</div>
+      <input id="_enigma-inp" autocomplete="off" placeholder="${lock.type==='numeric'?'Code numérique…':'Réponse…'}"
+        type="${lock.type==='numeric'?'text':'text'}"
+        style="width:100%;box-sizing:border-box;background:rgba(255,245,220,.9);border:1.5px solid rgba(120,80,20,.4);border-radius:4px;padding:12px 16px;font-family:'EB Garamond',serif;font-size:17px;color:#2a1808;outline:none;text-align:center;margin-top:14px">`;
+  }
+
+  const hintHTML = lock.hint ? `
+    <div class="sec-enig-hint-btn" onclick="document.getElementById('_enigma-hint').style.display='block';this.style.display='none'">💡 Voir un indice</div>
+    <div id="_enigma-hint" style="display:none;font-family:'EB Garamond',serif;font-size:13px;color:rgba(80,50,20,.6);font-style:italic;text-align:center;margin-top:8px;padding:8px;background:rgba(120,80,20,.06);border-radius:4px;border:1px solid rgba(120,80,20,.12)">${esc(lock.hint)}</div>` : '';
+
+  m.innerHTML=`
+    <div style="background:linear-gradient(180deg,#f8ecc8,#f0dda0);border-radius:6px;padding:30px;width:min(480px,94vw);max-height:90vh;overflow-y:auto;box-shadow:0 20px 80px rgba(0,0,0,.9);position:relative">
+      <div style="font-family:'Cinzel Decorative',serif;font-size:11px;letter-spacing:3px;color:rgba(60,30,10,.4);text-align:center;margin-bottom:20px">🔒 VERROU</div>
+      <div style="text-align:center;font-size:44px;margin-bottom:16px" id="_enigma-lock-icon">🔒</div>
+      ${inputHTML}
+      <div id="_enigma-msg" style="text-align:center;font-family:'Cinzel',serif;font-size:10px;letter-spacing:1px;height:20px;margin-top:10px"></div>
+      ${hintHTML}
+      <div style="display:flex;gap:10px;margin-top:18px">
+        <button onclick="document.getElementById('_sec-enigma-modal').remove()"
+          style="flex:1;padding:10px;background:rgba(80,40,10,.12);border:1px solid rgba(120,80,20,.3);border-radius:4px;font-family:'Cinzel',serif;font-size:9px;letter-spacing:1.5px;cursor:pointer;color:#3a2008">Annuler</button>
+        <button onclick="_secCheckAnswer('${secretId}',${lockIdx})"
+          style="flex:1;padding:10px;background:rgba(120,80,20,.2);border:1px solid rgba(120,80,20,.5);border-radius:4px;font-family:'Cinzel',serif;font-size:9px;letter-spacing:1.5px;cursor:pointer;color:#3a2008">Valider →</button>
+      </div>
+    </div>`;
+
+  document.body.appendChild(m);
+  // Focus sur l'input
+  setTimeout(()=>document.getElementById('_enigma-inp')?.focus(), 80);
+  // Valider avec Entrée
+  m.addEventListener('keydown', e=>{ if(e.key==='Enter') _secCheckAnswer(secretId, lockIdx); });
 }
 
-function _secRefreshImgPrev(id){
-  const prev=document.getElementById('_sec-imgs-prev'); if(!prev) return;
-  const imgs=window._secPendImgs[id]||[];
-  prev.innerHTML=imgs.map((s,i)=>`<div style="position:relative"><img src="${s}" style="height:70px;border-radius:3px;border:1px solid rgba(120,80,20,.25);object-fit:cover"><button onclick="_secRemoveImg(${i},'${id}')" style="position:absolute;top:-6px;right:-6px;background:#c03020;border:none;border-radius:50%;width:16px;height:16px;color:white;font-size:9px;cursor:pointer">✕</button></div>`).join('');
+// ── Vérifier la réponse ──
+function _secCheckAnswer(secretId, lockIdx){
+  const n=db[secretId]; if(!n) return;
+  const lock=(n._locks||[])[lockIdx]; if(!lock) return;
+  const lockId = lock._id || `${secretId}_lock_${lockIdx}`;
+
+  const inp=document.getElementById('_enigma-inp');
+  if(!inp) return;
+  const answer = inp.value.trim().toLowerCase();
+  const correct = (lock.answer||'').trim().toLowerCase();
+
+  if(answer === correct){
+    _secOnCorrect(secretId, lockIdx, lockId);
+  } else {
+    _secOnWrong(lockIdx);
+  }
 }
 
-function _secSave(id){
-  const n=db[id]; if(!n) return;
-  n.name=document.getElementById('_sec-name')?.value.trim()||n.name;
-  n.subtitle=document.getElementById('_sec-sub')?.value.trim()||'';
-  n.charBio=document.getElementById('_sec-body')?.value.trim()||'';
-  if(window._secPendImgs&&window._secPendImgs[id]!==undefined){
-    n.images=window._secPendImgs[id];
-    delete window._secPendImgs[id];
+// ── Bonne réponse ──
+function _secOnCorrect(secretId, lockIdx, lockId){
+  const n=db[secretId];
+  const lock=(n._locks||[])[lockIdx];
+
+  // Jouer le son correct
+  if(lock.soundCorrect){
+    const delay = lock.soundCorrectDelay||0;
+    setTimeout(()=>{
+      const a=new Audio(lock.soundCorrect);
+      a.volume=_masterVol;
+      a.play().catch(()=>{});
+    }, delay);
+  }
+
+  // Animation : verrou qui se brise
+  const iconEl=document.getElementById('_enigma-lock-icon');
+  if(iconEl){
+    iconEl.style.transition='all .4s';
+    iconEl.style.transform='scale(1.3)';
+    iconEl.textContent='🔓';
+    setTimeout(()=>{ iconEl.style.transform='scale(0)'; iconEl.style.opacity='0'; },200);
+  }
+
+  const msg=document.getElementById('_enigma-msg');
+  if(msg){ msg.textContent='✓ Verrou ouvert'; msg.style.color='#3a7030'; }
+
+  setTimeout(()=>{
+    _secSetUnlocked(lockId, true);
+    document.getElementById('_sec-enigma-modal')?.remove();
+    // Révéler le contenu progressivement
+    _secRenderParchment(secretId);
+    _secRevealContent(secretId, lockIdx);
+  }, 600);
+}
+
+// ── Mauvaise réponse ──
+function _secOnWrong(lockIdx){
+  const n=db[window._secState?.id];
+  const lock=n?((n._locks||[])[lockIdx]):null;
+
+  // Son mauvais
+  if(lock&&lock.soundWrong){
+    const delay = lock.soundWrongDelay||0;
+    setTimeout(()=>{
+      const a=new Audio(lock.soundWrong);
+      a.volume=_masterVol;
+      a.play().catch(()=>{});
+    }, delay);
+  }
+
+  // Animation tremblement
+  const modal=document.getElementById('_sec-enigma-modal');
+  const inner=modal?.querySelector('div');
+  if(inner){
+    inner.style.animation='none';
+    inner.offsetWidth; // reflow
+    inner.style.animation='sec-shake .4s ease';
+  }
+
+  const msg=document.getElementById('_enigma-msg');
+  if(msg){ msg.textContent='✗ Mauvaise réponse'; msg.style.color='#a03020'; }
+  const inp=document.getElementById('_enigma-inp');
+  if(inp){ inp.value=''; inp.focus(); }
+  setTimeout(()=>{ if(msg) msg.textContent=''; },2000);
+}
+
+// ── Révélation progressive du texte ──
+function _secRevealContent(secretId, lockIdx){
+  const bodyEl=document.getElementById('sec-p-body-text');
+  if(!bodyEl) return;
+  // Trouver le texte actuel et le révéler lettre par lettre
+  const fullText = bodyEl.textContent;
+  bodyEl.textContent = '';
+  let i=0;
+  const reveal=setInterval(()=>{
+    if(i>=fullText.length){ clearInterval(reveal); return; }
+    bodyEl.textContent += fullText[i];
+    i++;
+  }, 12);
+}
+
+// ── Gestionnaire de verrous (admin) ──
+function _secLockManager(secretId){
+  document.getElementById('_sec-lock-mgr')?.remove();
+  const n=db[secretId]; if(!n) return;
+  if(!n._locks) n._locks=[];
+
+  const m=document.createElement('div');m.id='_sec-lock-mgr';
+  m.style.cssText='position:fixed;inset:0;z-index:1300;background:rgba(0,0,0,.88);display:flex;align-items:center;justify-content:center;padding:20px;overflow:auto';
+
+  const locksList = n._locks.map((lock,li)=>{
+    const lockId = lock._id||`${secretId}_lock_${li}`;
+    return `<div style="background:rgba(120,80,20,.08);border:1px solid rgba(120,80,20,.2);border-radius:5px;padding:12px 14px;margin-bottom:8px;display:flex;align-items:center;gap:10px">
+      <span style="font-size:18px">🔒</span>
+      <div style="flex:1">
+        <div style="font-family:'Cinzel',serif;font-size:10px;color:#3a2008">${esc(lock.label||`Verrou ${li+1}`)}</div>
+        <div style="font-family:'EB Garamond',serif;font-size:11px;color:rgba(60,30,10,.5);font-style:italic">${lock.type||'password'} — ${lock.question?esc(lock.question.slice(0,40))+'…':'sans question'}</div>
+      </div>
+      <button onclick="_secEditLock('${secretId}',${li})" style="padding:5px 10px;background:rgba(120,80,20,.12);border:1px solid rgba(120,80,20,.3);border-radius:3px;font-family:'Cinzel',serif;font-size:8px;cursor:pointer;color:#3a2008">✎</button>
+      <button onclick="_secDeleteLock('${secretId}',${li})" style="padding:5px 10px;background:rgba(180,60,40,.08);border:1px solid rgba(180,60,40,.2);border-radius:3px;font-family:'Cinzel',serif;font-size:8px;cursor:pointer;color:#a03020">✕</button>
+    </div>`;
+  }).join('');
+
+  m.innerHTML=`
+    <div style="background:linear-gradient(180deg,#f8ecc8,#f0dda0);border-radius:6px;padding:28px;width:min(560px,96vw);max-height:90vh;overflow-y:auto;box-shadow:0 20px 80px rgba(0,0,0,.9)">
+      <div style="font-family:'Cinzel Decorative',serif;font-size:13px;color:#3a2008;letter-spacing:2px;margin-bottom:18px;text-align:center">🔒 GESTIONNAIRE DE VERROUS</div>
+      <div id="_slm-list">${locksList||'<div style="text-align:center;color:rgba(80,50,20,.4);font-style:italic;font-family:\'EB Garamond\',serif;padding:20px">Aucun verrou</div>'}</div>
+      <button onclick="_secAddLock('${secretId}')"
+        style="width:100%;margin-top:14px;padding:11px;background:rgba(120,80,20,.12);border:1.5px dashed rgba(120,80,20,.3);border-radius:4px;font-family:'Cinzel',serif;font-size:9px;letter-spacing:1.5px;cursor:pointer;color:rgba(60,30,10,.6)">＋ Ajouter un verrou</button>
+      <button onclick="document.getElementById('_sec-lock-mgr').remove()"
+        style="width:100%;margin-top:8px;padding:10px;background:rgba(80,40,10,.1);border:1px solid rgba(120,80,20,.25);border-radius:4px;font-family:'Cinzel',serif;font-size:9px;cursor:pointer;color:#3a2008">Fermer</button>
+    </div>`;
+  document.body.appendChild(m);
+}
+
+function _secAddLock(secretId){
+  const n=db[secretId];if(!n)return;
+  if(!n._locks)n._locks=[];
+  const newLock={
+    _id:`${secretId}_lock_${Date.now()}`,
+    label:`Verrou ${n._locks.length+1}`,
+    type:'password', question:'', answer:'', hint:'',
+    revealText:'', revealImg:null,
+    soundCorrect:null, soundCorrectDelay:0,
+    soundWrong:null, soundWrongDelay:0
+  };
+  n._locks.push(newLock);
+  save();
+  document.getElementById('_sec-lock-mgr')?.remove();
+  _secEditLock(secretId, n._locks.length-1);
+}
+
+function _secDeleteLock(secretId, lockIdx){
+  const n=db[secretId];if(!n||!n._locks)return;
+  if(!confirm('Supprimer ce verrou ?'))return;
+  n._locks.splice(lockIdx,1);
+  save();
+  document.getElementById('_sec-lock-mgr')?.remove();
+  _secLockManager(secretId);
+}
+
+// ── Éditeur de verrou ──
+function _secEditLock(secretId, lockIdx){
+  document.getElementById('_sec-lock-edit')?.remove();
+  const n=db[secretId];if(!n)return;
+  const lock=(n._locks||[])[lockIdx];if(!lock)return;
+
+  const m=document.createElement('div');m.id='_sec-lock-edit';
+  m.style.cssText='position:fixed;inset:0;z-index:1400;background:rgba(0,0,0,.9);display:flex;align-items:center;justify-content:center;padding:20px;overflow:auto';
+
+  const inpStyle='width:100%;box-sizing:border-box;background:rgba(255,245,220,.85);border:1px solid rgba(120,80,20,.3);border-radius:4px;padding:8px 12px;font-family:\'EB Garamond\',serif;font-size:14px;color:#2a1808;outline:none;margin-bottom:10px';
+  const lblStyle='font-family:\'Cinzel\',serif;font-size:8px;letter-spacing:2px;color:rgba(80,40,10,.5);display:block;margin-bottom:4px';
+
+  m.innerHTML=`
+    <div style="background:linear-gradient(180deg,#f8ecc8,#f0dda0);border-radius:6px;padding:28px;width:min(560px,96vw);max-height:92vh;overflow-y:auto;box-shadow:0 20px 80px rgba(0,0,0,.9)">
+      <div style="font-family:'Cinzel Decorative',serif;font-size:12px;color:#3a2008;letter-spacing:2px;margin-bottom:18px;text-align:center">✎ ÉDITER LE VERROU</div>
+
+      <label style="${lblStyle}">ÉTIQUETTE</label>
+      <input id="_sle-label" value="${esc(lock.label||'')}" style="${inpStyle}" placeholder="Nom du verrou">
+
+      <label style="${lblStyle}">TYPE D'ÉNIGME</label>
+      <select id="_sle-type" style="${inpStyle};margin-bottom:14px" onchange="_sleBuildQuestion()">
+        <option value="password"${lock.type==='password'?' selected':''}>Mot de passe / Réponse exacte</option>
+        <option value="missing_word"${lock.type==='missing_word'?' selected':''}>Mot manquant (utilise ___ pour le blanc)</option>
+        <option value="numeric"${lock.type==='numeric'?' selected':''}>Code numérique</option>
+      </select>
+
+      <label style="${lblStyle}">QUESTION / ÉNIGME</label>
+      <textarea id="_sle-question" rows="3" style="${inpStyle};resize:vertical" placeholder="Pour 'mot manquant' : Le roi de ___ fut le premier…">${esc(lock.question||'')}</textarea>
+
+      <label style="${lblStyle}">RÉPONSE CORRECTE</label>
+      <input id="_sle-answer" value="${esc(lock.answer||'')}" style="${inpStyle}" placeholder="Réponse exacte (insensible à la casse)">
+
+      <label style="${lblStyle}">INDICE (optionnel)</label>
+      <input id="_sle-hint" value="${esc(lock.hint||'')}" style="${inpStyle}" placeholder="Un indice pour aider…">
+
+      <label style="${lblStyle}">TEXTE RÉVÉLÉ QUAND DÉBLOQUÉ</label>
+      <textarea id="_sle-reveal" rows="4" style="${inpStyle};resize:vertical" placeholder="Texte qui apparaît progressivement sur le parchemin…">${esc(lock.revealText||'')}</textarea>
+
+      <label style="${lblStyle}">IMAGE RÉVÉLÉE (optionnel)</label>
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
+        ${lock.revealImg?`<img src="${lock.revealImg}" style="height:50px;border-radius:3px;border:1px solid rgba(120,80,20,.2)">`:'' }
+        <button onclick="_sleLoadRevealImg(${lockIdx},'${secretId}')" style="padding:6px 12px;background:rgba(120,80,20,.1);border:1px solid rgba(120,80,20,.25);border-radius:4px;font-family:'Cinzel',serif;font-size:8px;cursor:pointer;color:#3a2008">🖼 ${lock.revealImg?'Changer':'Ajouter'}</button>
+        ${lock.revealImg?`<button onclick="_sleRemoveRevealImg(${lockIdx},'${secretId}')" style="padding:6px 12px;background:rgba(180,60,40,.08);border:1px solid rgba(180,60,40,.2);border-radius:4px;font-family:'Cinzel',serif;font-size:8px;cursor:pointer;color:#a03020">✕</button>`:''}
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:6px">
+        <div>
+          <label style="${lblStyle}">SON — BONNE RÉPONSE</label>
+          <div style="display:flex;gap:6px;align-items:center">
+            <button onclick="_sleLoadSound(${lockIdx},'${secretId}','correct')" style="padding:6px 10px;background:rgba(40,100,40,.1);border:1px solid rgba(40,100,40,.25);border-radius:4px;font-family:'Cinzel',serif;font-size:8px;cursor:pointer;color:#2a6030">🎵 ${lock.soundCorrect?'Changer':'Charger'}</button>
+            ${lock.soundCorrect?`<button onclick="_sleClearSound(${lockIdx},'${secretId}','correct')" style="padding:5px 8px;background:rgba(180,60,40,.08);border:1px solid rgba(180,60,40,.2);border-radius:4px;font-size:9px;cursor:pointer;color:#a03020">✕</button>`:''}
+          </div>
+          <label style="${lblStyle};margin-top:8px">DÉCALAGE (ms)</label>
+          <input type="number" id="_sle-cd" value="${lock.soundCorrectDelay||0}" style="${inpStyle}" placeholder="0">
+        </div>
+        <div>
+          <label style="${lblStyle}">SON — MAUVAISE RÉPONSE</label>
+          <div style="display:flex;gap:6px;align-items:center">
+            <button onclick="_sleLoadSound(${lockIdx},'${secretId}','wrong')" style="padding:6px 10px;background:rgba(140,40,20,.1);border:1px solid rgba(140,40,20,.25);border-radius:4px;font-family:'Cinzel',serif;font-size:8px;cursor:pointer;color:#7a2810">🎵 ${lock.soundWrong?'Changer':'Charger'}</button>
+            ${lock.soundWrong?`<button onclick="_sleClearSound(${lockIdx},'${secretId}','wrong')" style="padding:5px 8px;background:rgba(180,60,40,.08);border:1px solid rgba(180,60,40,.2);border-radius:4px;font-size:9px;cursor:pointer;color:#a03020">✕</button>`:''}
+          </div>
+          <label style="${lblStyle};margin-top:8px">DÉCALAGE (ms)</label>
+          <input type="number" id="_sle-wd" value="${lock.soundWrongDelay||0}" style="${inpStyle}" placeholder="0">
+        </div>
+      </div>
+
+      <div style="display:flex;gap:10px;margin-top:14px">
+        <button onclick="document.getElementById('_sec-lock-edit').remove();_secLockManager('${secretId}')"
+          style="flex:1;padding:10px;background:rgba(80,40,10,.1);border:1px solid rgba(120,80,20,.25);border-radius:4px;font-family:'Cinzel',serif;font-size:9px;cursor:pointer;color:#3a2008">← Retour</button>
+        <button onclick="_sleSave('${secretId}',${lockIdx})"
+          style="flex:1;padding:10px;background:rgba(120,80,20,.2);border:1px solid rgba(120,80,20,.5);border-radius:4px;font-family:'Cinzel',serif;font-size:9px;cursor:pointer;color:#3a2008">✓ Enregistrer</button>
+      </div>
+    </div>`;
+  document.body.appendChild(m);
+}
+
+function _sleSave(secretId, lockIdx){
+  const n=db[secretId];if(!n||!n._locks)return;
+  const lock=n._locks[lockIdx];if(!lock)return;
+  lock.label=document.getElementById('_sle-label')?.value.trim()||lock.label;
+  lock.type=document.getElementById('_sle-type')?.value||'password';
+  lock.question=document.getElementById('_sle-question')?.value.trim()||'';
+  lock.answer=document.getElementById('_sle-answer')?.value.trim()||'';
+  lock.hint=document.getElementById('_sle-hint')?.value.trim()||'';
+  lock.revealText=document.getElementById('_sle-reveal')?.value.trim()||'';
+  lock.soundCorrectDelay=parseInt(document.getElementById('_sle-cd')?.value)||0;
+  lock.soundWrongDelay=parseInt(document.getElementById('_sle-wd')?.value)||0;
+  save();
+  document.getElementById('_sec-lock-edit')?.remove();
+  _secLockManager(secretId);
+}
+
+function _sleLoadRevealImg(lockIdx, secretId){
+  const inp=document.createElement('input');inp.type='file';inp.accept='image/*';
+  inp.onchange=e=>{
+    const f=e.target.files[0];if(!f)return;
+    _uploadToCloudinary(f,url=>{
+      const n=db[secretId];if(n&&n._locks&&n._locks[lockIdx]) n._locks[lockIdx].revealImg=url;
+      save();
+      document.getElementById('_sec-lock-edit')?.remove();
+      _secEditLock(secretId,lockIdx);
+    });
+  };
+  inp.click();
+}
+function _sleRemoveRevealImg(lockIdx, secretId){
+  const n=db[secretId];if(n&&n._locks&&n._locks[lockIdx]) delete n._locks[lockIdx].revealImg;
+  save();
+  document.getElementById('_sec-lock-edit')?.remove();
+  _secEditLock(secretId,lockIdx);
+}
+function _sleLoadSound(lockIdx, secretId, type){
+  const inp=document.createElement('input');inp.type='file';inp.accept='audio/*';
+  inp.onchange=e=>{
+    const f=e.target.files[0];if(!f)return;
+    _uploadToCloudinary(f,url=>{
+      const n=db[secretId];if(n&&n._locks&&n._locks[lockIdx]){
+        if(type==='correct') n._locks[lockIdx].soundCorrect=url;
+        else n._locks[lockIdx].soundWrong=url;
+      }
+      save();
+      document.getElementById('_sec-lock-edit')?.remove();
+      _secEditLock(secretId,lockIdx);
+    });
+  };
+  inp.click();
+}
+function _sleClearSound(lockIdx, secretId, type){
+  const n=db[secretId];if(n&&n._locks&&n._locks[lockIdx]){
+    if(type==='correct') n._locks[lockIdx].soundCorrect=null;
+    else n._locks[lockIdx].soundWrong=null;
   }
   save();
-  document.getElementById('_sec-modal')?.remove();
-  renderTree();
-  renderContent(n.parentId||id);
+  document.getElementById('_sec-lock-edit')?.remove();
+  _secEditLock(secretId,lockIdx);
 }
+
 
 // ── Intercepter openEditModal pour les secrets ──
 // (géré dans openEditModal via entryType==='secret')
