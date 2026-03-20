@@ -12517,6 +12517,8 @@ function _applyMode(){
 
 function _visitorCtxGuard(e){
   if(!_isAdmin()){
+    // Laisser passer le clic droit sur les verrous et blocs révélés (pour refermer)
+    if(e.target.closest('.sec-lock-inline,.sec-reveal-block,.sec-reveal-footer')) return;
     e.preventDefault();
     e.stopImmediatePropagation();
   }
