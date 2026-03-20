@@ -1230,8 +1230,7 @@ function ensureMusicLib(){
     id:mlId, type:'category', kind:'music-lib',
     name:'Bibliothèque Musicale', icon:'🎵',
     parentId:loreRoot.id, children:[],
-    subtitle:'Toutes les musiques du Codex',
-    _musicList:[]
+    subtitle:'Toutes les musiques du Codex'
   };
   loreRoot.children.unshift(mlId); // en premier dans Encyclopédie
 }
@@ -9179,38 +9178,56 @@ function renderMusicLib(v, n){
 }
 
 // Construire la liste des pistes depuis toutes les sources audio
-function _mlibCollect(nodeId){
-  const n = db[nodeId]; if(!n) return [];
-  // Lire la liste personnalisée si elle existe
-  const custom = n._musicList || [];
-  if(custom.length > 0) return custom;
 
-  // Sinon, collecter automatiquement
-  const tracks = [];
-  function addTrack(src, name, origin){
-    if(!src || tracks.find(t=>t.src===src)) return;
-    tracks.push({src, name, origin, id: 'auto_'+tracks.length});
-  }
-  // Sources globales
-  addTrack(globalStatNames._wlcAudio,'Thème d\'Accueil','Accueil');
-  addTrack(globalStatNames._ilAudio,'Thème d\'Iluminia','Iluminia');
-  addTrack(globalStatNames._hgAudio,'Thème des Portes','Gates of Hades');
-  addTrack(globalStatNames._gardAudio,'Thème des Gardiens','Les Gardiens');
-  addTrack(globalStatNames._geoAudio,'Thème des Pays','Pays');
-  // Sons de catégories
-  Object.values(db).forEach(nd=>{
-    if(nd._audio?.src) addTrack(nd._audio.src, nd.name+' — Thème', nd.name);
-  });
-  return tracks;
-}
 
 function _mlibBuild(nodeId){
   const n = db[nodeId]; if(!n) return;
-  if(!n._musicList) n._musicList = _mlibCollect(nodeId);
+  // Collecter toutes les sources audio disponibles
+  const auto = _mlibCollectAuto();
+  // Appliquer les overrides sauvegardés (noms perso, ordre, ajouts manuels)
+  const overrides = n._musicOverrides || {}; // {src: {name, origin}}
+  const manualOrder = n._musicOrder || []; // [src, src, ...] pour l'ordre
+  // Construire la liste finale
+  let tracks = auto.map(t=>({
+    ...t,
+    name: overrides[t.src]?.name ?? t.name,
+    origin: overrides[t.src]?.origin ?? t.origin
+  }));
+  // Ajouter les pistes uploadées manuellement (pas dans auto)
+  (n._musicManual||[]).forEach(t=>{
+    if(!tracks.find(x=>x.src===t.src)) tracks.push({...t, name: overrides[t.src]?.name ?? t.name});
+  });
+  // Appliquer l'ordre personnalisé si défini
+  if(manualOrder.length > 0){
+    const ordered=[], rest=[];
+    manualOrder.forEach(src=>{ const t=tracks.find(x=>x.src===src); if(t) ordered.push(t); });
+    tracks.forEach(t=>{ if(!manualOrder.includes(t.src)) rest.push(t); });
+    tracks=[...ordered,...rest];
+  }
+  n._musicList = tracks;
   window._mlibNodeId = nodeId;
   window._mlibCurrentAudio = window._mlibCurrentAudio || null;
   window._mlibCurrentIdx = window._mlibCurrentIdx ?? -1;
   _mlibRender();
+}
+
+function _mlibCollectAuto(){
+  // Collecter toutes les sources audio du site
+  const tracks = [];
+  function addTrack(src, name, origin){
+    if(!src || tracks.find(t=>t.src===src)) return;
+    tracks.push({src, name, origin});
+  }
+  addTrack(globalStatNames._wlcAudio,'Theme Accueil','Accueil');
+  addTrack(globalStatNames._ilAudio,'Theme Iluminia','Iluminia');
+  addTrack(globalStatNames._hgAudio,'Theme des Portes','Gates of Hades');
+  addTrack(globalStatNames._gardAudio,'Theme des Gardiens','Les Gardiens');
+  addTrack(globalStatNames._geoAudio,'Theme des Pays','Pays');
+  Object.values(db).forEach(nd=>{
+    if(nd._audio?.src) addTrack(nd._audio.src, (nd.name||'')+' - Theme', nd.name||'');
+    if(nd._sfx) addTrack(nd._sfx, (nd.name||'')+' - Effet', nd.name||'');
+  });
+  return tracks;
 }
 
 function _mlibRender(){
@@ -9365,10 +9382,12 @@ function _mlibStartRename(idx){
 
 function _mlibSaveName(idx, val){
   const nodeId = window._mlibNodeId;
-  const n = db[nodeId]; if(!n||!n._musicList) return;
-  if(val.trim()) n._musicList[idx].name = val.trim();
+  const n = db[nodeId]; if(!n) return;
+  const t = (n._musicList||[])[idx]; if(!t||!val.trim()) return;
+  if(!n._musicOverrides) n._musicOverrides = {};
+  n._musicOverrides[t.src] = {name: val.trim(), origin: t.origin};
   save();
-  _mlibRender();
+  _mlibBuild(nodeId); // reconstruire depuis les sources
 }
 
 function _mlibInitDrag(nodeId){
@@ -9390,6 +9409,8 @@ function _mlibInitDrag(nodeId){
       const moved = n._musicList.splice(_dragIdx,1)[0];
       n._musicList.splice(targetIdx,0,moved);
       if(window._mlibCurrentIdx===_dragIdx) window._mlibCurrentIdx=targetIdx;
+      // Sauvegarder l'ordre
+      n._musicOrder = n._musicList.map(t=>t.src);
       save();
       _mlibRender();
     });
@@ -9404,8 +9425,9 @@ function _mlibAddTrack(nodeId){
   inp.onchange=e=>{
     const f=e.target.files[0];if(!f)return;
     _uploadToCloudinary(f,url=>{
-      n._musicList.push({src:url,name:f.name.replace(/\.[^.]+$/,''),origin:'',id:'usr_'+Date.now()});
-      save();_mlibRender();
+      if(!n._musicManual) n._musicManual=[];
+      n._musicManual.push({src:url,name:f.name.replace(/\.[^.]+$/,''),origin:'Manuel'});
+      save();_mlibBuild(nodeId);
     });
   };
   inp.click();
