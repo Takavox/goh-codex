@@ -5085,6 +5085,24 @@ function _geoCanvasClick(e,nodeId){
     _geoPaintAt(nodeId,px,py);
     return;
   }
+  // Mode déplacement POI
+  if(GS._movingPoi){
+    const {nodeId:nid,idx}=GS._movingPoi;
+    GS._movingPoi=null;
+    const nn=db[nid];if(nn&&nn._geoPois&&nn._geoPois[idx]){
+      nn._geoPois[idx].x=px;
+      nn._geoPois[idx].y=py;
+      save();
+      _geoRenderPois(nid);
+      _geoShowHint('Point repositionné ✓');
+    }
+    return;
+  }
+  // Mode nav : clic gauche → naviguer le bateau vers ce point
+  if(GS.mode==='nav'){
+    _geoNavigateToPoint(nodeId,px,py);
+    return;
+  }
 }
 
 function _geoCanvasMove(e,nodeId){
@@ -5127,6 +5145,40 @@ function _geoClearAllLand(nodeId){
 }
 
 // ── Navigation vers un POI ──
+
+function _geoNavigateToPoint(nodeId,px,py){
+  const GS=window._geoState;if(!GS)return;
+  const boat=GS.boat;
+  const n=db[nodeId];
+  // Charger grille si disponible
+  if(n&&n._geoGridData&&!GS.gridLoaded){
+    GS.grid=new Uint8Array(n._geoGridData);
+    GS.gridW=n._geoGridW||80;GS.gridH=n._geoGridH||50;
+    GS.gridLoaded=true;
+  }
+  const x0=Math.round(boat.x*GS.gridW);
+  const y0=Math.round(boat.y*GS.gridH);
+  const x1=Math.round(px*GS.gridW);
+  const y1=Math.round(py*GS.gridH);
+  // Vérifier que la destination n'est pas sur la terre
+  if(GS.grid&&GS.grid[y1*GS.gridW+x1]===1){
+    _geoShowHint('Impossible — zone de terre');
+    return;
+  }
+  let path=_geoAstar(GS.grid,GS.gridW,GS.gridH,x0,y0,x1,y1);
+  if(!path) path=[[x1,y1]];
+  if(path.length>4) path=path.filter((_,i)=>i%2===0||i===path.length-1);
+  boat.path=path;
+  boat.pathIdx=0;
+  boat.moving=true;
+  GS.pendingNodeId=null;
+  // Enlever highlight POI destination
+  document.querySelectorAll('.geo-poi').forEach(el=>el.classList.remove('geo-poi-dest'));
+  // Afficher un curseur temporaire
+  const canvas=document.getElementById('geo-map-canvas');
+  if(canvas){ canvas.style.cursor='crosshair'; setTimeout(()=>{canvas.style.cursor='';},600); }
+}
+
 function _geoNavigateTo(nodeId,poiIdx){
   const GS=window._geoState;if(!GS)return;
   const n=db[nodeId];if(!n)return;
@@ -5197,36 +5249,7 @@ function _geoRenderPois(nodeId){
     if(_isAdmin()){
       // Clic droit → menu (déplacer + supprimer)
       el.oncontextmenu=e=>{e.preventDefault();e.stopPropagation();_geoPoiCtx(e,nodeId,i);};
-      // Drag pour déplacer
-      el.addEventListener('mousedown', e=>{
-        if(e.button!==0) return;
-        e.stopPropagation();
-        let moved=false;
-        const startX=e.clientX, startY=e.clientY;
-        const onMove=mv=>{
-          const dx=Math.abs(mv.clientX-startX),dy=Math.abs(mv.clientY-startY);
-          if(!moved&&(dx>4||dy>4)) moved=true;
-          if(!moved) return;
-          const rect=overlay.getBoundingClientRect();
-          const px=(mv.clientX-rect.left)/rect.width;
-          const py=(mv.clientY-rect.top)/rect.height;
-          el.style.left=(Math.max(0,Math.min(1,px))*100)+'%';
-          el.style.top=(Math.max(0,Math.min(1,py))*100)+'%';
-        };
-        const onUp=up=>{
-          document.removeEventListener('mousemove',onMove);
-          document.removeEventListener('mouseup',onUp);
-          if(!moved) return; // c'était un clic simple → navigation
-          const rect=overlay.getBoundingClientRect();
-          const px=(up.clientX-rect.left)/rect.width;
-          const py=(up.clientY-rect.top)/rect.height;
-          n._geoPois[i].x=Math.max(0,Math.min(1,px));
-          n._geoPois[i].y=Math.max(0,Math.min(1,py));
-          save();
-        };
-        document.addEventListener('mousemove',onMove);
-        document.addEventListener('mouseup',onUp);
-      });
+
     }
     overlay.appendChild(el);
   });
@@ -5350,7 +5373,7 @@ function _geoPoiCtx(e,nodeId,idx){
   document.getElementById('_geo-poi-ctx')?.remove();
   const n=db[nodeId];const p=(n._geoPois||[])[idx];if(!p)return;
   const m=document.createElement('div');m.id='_geo-poi-ctx';
-  m.style.cssText=`position:fixed;left:${e.clientX}px;top:${e.clientY}px;z-index:99999;background:#0e0a02;border:1px solid rgba(180,140,40,.3);border-radius:6px;padding:4px 0;min-width:160px;box-shadow:0 8px 28px rgba(0,0,0,.8);font-family:'Cinzel',serif;font-size:10px`;
+  m.style.cssText=`position:fixed;left:${e.clientX}px;top:${e.clientY}px;z-index:99999;background:#0e0a02;border:1px solid rgba(180,140,40,.3);border-radius:6px;padding:4px 0;min-width:180px;box-shadow:0 8px 28px rgba(0,0,0,.8);font-family:'Cinzel',serif;font-size:10px`;
   const title=document.createElement('div');title.style.cssText='padding:7px 14px 5px;font-size:8px;letter-spacing:2px;color:rgba(180,140,40,.4);border-bottom:1px solid rgba(180,140,40,.1);margin-bottom:4px';
   title.textContent=p.name||'Point d\'intérêt';m.appendChild(title);
   function row(icon,label,fn,danger){
@@ -5360,6 +5383,11 @@ function _geoPoiCtx(e,nodeId,idx){
     r.onmouseleave=()=>r.style.background='';
     r.innerHTML=`${icon} ${label}`;r.onclick=()=>{m.remove();fn();};m.appendChild(r);
   }
+  row('✥','Déplacer',()=>{
+    // Passer en mode déplacement : prochain clic sur la carte = nouvelle position
+    _geoShowHint('Cliquez sur la carte pour repositionner le point');
+    const GS=window._geoState;if(GS)GS._movingPoi={nodeId,idx};
+  });
   row('✕','Supprimer',()=>{
     n._geoPois.splice(idx,1);save();_geoRenderPois(nodeId);
   },true);
