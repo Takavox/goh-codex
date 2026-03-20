@@ -4673,6 +4673,23 @@ function renderGeographieImmersive(v, n){
     #geo-paint-panel{position:absolute;bottom:20px;left:50%;transform:translateX(-50%);z-index:30;background:rgba(4,6,14,.92);border:1px solid rgba(180,140,40,.3);border-radius:8px;padding:12px 18px;pointer-events:all;font-family:'Cinzel',serif;font-size:9px;color:rgba(200,175,120,.7);text-align:center;display:none}
     #geo-hint{position:absolute;bottom:20px;left:50%;transform:translateX(-50%);z-index:25;background:rgba(4,6,14,.88);border:1px solid rgba(180,140,40,.3);border-radius:20px;padding:7px 20px;font-family:'Cinzel',serif;font-size:9px;color:#c8a840;letter-spacing:1px;pointer-events:none;opacity:0;transition:opacity .3s}
     #geo-boat-size-panel{position:absolute;right:20px;top:60px;z-index:30;background:rgba(4,6,14,.92);border:1px solid rgba(180,140,40,.3);border-radius:8px;padding:14px 18px;pointer-events:all;font-family:'Cinzel',serif;font-size:9px;color:rgba(200,175,120,.7);display:none;min-width:160px}
+    #geo-poi-panel{position:absolute;bottom:80px;left:50%;transform:translateX(-50%);z-index:40;
+      width:320px;max-width:90vw;
+      background:rgba(6,4,12,.96);border:1px solid rgba(200,165,60,.35);border-radius:10px;
+      overflow:hidden;box-shadow:0 12px 48px rgba(0,0,0,.85),0 0 30px rgba(180,140,40,.08);
+      pointer-events:all;display:none;animation:geo-panel-in .22s ease}
+    @keyframes geo-panel-in{from{opacity:0;transform:translateX(-50%) translateY(12px)}to{opacity:1;transform:translateX(-50%) translateY(0)}}
+    #geo-poi-panel-img{width:100%;height:140px;object-fit:cover;display:block}
+    #geo-poi-panel-img-ph{width:100%;height:80px;display:flex;align-items:center;justify-content:center;font-size:32px;background:rgba(180,140,40,.06);border-bottom:1px solid rgba(180,140,40,.1)}
+    #geo-poi-panel-body{padding:16px 18px 14px}
+    #geo-poi-panel-name{font-family:'Cinzel Decorative',serif;font-size:14px;color:#e8d8a0;letter-spacing:1.5px;margin-bottom:6px}
+    #geo-poi-panel-desc{font-family:'EB Garamond',serif;font-size:13px;color:rgba(200,180,130,.6);font-style:italic;line-height:1.6;margin-bottom:14px;min-height:18px}
+    #geo-poi-panel-btns{display:flex;gap:8px}
+    .geo-ppanel-btn{flex:1;padding:9px;border-radius:5px;font-family:'Cinzel',serif;font-size:9px;letter-spacing:1.5px;cursor:pointer;border:1px solid rgba(180,140,40,.25);background:rgba(180,140,40,.08);color:rgba(200,175,120,.7);transition:all .15s}
+    .geo-ppanel-btn:hover{background:rgba(180,140,40,.2);border-color:rgba(200,165,60,.5);color:#d4b060}
+    .geo-ppanel-btn.primary{background:rgba(180,140,40,.2);border-color:rgba(200,165,60,.5);color:#d4b060}
+    .geo-ppanel-btn.primary:hover{background:rgba(180,140,40,.35);border-color:#c8a840;color:#f0d060}
+
   `;
   document.head.appendChild(s);
 
@@ -4718,6 +4735,15 @@ function renderGeographieImmersive(v, n){
           <div style="text-align:center;margin-top:6px;font-size:11px;color:#c8a840" id="geo-size-val">${boatSize}px</div>
         </div>
         <div id="geo-hint"></div>
+      <div id="geo-poi-panel">
+        <div id="geo-poi-panel-img-ph"></div>
+        <img id="geo-poi-panel-img" style="display:none">
+        <div id="geo-poi-panel-body">
+          <div id="geo-poi-panel-name"></div>
+          <div id="geo-poi-panel-desc"></div>
+          <div id="geo-poi-panel-btns"></div>
+        </div>
+      </div>
       </div>
     </div>`;
 
@@ -4737,9 +4763,22 @@ function renderGeographieImmersive(v, n){
 
   // State
   // Charger la grille sauvegardée si disponible
-  const savedGrid = n._geoGridData ? new Uint8Array(n._geoGridData) : null;
+  // Charger la grille sauvegardée — gère tableau JS ou objet JSON (après Supabase)
+  let savedGrid = null;
   const savedGridW = n._geoGridW || 80;
   const savedGridH = n._geoGridH || 50;
+  if(n._geoGridData){
+    try{
+      const raw = n._geoGridData;
+      if(raw instanceof Uint8Array){ savedGrid=raw; }
+      else if(Array.isArray(raw)){ savedGrid=new Uint8Array(raw); }
+      else { // objet {0:v,1:v,...} depuis JSON
+        const arr=new Uint8Array(savedGridW*savedGridH);
+        Object.keys(raw).forEach(k=>{ arr[+k]=raw[k]; });
+        savedGrid=arr;
+      }
+    }catch(e){ console.warn('Geo grid load error',e); }
+  }
 
   const GS = {
     nodeId, mapImg,
@@ -5126,6 +5165,9 @@ function _geoScreenToNorm(e, outerEl){
 
 function _geoCanvasClick(e,nodeId){
   const GS=window._geoState;if(!GS) return;
+  // Fermer le panel POI si ouvert
+  const panel=document.getElementById('geo-poi-panel');
+  if(panel&&panel.style.display!=='none') panel.style.display='none';
   const {px,py}=_geoScreenToNorm(e,e.currentTarget);
 
   if(GS.mode==='poi'&&_isAdmin()){
@@ -5187,7 +5229,8 @@ function _geoPaintAt(nodeId,px,py){
   }
   // Sauvegarder la grille dans le nœud
   const n=db[nodeId];if(n){
-    n._geoGridData=Array.from(GS.grid);
+    // Sauvegarder comme vrai Array pour compatibilité JSON/Supabase
+    n._geoGridData=[...GS.grid];
     n._geoGridW=GS.gridW;
     n._geoGridH=GS.gridH;
     save();
@@ -5228,6 +5271,48 @@ function _geoNavigateToPoint(nodeId,px,py){
   // Afficher un curseur temporaire
   const canvas=document.getElementById('geo-map-canvas');
   if(canvas){ canvas.style.cursor='crosshair'; setTimeout(()=>{canvas.style.cursor='';},600); }
+}
+
+
+function _geoShowPoiPanel(nodeId, poiIdx){
+  const n=db[nodeId];if(!n)return;
+  const p=(n._geoPois||[])[poiIdx];if(!p)return;
+
+  const panel=document.getElementById('geo-poi-panel');if(!panel)return;
+
+  // Nom
+  const nameEl=document.getElementById('geo-poi-panel-name');
+  if(nameEl) nameEl.textContent=(p.icon||'')+(p.icon?' ':'')+esc(p.name||'Lieu inconnu');
+
+  // Description
+  const descEl=document.getElementById('geo-poi-panel-desc');
+  if(descEl) descEl.textContent=p.desc||'';
+
+  // Image
+  const imgEl=document.getElementById('geo-poi-panel-img');
+  const phEl=document.getElementById('geo-poi-panel-img-ph');
+  if(imgEl&&phEl){
+    if(p.img){
+      imgEl.src=p.img; imgEl.style.display='block';
+      phEl.style.display='none';
+    } else {
+      imgEl.style.display='none';
+      phEl.style.display='flex';
+      phEl.textContent=p.icon||'🗺';
+    }
+  }
+
+  // Boutons
+  const btns=document.getElementById('geo-poi-panel-btns');
+  if(btns){
+    const hasLink=p.linkId&&db[p.linkId];
+    btns.innerHTML=`
+      <button class="geo-ppanel-btn" onclick="document.getElementById('geo-poi-panel').style.display='none'">✕ Fermer</button>
+      ${hasLink?`<button class="geo-ppanel-btn" onclick="document.getElementById('geo-poi-panel').style.display='none';selectNode('${p.linkId}')">📂 Ouvrir</button>`:''}
+      <button class="geo-ppanel-btn primary" onclick="document.getElementById('geo-poi-panel').style.display='none';_geoNavigateTo('${nodeId}',${poiIdx})">⚓ Aller</button>`;
+  }
+
+  panel.style.display='block';
 }
 
 function _geoNavigateTo(nodeId,poiIdx){
@@ -5291,7 +5376,7 @@ function _geoRenderPois(nodeId){
     el.style.left=(p.x*100)+'%';
     el.style.top=(p.y*100)+'%';
     el.innerHTML=`<div class="geo-poi-dot" style="border-color:${p.color||'rgba(200,160,60,.8)'}">${p.icon||'📍'}</div><div class="geo-poi-label">${esc(p.name||'')}</div>`;
-    el.onclick=e=>{e.stopPropagation();_geoNavigateTo(nodeId,i);};
+    el.onclick=e=>{e.stopPropagation();_geoShowPoiPanel(nodeId,i);};
     if(_isAdmin()){
       // Clic droit → menu (déplacer + supprimer)
       el.oncontextmenu=e=>{e.preventDefault();e.stopPropagation();_geoPoiCtx(e,nodeId,i);};
@@ -5385,6 +5470,19 @@ function _geoAddPoiModal(nodeId,px,py){
         </div>
         <input id="_gpoi-icon" value="⚓" style="display:none">
       </div>
+      <div style="margin-bottom:10px">
+        <div style="font-size:8px;letter-spacing:1.5px;color:rgba(180,140,40,.5);margin-bottom:6px">DESCRIPTION COURTE</div>
+        <textarea id="_gpoi-desc" placeholder="Description du lieu…" rows="2"
+          style="width:100%;box-sizing:border-box;background:rgba(255,255,255,.05);border:1px solid rgba(180,140,40,.25);border-radius:4px;padding:8px 12px;color:#e8d8a0;font-family:'EB Garamond',serif;font-size:13px;resize:none;outline:none"></textarea>
+      </div>
+      <div style="margin-bottom:10px">
+        <div style="font-size:8px;letter-spacing:1.5px;color:rgba(180,140,40,.5);margin-bottom:6px">IMAGE</div>
+        <div style="display:flex;align-items:center;gap:8px">
+          <button onclick="_gpoiLoadImg()" style="padding:6px 12px;background:rgba(180,140,40,.1);border:1px solid rgba(180,140,40,.25);border-radius:4px;color:#c8a840;font-family:'Cinzel',serif;font-size:9px;cursor:pointer">🖼 Choisir</button>
+          <span id="_gpoi-img-lbl" style="font-size:10px;color:rgba(180,140,40,.4);font-style:italic">Aucune image</span>
+        </div>
+        <input id="_gpoi-img" value="" style="display:none">
+      </div>
       <div style="margin-bottom:14px">
         <div style="font-size:8px;letter-spacing:1.5px;color:rgba(180,140,40,.5);margin-bottom:6px">LIER À UNE SOUS-CATÉGORIE</div>
         <select id="_gpoi-link" style="width:100%;background:rgba(255,255,255,.05);border:1px solid rgba(180,140,40,.25);border-radius:4px;padding:7px;color:#e8d8a0;font-family:'Cinzel',serif;font-size:10px">
@@ -5407,11 +5505,27 @@ function _geoSavePoi(nodeId,px,py){
   const name=document.getElementById('_gpoi-name')?.value.trim()||'Point';
   const icon=document.getElementById('_gpoi-icon')?.value||'⚓';
   const linkId=document.getElementById('_gpoi-link')?.value||null;
+  const desc=document.getElementById('_gpoi-desc')?.value.trim()||'';
+  const img=document.getElementById('_gpoi-img')?.value||null;
   if(!n._geoPois)n._geoPois=[];
-  n._geoPois.push({x:px,y:py,name,icon,linkId:linkId||null,color:'rgba(200,160,60,.8)'});
+  n._geoPois.push({x:px,y:py,name,icon,linkId:linkId||null,color:'rgba(200,160,60,.8)',desc,img:img||null});
   save();
   document.getElementById('_geo-poi-modal')?.remove();
   _geoRenderPois(nodeId);
+}
+
+function _gpoiLoadImg(){
+  const inp=document.createElement('input');inp.type='file';inp.accept='image/*';
+  inp.onchange=e=>{
+    const f=e.target.files[0];if(!f)return;
+    _uploadToCloudinary(f,url=>{
+      const imgInput=document.getElementById('_gpoi-img');
+      const lbl=document.getElementById('_gpoi-img-lbl');
+      if(imgInput)imgInput.value=url;
+      if(lbl)lbl.textContent='Image chargée ✓';
+    });
+  };
+  inp.click();
 }
 
 // ── Clic droit sur POI (admin) ──
