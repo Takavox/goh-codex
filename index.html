@@ -4825,7 +4825,7 @@ function renderGeographieImmersive(v, n){
   };
   img.src = mapImg;
 
-  const _geoIsUI = e => e.target.closest('#geo-toolbar,#geo-paint-panel,#geo-boat-size-panel,#_vol-ctrl,#_geo-poi-modal');
+  const _geoIsUI = e => e.target.closest('#geo-toolbar,#geo-paint-panel,#geo-boat-size-panel,#_vol-ctrl,#_geo-poi-modal,#geo-poi-panel');
   const geo_outer = document.getElementById('geo-outer');
   geo_outer.addEventListener('click', e => { if(!_geoIsUI(e)) _geoCanvasClick(e, nodeId); });
   geo_outer.addEventListener('mousemove', e => { if(!_geoIsUI(e)) _geoCanvasMove(e, nodeId); });
@@ -5305,14 +5305,81 @@ function _geoShowPoiPanel(nodeId, poiIdx){
   // Boutons
   const btns=document.getElementById('geo-poi-panel-btns');
   if(btns){
-    const hasLink=p.linkId&&db[p.linkId];
+    const adminBtn=_isAdmin()?`<button class="geo-ppanel-btn" onclick="_geoEditPoiModal('${nodeId}',${poiIdx})">✎ Modifier</button>`:'';
     btns.innerHTML=`
       <button class="geo-ppanel-btn" onclick="document.getElementById('geo-poi-panel').style.display='none'">✕ Fermer</button>
-      ${hasLink?`<button class="geo-ppanel-btn" onclick="document.getElementById('geo-poi-panel').style.display='none';selectNode('${p.linkId}')">📂 Ouvrir</button>`:''}
-      <button class="geo-ppanel-btn primary" onclick="document.getElementById('geo-poi-panel').style.display='none';_geoNavigateTo('${nodeId}',${poiIdx})">⚓ Aller</button>`;
+      ${adminBtn}
+      <button class="geo-ppanel-btn primary" onclick="document.getElementById('geo-poi-panel').style.display='none';setTimeout(()=>_geoNavigateTo('${nodeId}',${poiIdx}),50)">⚓ Aller</button>`;
   }
 
   panel.style.display='block';
+}
+
+
+function _geoEditPoiModal(nodeId, poiIdx){
+  const n=db[nodeId];if(!n)return;
+  const p=(n._geoPois||[])[poiIdx];if(!p)return;
+  document.getElementById('_geo-edit-poi-modal')?.remove();
+  document.getElementById('geo-poi-panel').style.display='none';
+  const m=document.createElement('div');m.id='_geo-edit-poi-modal';
+  m.style.cssText='position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.82);display:flex;align-items:center;justify-content:center';
+  m.innerHTML=`
+    <div style="background:#0e0a02;border:1px solid rgba(180,140,40,.3);border-radius:8px;padding:26px;width:340px;max-width:95vw;font-family:'Cinzel',serif">
+      <div style="font-size:11px;letter-spacing:2px;color:rgba(200,175,120,.7);margin-bottom:18px;text-align:center">✎ MODIFIER LE POINT</div>
+      <input id="_gedit-name" value="${esc(p.name||'')}" placeholder="Nom"
+        style="width:100%;box-sizing:border-box;background:rgba(255,255,255,.05);border:1px solid rgba(180,140,40,.25);border-radius:4px;padding:9px 12px;color:#e8d8a0;font-family:'EB Garamond',serif;font-size:14px;margin-bottom:10px;outline:none">
+      <textarea id="_gedit-desc" placeholder="Description courte…" rows="3"
+        style="width:100%;box-sizing:border-box;background:rgba(255,255,255,.05);border:1px solid rgba(180,140,40,.25);border-radius:4px;padding:8px 12px;color:#e8d8a0;font-family:'EB Garamond',serif;font-size:13px;resize:none;outline:none;margin-bottom:10px">${esc(p.desc||'')}</textarea>
+      <div style="margin-bottom:14px">
+        <div style="font-size:8px;letter-spacing:1.5px;color:rgba(180,140,40,.5);margin-bottom:6px">IMAGE</div>
+        ${p.img?`<img src="${p.img}" style="width:100%;height:80px;object-fit:cover;border-radius:4px;margin-bottom:6px">`:''}
+        <div style="display:flex;align-items:center;gap:8px">
+          <button onclick="_geditLoadImg(${poiIdx},'${nodeId}')" style="padding:6px 12px;background:rgba(180,140,40,.1);border:1px solid rgba(180,140,40,.25);border-radius:4px;color:#c8a840;font-family:'Cinzel',serif;font-size:9px;cursor:pointer">🖼 ${p.img?'Changer':'Ajouter'}</button>
+          ${p.img?`<button onclick="_geditRemoveImg(${poiIdx},'${nodeId}')" style="padding:6px 12px;background:rgba(200,60,60,.08);border:1px solid rgba(200,60,60,.2);border-radius:4px;color:rgba(200,100,100,.7);font-family:'Cinzel',serif;font-size:9px;cursor:pointer">🗑 Supprimer</button>`:''}
+        </div>
+      </div>
+      <div style="display:flex;gap:10px">
+        <button onclick="document.getElementById('_geo-edit-poi-modal').remove()"
+          style="flex:1;padding:9px;background:rgba(255,255,255,.04);border:1px solid rgba(180,140,40,.2);border-radius:4px;color:rgba(180,140,40,.5);font-family:'Cinzel',serif;font-size:9px;cursor:pointer">Annuler</button>
+        <button onclick="_geditSave('${nodeId}',${poiIdx})"
+          style="flex:1;padding:9px;background:rgba(180,140,40,.15);border:1px solid rgba(180,140,40,.4);border-radius:4px;color:#d4b060;font-family:'Cinzel',serif;font-size:9px;cursor:pointer">✓ Enregistrer</button>
+      </div>
+    </div>`;
+  document.body.appendChild(m);
+  m.addEventListener('click',e=>{if(e.target===m)m.remove();});
+}
+
+function _geditSave(nodeId, poiIdx){
+  const n=db[nodeId];if(!n)return;
+  const p=(n._geoPois||[])[poiIdx];if(!p)return;
+  p.name=document.getElementById('_gedit-name')?.value.trim()||p.name;
+  p.desc=document.getElementById('_gedit-desc')?.value.trim()||'';
+  save();
+  document.getElementById('_geo-edit-poi-modal')?.remove();
+  _geoRenderPois(nodeId);
+}
+
+function _geditLoadImg(poiIdx, nodeId){
+  const inp=document.createElement('input');inp.type='file';inp.accept='image/*';
+  inp.onchange=e=>{
+    const f=e.target.files[0];if(!f)return;
+    _uploadToCloudinary(f,url=>{
+      const n=db[nodeId];
+      if(n&&n._geoPois&&n._geoPois[poiIdx]) n._geoPois[poiIdx].img=url;
+      save();
+      document.getElementById('_geo-edit-poi-modal')?.remove();
+      _geoEditPoiModal(nodeId,poiIdx);
+    });
+  };
+  inp.click();
+}
+
+function _geditRemoveImg(poiIdx, nodeId){
+  const n=db[nodeId];
+  if(n&&n._geoPois&&n._geoPois[poiIdx]) delete n._geoPois[poiIdx].img;
+  save();
+  document.getElementById('_geo-edit-poi-modal')?.remove();
+  _geoEditPoiModal(nodeId,poiIdx);
 }
 
 function _geoNavigateTo(nodeId,poiIdx){
