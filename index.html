@@ -1077,6 +1077,8 @@ async function _sbInit(){
         globalStatNames = Object.assign({phys:{},magic:{},intel:{}}, remoteGS);
         _migrateData();
         ensureGardiens();
+  ensureMusicLib();
+        ensureMusicLib();
         Object.values(db).forEach(n=>{
           if(n.type==='category' && n.parentId===null && n.kind==='generic'){
             delete expanded[n.id];
@@ -1213,6 +1215,25 @@ function ensureDivisions(){
     if(!divNode.children.includes(id))divNode.children.push(id);
   });
   // save() moved to _sbInit
+}
+
+
+function ensureMusicLib(){
+  const allNodes = Object.values(db);
+  // Déjà créée ?
+  if(allNodes.find(n=>n.kind==='music-lib')) return;
+  // Trouver lore-root (Encyclopédie)
+  const loreRoot = allNodes.find(n=>n.kind==='lore-root');
+  if(!loreRoot) return;
+  const mlId = gid();
+  db[mlId] = {
+    id:mlId, type:'category', kind:'music-lib',
+    name:'Bibliothèque Musicale', icon:'🎵',
+    parentId:loreRoot.id, children:[],
+    subtitle:'Toutes les musiques du Codex',
+    _musicList:[]
+  };
+  loreRoot.children.unshift(mlId); // en premier dans Encyclopédie
 }
 
 function ensureGardiens(){
