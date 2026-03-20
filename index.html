@@ -9485,6 +9485,13 @@ function renderLoreImmersive(v, n){
           <div class="lore-rule"></div>
           <div class="lore-sub">${esc(n.subtitle||'Langues, religions, mythes et concepts du monde')}</div>
           <input id="lore-search" placeholder="🔍 Rechercher un terme…" oninput="_loreFilter(this.value,'${n.id}','')">
+          ${(()=>{
+            const subcats=(n.children||[]).map(id=>db[id]).filter(c=>c&&c.type==='category');
+            if(!subcats.length) return '';
+            return '<div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:14px">'+
+              subcats.map(c=>`<button onclick="selectNode('${c.id}')" style="display:flex;align-items:center;gap:7px;padding:8px 16px;background:rgba(80,120,200,.1);border:1px solid rgba(80,120,200,.3);border-radius:6px;color:#8ab0e8;font-family:'Cinzel',serif;font-size:9.5px;letter-spacing:1px;cursor:pointer;transition:all .18s" onmouseenter="this.style.background='rgba(80,120,200,.22)'" onmouseleave="this.style.background='rgba(80,120,200,.1)'"><span style="font-size:16px">${c.icon||'📁'}</span>${esc(c.name)}</button>`).join('')+
+            '</div>';
+          })()}
           <div id="lore-count" class="lore-count" style="margin-top:10px"></div>
         </div>
         <div id="lore-content"></div>
