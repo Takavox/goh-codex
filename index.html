@@ -4746,17 +4746,31 @@ function _secShowEnigma(secretId, lockIdx){
 
   let inputHTML = '';
   if(lock.type==='missing_word'){
-    // Mettre en évidence le mot manquant avec un input inline
-    const question = (lock.question||'').replace(/___/g,
-      `<span style="display:inline-block;border-bottom:2px solid rgba(120,80,20,.6);min-width:80px;padding:0 4px">
-        <input id="_enigma-inp" autocomplete="off" style="background:none;border:none;outline:none;font-family:'EB Garamond',serif;font-size:17px;color:#2a1808;width:100px;text-align:center" placeholder="???">
-       </span>`);
-    inputHTML = `<div class="sec-enig-question" style="line-height:2">${question}</div>`;
+    // Remplacer ___ par un champ de saisie inline
+    // lock.question n'est PAS escapé ici (on l'affiche en HTML)
+    const rawQ = lock.question||'';
+    const hasBlank = rawQ.includes('___');
+    if(hasBlank){
+      const qWithInput = rawQ.replace(/___/g,
+        `<span style="display:inline-block;border-bottom:2px solid rgba(120,80,20,.7);min-width:90px;padding:0 6px;vertical-align:bottom">` +
+        `<input id="_enigma-inp" autocomplete="off" spellcheck="false"` +
+        ` style="background:none;border:none;outline:none;font-family:'EB Garamond',serif;font-size:17px;color:#2a1808;width:110px;text-align:center;padding:2px 0" placeholder="?">` +
+        `</span>`);
+      inputHTML = `<div class="sec-enig-question" style="line-height:2.4;text-align:center">${qWithInput}</div>`;
+    } else {
+      // Pas de ___ → afficher la question + champ séparé
+      inputHTML = `
+        <div class="sec-enig-question">${esc(rawQ)||'Complétez la phrase…'}</div>
+        <input id="_enigma-inp" autocomplete="off" spellcheck="false" placeholder="Mot manquant…"
+          style="width:100%;box-sizing:border-box;background:rgba(255,245,220,.9);border:1.5px solid rgba(120,80,20,.4);border-radius:4px;padding:12px 16px;font-family:'EB Garamond',serif;font-size:17px;color:#2a1808;outline:none;text-align:center;margin-top:14px">`;
+    }
   } else {
+    // password ou numeric : champ standard
     inputHTML = `
       <div class="sec-enig-question">${esc(lock.question||'Quelle est la réponse ?')}</div>
-      <input id="_enigma-inp" autocomplete="off" placeholder="${lock.type==='numeric'?'Code numérique…':'Réponse…'}"
-        type="${lock.type==='numeric'?'text':'text'}"
+      <input id="_enigma-inp" autocomplete="off" spellcheck="false"
+        inputmode="${lock.type==='numeric'?'numeric':'text'}"
+        placeholder="${lock.type==='numeric'?'Code numérique…':'Réponse…'}"
         style="width:100%;box-sizing:border-box;background:rgba(255,245,220,.9);border:1.5px solid rgba(120,80,20,.4);border-radius:4px;padding:12px 16px;font-family:'EB Garamond',serif;font-size:17px;color:#2a1808;outline:none;text-align:center;margin-top:14px">`;
   }
 
@@ -4794,9 +4808,13 @@ function _secCheckAnswer(secretId, lockIdx){
 
   const inp=document.getElementById('_enigma-inp');
   if(!inp) return;
-  const answer = inp.value.trim().toLowerCase();
+  // Normaliser : supprimer espaces multiples, trim, minuscules
+  const answer = inp.value.replace(/\s+/g,' ').trim().toLowerCase();
   // Plusieurs bonnes réponses séparées par |
-  const acceptedAnswers = (lock.answer||'').split('|').map(a=>a.trim().toLowerCase()).filter(Boolean);
+  const acceptedAnswers = (lock.answer||'').split('|').map(a=>a.replace(/\s+/g,' ').trim().toLowerCase()).filter(Boolean);
+  if(acceptedAnswers.length === 0){
+    _secOnWrong(lockIdx); return;
+  }
   if(acceptedAnswers.includes(answer)){
     _secOnCorrect(secretId, lockIdx, lockId);
   } else {
@@ -4896,21 +4914,23 @@ function _secLockManager(secretId){
   m.style.cssText='position:fixed;inset:0;z-index:1300;background:rgba(0,0,0,.88);display:flex;align-items:center;justify-content:center;padding:20px;overflow:auto';
 
   const locksList = n._locks.map((lock,li)=>{
-    const lockId = lock._id||`${secretId}_lock_${li}`;
-    return `<div style="background:rgba(120,80,20,.08);border:1px solid rgba(120,80,20,.2);border-radius:5px;padding:12px 14px;margin-bottom:8px;display:flex;align-items:center;gap:10px">
-      <span style="font-size:18px">🔒</span>
-      <div style="flex:1">
+    return `<div class="_slm-row" data-idx="${li}" draggable="true"
+      style="background:rgba(120,80,20,.08);border:1px solid rgba(120,80,20,.2);border-radius:5px;padding:12px 14px;margin-bottom:8px;display:flex;align-items:center;gap:10px;cursor:grab;transition:opacity .15s,box-shadow .15s">
+      <span style="font-size:14px;color:rgba(120,80,20,.4);cursor:grab;flex-shrink:0" title="Glisser pour réordonner">⠿</span>
+      <span style="font-size:18px;flex-shrink:0">🔒</span>
+      <div style="flex:1;min-width:0">
         <div style="font-family:'Cinzel',serif;font-size:10px;color:#3a2008">${esc(lock.label||`Verrou ${li+1}`)}</div>
-        <div style="font-family:'EB Garamond',serif;font-size:11px;color:rgba(60,30,10,.5);font-style:italic">${lock.type||'password'} — ${lock.question?esc(lock.question.slice(0,40))+'…':'sans question'}</div>
+        <div style="font-family:'EB Garamond',serif;font-size:11px;color:rgba(60,30,10,.5);font-style:italic;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${lock.type||'password'}${lock.question?' — '+esc(lock.question.slice(0,35))+'…':''}</div>
       </div>
-      <button onclick="_secEditLock('${secretId}',${li})" style="padding:5px 10px;background:rgba(120,80,20,.12);border:1px solid rgba(120,80,20,.3);border-radius:3px;font-family:'Cinzel',serif;font-size:8px;cursor:pointer;color:#3a2008">✎</button>
-      <button onclick="_secDeleteLock('${secretId}',${li})" style="padding:5px 10px;background:rgba(180,60,40,.08);border:1px solid rgba(180,60,40,.2);border-radius:3px;font-family:'Cinzel',serif;font-size:8px;cursor:pointer;color:#a03020">✕</button>
+      <button onclick="_secEditLock('${secretId}',${li})" style="padding:5px 10px;background:rgba(120,80,20,.12);border:1px solid rgba(120,80,20,.3);border-radius:3px;font-family:'Cinzel',serif;font-size:8px;cursor:pointer;color:#3a2008;flex-shrink:0">✎</button>
+      <button onclick="_secDeleteLock('${secretId}',${li})" style="padding:5px 10px;background:rgba(180,60,40,.08);border:1px solid rgba(180,60,40,.2);border-radius:3px;font-family:'Cinzel',serif;font-size:8px;cursor:pointer;color:#a03020;flex-shrink:0">✕</button>
     </div>`;
   }).join('');
 
   m.innerHTML=`
     <div style="background:linear-gradient(180deg,#f8ecc8,#f0dda0);border-radius:6px;padding:28px;width:min(560px,96vw);max-height:90vh;overflow-y:auto;box-shadow:0 20px 80px rgba(0,0,0,.9)">
-      <div style="font-family:'Cinzel Decorative',serif;font-size:13px;color:#3a2008;letter-spacing:2px;margin-bottom:18px;text-align:center">🔒 GESTIONNAIRE DE VERROUS</div>
+      <div style="font-family:'Cinzel Decorative',serif;font-size:13px;color:#3a2008;letter-spacing:2px;margin-bottom:6px;text-align:center">🔒 GESTIONNAIRE DE VERROUS</div>
+      <div style="font-family:'EB Garamond',serif;font-size:11px;color:rgba(80,50,20,.4);text-align:center;margin-bottom:16px;font-style:italic">Glisser ⠿ pour réordonner</div>
       <div id="_slm-list">${locksList||'<div style="text-align:center;color:rgba(80,50,20,.4);font-style:italic;font-family:\'EB Garamond\',serif;padding:20px">Aucun verrou</div>'}</div>
       <button onclick="_secAddLock('${secretId}')"
         style="width:100%;margin-top:14px;padding:11px;background:rgba(120,80,20,.12);border:1.5px dashed rgba(120,80,20,.3);border-radius:4px;font-family:'Cinzel',serif;font-size:9px;letter-spacing:1.5px;cursor:pointer;color:rgba(60,30,10,.6)">＋ Ajouter un verrou</button>
@@ -4918,6 +4938,34 @@ function _secLockManager(secretId){
         style="width:100%;margin-top:8px;padding:10px;background:rgba(80,40,10,.1);border:1px solid rgba(120,80,20,.25);border-radius:4px;font-family:'Cinzel',serif;font-size:9px;cursor:pointer;color:#3a2008">Fermer</button>
     </div>`;
   document.body.appendChild(m);
+
+  // ── Drag & drop pour réordonner ──
+  let _dragIdx = null;
+  const list = document.getElementById('_slm-list');
+  list.querySelectorAll('._slm-row').forEach(row=>{
+    row.addEventListener('dragstart', e=>{
+      _dragIdx = parseInt(row.dataset.idx);
+      row.style.opacity = '0.4';
+      e.dataTransfer.effectAllowed = 'move';
+    });
+    row.addEventListener('dragend', ()=>{ row.style.opacity='1'; row.style.boxShadow=''; });
+    row.addEventListener('dragover', e=>{
+      e.preventDefault();
+      row.style.boxShadow='0 0 0 2px rgba(120,80,20,.5)';
+    });
+    row.addEventListener('dragleave', ()=>{ row.style.boxShadow=''; });
+    row.addEventListener('drop', e=>{
+      e.preventDefault();
+      row.style.boxShadow='';
+      const targetIdx = parseInt(row.dataset.idx);
+      if(_dragIdx === null || _dragIdx === targetIdx) return;
+      // Réordonner
+      const moved = n._locks.splice(_dragIdx, 1)[0];
+      n._locks.splice(targetIdx, 0, moved);
+      save();
+      _secLockManager(secretId); // Re-render
+    });
+  });
 }
 
 function _secAddLock(secretId){
