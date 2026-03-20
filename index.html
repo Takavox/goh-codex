@@ -4705,7 +4705,7 @@ function renderGeographieImmersive(v, n){
           </div>
           <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
             <span style="font-size:8px;letter-spacing:1px;min-width:50px">TAILLE</span>
-            <input type="range" id="geo-paint-radius-slider" min="1" max="15" value="4"
+            <input type="range" id="geo-paint-radius-slider" min="1" max="15" value="2"
               style="flex:1;accent-color:#c8a840;cursor:pointer"
               oninput="if(window._geoState)window._geoState.paintRadius=parseInt(this.value);document.getElementById('geo-paint-radius-val').textContent=this.value">
             <span id="geo-paint-radius-val" style="font-size:9px;color:#c8a840;min-width:16px">4</span>
@@ -4745,6 +4745,7 @@ function renderGeographieImmersive(v, n){
     nodeId, mapImg,
     pois, landPolygons,
     boat: {x:0.1, y:0.5, angle: 0, targetX:null, targetY:null, path:[], pathIdx:0, moving:false, speed:0.0015, size: boatSize},
+    view: {scale:1, tx:0, ty:0, panning:false, panStartX:0, panStartY:0, panStartTx:0, panStartTy:0},
     mode: 'nav', // 'nav' | 'poi' | 'paint'
     paintMode: 'land', // 'land' | 'water'
     paintRadius: 4,
@@ -4786,10 +4787,45 @@ function renderGeographieImmersive(v, n){
   img.src = mapImg;
 
   const _geoIsUI = e => e.target.closest('#geo-toolbar,#geo-paint-panel,#geo-boat-size-panel,#_vol-ctrl,#_geo-poi-modal');
-  document.getElementById('geo-outer').addEventListener('click', e => { if(!_geoIsUI(e)) _geoCanvasClick(e, nodeId); });
-  document.getElementById('geo-outer').addEventListener('mousemove', e => { if(!_geoIsUI(e)) _geoCanvasMove(e, nodeId); });
-  document.getElementById('geo-outer').addEventListener('mouseup', e => { if(window._geoState && !_geoIsUI(e)) window._geoState._painting = false; });
-  document.getElementById('geo-outer').addEventListener('mousedown', e => { if(window._geoState?.mode==='paint' && !_geoIsUI(e)) window._geoState._painting = true; });
+  const geo_outer = document.getElementById('geo-outer');
+  geo_outer.addEventListener('click', e => { if(!_geoIsUI(e)) _geoCanvasClick(e, nodeId); });
+  geo_outer.addEventListener('mousemove', e => { if(!_geoIsUI(e)) _geoCanvasMove(e, nodeId); });
+  geo_outer.addEventListener('mouseup', e => {
+    const GS=window._geoState; if(!GS) return;
+    GS._painting = false;
+    GS.view.panning = false;
+  });
+  geo_outer.addEventListener('mousedown', e => {
+    const GS=window._geoState; if(!GS||_geoIsUI(e)) return;
+    if(GS.mode==='paint'){
+      if(e.button===0) GS._painting = true;
+      if(e.button===2||e.button===1){
+        // Clic droit/milieu = pan
+        e.preventDefault();
+        const rect=geo_outer.getBoundingClientRect();
+        GS.view.panning=true;
+        GS.view.panStartX=e.clientX-rect.left;
+        GS.view.panStartY=e.clientY-rect.top;
+        GS.view.panStartTx=GS.view.tx;
+        GS.view.panStartTy=GS.view.ty;
+      }
+    }
+  });
+  geo_outer.addEventListener('contextmenu', e => { if(window._geoState?.mode==='paint') e.preventDefault(); });
+  geo_outer.addEventListener('wheel', e => {
+    const GS=window._geoState; if(!GS||_geoIsUI(e)) return;
+    if(GS.mode!=='paint') return; // zoom uniquement en mode peinture
+    e.preventDefault();
+    const rect=geo_outer.getBoundingClientRect();
+    const mx=e.clientX-rect.left, my=e.clientY-rect.top;
+    const factor=e.deltaY<0?1.18:0.85;
+    const newScale=Math.max(1,Math.min(12,GS.view.scale*factor));
+    GS.view.tx=mx-(mx-GS.view.tx)*newScale/GS.view.scale;
+    GS.view.ty=my-(my-GS.view.ty)*newScale/GS.view.scale;
+    GS.view.scale=newScale;
+    // Afficher le niveau de zoom
+    _geoShowHint('Zoom '+Math.round(newScale*100)+'%');
+  },{passive:false});
 }
 
 // ── Grille pathfinding ──
@@ -4892,22 +4928,26 @@ function _geoStartLoop(nodeId){
     ctx.fillStyle='#040c18';
     ctx.fillRect(0,0,W,H);
 
-    // Carte
+    // Carte avec zoom/pan
+    const vw=GS.view;
+    ctx.save();
+    ctx.translate(vw.tx, vw.ty);
+    ctx.scale(vw.scale, vw.scale);
+
     if(GS.imgLoaded){
       ctx.drawImage(GS.img,0,0,W,H);
-      // Overlay sombre pour lisibilité
       ctx.fillStyle='rgba(0,5,20,.18)';
       ctx.fillRect(0,0,W,H);
     }
 
-    // Afficher grille terre si mode paint (admin)
+    // Grille terre en mode paint
     if(GS.mode==='paint'&&GS.grid){
       const gW=GS.gridW,gH=GS.gridH;
       const cw=W/gW,ch=H/gH;
       for(let gy=0;gy<gH;gy++){
         for(let gx=0;gx<gW;gx++){
           if(GS.grid[gy*gW+gx]===1){
-            ctx.fillStyle='rgba(200,100,40,.35)';
+            ctx.fillStyle='rgba(200,100,40,.45)';
             ctx.fillRect(gx*cw,gy*ch,cw,ch);
           }
         }
@@ -4928,7 +4968,6 @@ function _geoStartLoop(nodeId){
         if(boat.pathIdx>=boat.path.length){
           boat.moving=false;
           boat.path=[];
-          // Arrivé à destination
           if(GS.pendingNodeId){
             const nid=GS.pendingNodeId;
             GS.pendingNodeId=null;
@@ -4937,7 +4976,6 @@ function _geoStartLoop(nodeId){
         }
       } else {
         const nx=dx/dist*speed, ny=dy/dist*speed;
-        // Sillage
         GS.wake.push({x:boat.x,y:boat.y,a:.6,t:0});
         boat.x+=nx/W;
         boat.y+=ny/H;
@@ -4945,7 +4983,7 @@ function _geoStartLoop(nodeId){
       }
     }
 
-    // Dessiner sillage
+    // Sillage
     GS.wake=GS.wake.filter(w=>w.a>0.01);
     GS.wake.forEach(w=>{
       w.a*=0.92; w.t++;
@@ -4956,8 +4994,10 @@ function _geoStartLoop(nodeId){
       ctx.fill();
     });
 
-    // Dessiner bateau
+    // Bateau
     _geoDrawBoat(ctx,boat.x*W,boat.y*H,boat.angle,boat.size,boat.moving,t);
+
+    ctx.restore();
 
     t++;
   }
@@ -5070,11 +5110,23 @@ function _geoDrawBoat(ctx,x,y,angle,size,moving,t){
 }
 
 // ── Gestion clic sur la carte ──
+
+// Convertir coordonnées écran → coordonnées normalisées (0-1) selon zoom/pan
+function _geoScreenToNorm(e, outerEl){
+  const GS=window._geoState;
+  const rect=outerEl.getBoundingClientRect();
+  const sx=e.clientX-rect.left, sy=e.clientY-rect.top;
+  const W=rect.width, H=rect.height;
+  const vw=GS?GS.view:{scale:1,tx:0,ty:0};
+  // Inverser la transformation : (sx - tx) / scale / W
+  const px=(sx-vw.tx)/(vw.scale*W);
+  const py=(sy-vw.ty)/(vw.scale*H);
+  return {px, py};
+}
+
 function _geoCanvasClick(e,nodeId){
   const GS=window._geoState;if(!GS) return;
-  const rect=e.currentTarget.getBoundingClientRect();
-  const px=(e.clientX-rect.left)/rect.width;
-  const py=(e.clientY-rect.top)/rect.height;
+  const {px,py}=_geoScreenToNorm(e,e.currentTarget);
 
   if(GS.mode==='poi'&&_isAdmin()){
     _geoAddPoiModal(nodeId,px,py);
@@ -5108,10 +5160,14 @@ function _geoCanvasClick(e,nodeId){
 function _geoCanvasMove(e,nodeId){
   const GS=window._geoState;if(!GS)return;
   if(GS.mode==='paint'&&GS._painting&&_isAdmin()){
-    const rect=e.currentTarget.getBoundingClientRect();
-    const px=(e.clientX-rect.left)/rect.width;
-    const py=(e.clientY-rect.top)/rect.height;
+    const {px,py}=_geoScreenToNorm(e,e.currentTarget);
     _geoPaintAt(nodeId,px,py);
+  }
+  // Pan en mode paint avec clic droit maintenu
+  if(GS.mode==='paint'&&GS.view.panning){
+    const rect=e.currentTarget.getBoundingClientRect();
+    GS.view.tx=GS.view.panStartTx+(e.clientX-rect.left-GS.view.panStartX);
+    GS.view.ty=GS.view.panStartTy+(e.clientY-rect.top-GS.view.panStartY);
   }
 }
 
@@ -5258,6 +5314,10 @@ function _geoRenderPois(nodeId){
 // ── Mode toggle ──
 function _geoSetMode(mode){
   const GS=window._geoState;if(!GS)return;
+  // Quitter le mode paint : reset zoom/pan
+  if(GS.mode==='paint'&&mode!=='paint'){
+    GS.view.scale=1;GS.view.tx=0;GS.view.ty=0;
+  }
   GS.mode=mode;
   const paintPanel=document.getElementById('geo-paint-panel');
   const poiBtn=document.getElementById('geo-btn-poi');
