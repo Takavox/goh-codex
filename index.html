@@ -10285,6 +10285,8 @@ function _carteImgLoaded(){
   _carteState.tx=(vpW-imgW*scale)/2;
   _carteState.ty=(vpH-imgH*scale)/2;
   _carteUpdateTransform();
+  // Re-render les POIs maintenant que l'image est chargée et ses dimensions connues
+  if(_carteState.nodeId) _carteRenderPois(_carteState.nodeId);
 }
 
 function _carteUpdateTransform(){
@@ -10380,8 +10382,16 @@ function _carteRenderPois(nodeId){
   const n=db[nodeId];if(!n)return;
   const wrap=document.getElementById('carte-canvas-wrap');if(!wrap)return;
   wrap.querySelectorAll('.carte-poi').forEach(el=>el.remove());
-  const img=document.getElementById('carte-img')||document.getElementById('carte-img-ph');
-  const iw=img?img.offsetWidth:800,ih=img?img.offsetHeight:600;
+  const img=document.getElementById('carte-img');
+  // Utiliser naturalWidth/naturalHeight (dimensions réelles de l'image)
+  // plutôt que offsetWidth (dépend du layout/zoom)
+  const iw=img?(img.naturalWidth||img.offsetWidth||800):800;
+  const ih=img?(img.naturalHeight||img.offsetHeight||600):600;
+  if(!iw||!ih){ 
+    // Image pas encore chargée → réessayer après chargement
+    if(img) img.onload=()=>_carteRenderPois(nodeId);
+    return;
+  }
   (n._pois||[]).forEach((p,i)=>{
     const t=_CARTE_POI_TYPES[p.type]||_CARTE_POI_TYPES.interet;
     const el=document.createElement('div');
