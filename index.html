@@ -57,6 +57,7 @@ body {
   position:relative;
   z-index:10;
 }
+@keyframes pulse-online{0%,100%{opacity:.7;transform:scale(1)}50%{opacity:1;transform:scale(1.3)}}
 #topbar::after{
   content:'';position:absolute;bottom:0;left:0;right:0;height:1px;
   background:linear-gradient(90deg,transparent,var(--gold-dim) 40%,var(--crimson) 60%,transparent);
@@ -843,6 +844,10 @@ body.visitor-mode .il-btn-row{ display:none !important; }
   </div>
   <div id="topbar-r">
     <span id="visitor-badge">👁 VISITEUR</span>
+    <span id="_online-badge" title="Personnes en ligne" style="font-family:'Cinzel',serif;font-size:8.5px;letter-spacing:1px;color:rgba(140,200,140,.55);display:flex;align-items:center;gap:4px;padding:3px 8px;border:1px solid rgba(80,160,80,.2);border-radius:10px;background:rgba(40,100,40,.08)">
+      <span style="width:6px;height:6px;border-radius:50%;background:rgba(100,220,100,.7);display:inline-block;box-shadow:0 0 5px rgba(80,200,80,.5);animation:pulse-online 2s ease-in-out infinite"></span>
+      <span id="_online-count">1</span> en ligne
+    </span>
     <div id="topbar-admin-group" style="display:flex;gap:7px;align-items:center">
       <button class="topbtn" onclick="_showExportMenu(event)" title="Sauvegarder les données"
         style="border-color:rgba(80,160,80,.4);color:rgba(120,200,120,.8)">💾 Exporter ▾</button>
@@ -3337,6 +3342,12 @@ function renderCategory(v,n){
     renderSecretsImmersive(v,n);
     return;
   }
+  // ── Musicothèque ──
+  if(n.kind==='music-lib'){
+    renderMusicLib(v,n);
+    return;
+  }
+
   if(n.kind==='carte'){
     renderCarteImmersive(v,n);
     return;
@@ -9063,6 +9074,324 @@ function _artNew(parentId){
 // ════════════════════════════════════════════════════
 //  ENCYCLOPÉDIE / LORE
 // ════════════════════════════════════════════════════
+
+// ══════════════════════════════════════════════════════
+//  MUSICOTHÈQUE — Bibliothèque musicale du Codex
+// ══════════════════════════════════════════════════════
+
+function renderMusicLib(v, n){
+  if(_geoAnim){cancelAnimationFrame(_geoAnim);_geoAnim=null;}
+
+  const oldS=document.getElementById('mlib-style');if(oldS)oldS.remove();
+  const s=document.createElement('style');s.id='mlib-style';
+  s.textContent=`
+    #mlib-outer{position:relative;width:100%;min-height:calc(100vh - 90px);overflow-y:auto;
+      background:linear-gradient(160deg,#05030e 0%,#080514 40%,#06040f 100%)}
+    #mlib-ui{position:relative;z-index:2;display:flex;flex-direction:column;align-items:center;padding:44px 24px 100px;max-width:820px;margin:0 auto}
+    .mlib-title{font-family:'Cinzel Decorative',serif;font-size:clamp(18px,2.5vw,30px);color:#e8e0c8;
+      text-shadow:0 0 40px rgba(150,100,255,.4),0 2px 8px #000;letter-spacing:8px;margin-bottom:6px;text-align:center}
+    .mlib-sub{font-family:'EB Garamond',serif;font-size:13px;color:rgba(180,160,220,.4);font-style:italic;
+      letter-spacing:3px;text-align:center;margin-bottom:30px}
+    #mlib-search-wrap{width:100%;max-width:500px;position:relative;margin-bottom:28px}
+    #mlib-search{width:100%;box-sizing:border-box;background:rgba(120,80,200,.07);border:1px solid rgba(140,100,220,.2);
+      border-radius:5px;padding:10px 40px 10px 16px;color:#d8d0f0;font-family:'EB Garamond',serif;
+      font-size:15px;outline:none;font-style:italic}
+    #mlib-search:focus{border-color:rgba(160,120,240,.45)}
+    #mlib-search::placeholder{color:rgba(160,140,220,.3);font-style:italic}
+    .mlib-search-icon{position:absolute;right:12px;top:50%;transform:translateY(-50%);
+      color:rgba(160,140,220,.3);font-size:14px;pointer-events:none}
+    #mlib-list{width:100%;display:flex;flex-direction:column;gap:10px}
+    .mlib-track{background:rgba(20,14,36,.85);border:1px solid rgba(100,70,180,.2);border-radius:8px;
+      padding:14px 18px;display:flex;align-items:center;gap:14px;transition:border-color .2s,background .2s}
+    .mlib-track:hover{border-color:rgba(140,100,220,.4);background:rgba(28,18,48,.9)}
+    .mlib-track.playing{border-color:rgba(160,120,255,.6);background:rgba(30,15,55,.95)}
+    .mlib-track-num{font-family:'Cinzel',serif;font-size:11px;color:rgba(140,110,220,.35);min-width:22px;text-align:right}
+    .mlib-play-btn{width:36px;height:36px;border-radius:50%;background:rgba(140,100,220,.15);
+      border:1px solid rgba(140,100,220,.3);display:flex;align-items:center;justify-content:center;
+      cursor:pointer;font-size:13px;flex-shrink:0;transition:all .15s}
+    .mlib-play-btn:hover{background:rgba(140,100,220,.3);border-color:rgba(160,120,255,.6)}
+    .mlib-track.playing .mlib-play-btn{background:rgba(140,100,220,.35);border-color:rgba(180,140,255,.7)}
+    .mlib-info{flex:1;min-width:0}
+    .mlib-name{font-family:'Cinzel',serif;font-size:10px;letter-spacing:1px;color:#d0c8f0;
+      white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .mlib-track.playing .mlib-name{color:#e0d8ff}
+    .mlib-origin{font-family:'EB Garamond',serif;font-size:12px;color:rgba(160,140,220,.45);font-style:italic}
+    .mlib-progress-wrap{flex:1;max-width:180px;display:flex;flex-direction:column;gap:4px}
+    .mlib-progress{width:100%;height:3px;background:rgba(140,100,220,.15);border-radius:2px;
+      cursor:pointer;position:relative;overflow:hidden}
+    .mlib-progress-bar{height:100%;background:linear-gradient(90deg,rgba(140,100,220,.6),rgba(180,140,255,.9));
+      border-radius:2px;width:0%;transition:width .3s linear;pointer-events:none}
+    .mlib-time{font-family:'Cinzel',serif;font-size:7.5px;color:rgba(140,110,220,.35);letter-spacing:.5px;text-align:right}
+    .mlib-vol{width:60px;accent-color:#9070d8;cursor:pointer}
+    .mlib-dl-btn{padding:5px 10px;background:rgba(100,70,180,.1);border:1px solid rgba(120,90,200,.25);
+      border-radius:4px;color:rgba(160,130,230,.6);font-family:'Cinzel',serif;font-size:8px;
+      cursor:pointer;transition:all .15s;text-decoration:none;white-space:nowrap}
+    .mlib-dl-btn:hover{background:rgba(100,70,180,.22);border-color:rgba(140,110,230,.5);color:#c0a8ff}
+    .mlib-drag-handle{font-size:12px;color:rgba(140,110,220,.25);cursor:grab;flex-shrink:0;padding:0 2px}
+    .mlib-edit-name{display:none;background:rgba(0,0,0,.3);border:1px solid rgba(140,100,220,.35);
+      border-radius:3px;padding:3px 8px;color:#d0c8f0;font-family:'Cinzel',serif;font-size:10px;outline:none;width:140px}
+    .mlib-rename-btn{font-size:9px;color:rgba(140,110,220,.4);cursor:pointer;padding:2px 4px;
+      background:none;border:none;transition:color .15s}
+    .mlib-rename-btn:hover{color:rgba(180,150,255,.8)}
+    .mlib-empty{font-family:'EB Garamond',serif;font-size:15px;color:rgba(160,140,220,.25);
+      font-style:italic;text-align:center;padding:50px}
+  `;
+  document.head.appendChild(s);
+
+  v.style.padding='0';v.style.overflow='auto';
+  v.innerHTML=`<div id="mlib-outer">
+    <div id="mlib-ui">
+      <div class="mlib-title">♪ Bibliothèque Musicale</div>
+      <div class="mlib-sub">${esc(n.subtitle||'Les musiques du monde')}</div>
+      ${_isAdmin()?`<button onclick="_mlibAddTrack('${n.id}')" style="margin-bottom:20px;padding:7px 18px;background:rgba(100,70,180,.12);border:1px solid rgba(120,90,200,.3);border-radius:5px;color:rgba(160,130,230,.7);font-family:'Cinzel',serif;font-size:9px;letter-spacing:1.5px;cursor:pointer">＋ Ajouter une musique</button>`:''}
+      <div id="mlib-search-wrap">
+        <input id="mlib-search" type="text" placeholder="Rechercher une musique…" oninput="_mlibFilter()">
+        <span class="mlib-search-icon">⌕</span>
+      </div>
+      <div id="mlib-list"></div>
+    </div>
+  </div>`;
+
+  _mlibBuild(n.id);
+  initCatAudio(n.id);
+  _injectCatBg('mlib-outer', n.id);
+}
+
+// Construire la liste des pistes depuis toutes les sources audio
+function _mlibCollect(nodeId){
+  const n = db[nodeId]; if(!n) return [];
+  // Lire la liste personnalisée si elle existe
+  const custom = n._musicList || [];
+  if(custom.length > 0) return custom;
+
+  // Sinon, collecter automatiquement
+  const tracks = [];
+  function addTrack(src, name, origin){
+    if(!src || tracks.find(t=>t.src===src)) return;
+    tracks.push({src, name, origin, id: 'auto_'+tracks.length});
+  }
+  // Sources globales
+  addTrack(globalStatNames._wlcAudio,'Thème d\'Accueil','Accueil');
+  addTrack(globalStatNames._ilAudio,'Thème d\'Iluminia','Iluminia');
+  addTrack(globalStatNames._hgAudio,'Thème des Portes','Gates of Hades');
+  addTrack(globalStatNames._gardAudio,'Thème des Gardiens','Les Gardiens');
+  addTrack(globalStatNames._geoAudio,'Thème des Pays','Pays');
+  // Sons de catégories
+  Object.values(db).forEach(nd=>{
+    if(nd._audio?.src) addTrack(nd._audio.src, nd.name+' — Thème', nd.name);
+  });
+  return tracks;
+}
+
+function _mlibBuild(nodeId){
+  const n = db[nodeId]; if(!n) return;
+  if(!n._musicList) n._musicList = _mlibCollect(nodeId);
+  window._mlibNodeId = nodeId;
+  window._mlibCurrentAudio = window._mlibCurrentAudio || null;
+  window._mlibCurrentIdx = window._mlibCurrentIdx ?? -1;
+  _mlibRender();
+}
+
+function _mlibRender(){
+  const nodeId = window._mlibNodeId;
+  const n = db[nodeId]; if(!n) return;
+  const list = document.getElementById('mlib-list'); if(!list) return;
+  const q = (document.getElementById('mlib-search')?.value||'').toLowerCase().trim();
+
+  const tracks = n._musicList || [];
+  const filtered = q ? tracks.filter(t=>
+    (t.name||'').toLowerCase().includes(q) ||
+    (t.origin||'').toLowerCase().includes(q)
+  ) : tracks;
+
+  if(filtered.length === 0){
+    list.innerHTML = `<div class="mlib-empty">${q?'Aucun résultat.':'Aucune musique enregistrée.'}</div>`;
+    return;
+  }
+
+  list.innerHTML = filtered.map((t,i)=>{
+    const realIdx = tracks.indexOf(t);
+    const isPlaying = window._mlibCurrentIdx === realIdx;
+    return `<div class="mlib-track${isPlaying?' playing':''}" id="mlib-tr-${realIdx}" data-idx="${realIdx}"
+      ${_isAdmin()?'draggable="true"':''}>
+      ${_isAdmin()?`<span class="mlib-drag-handle" title="Glisser pour réordonner">⠿</span>`:''}
+      <span class="mlib-track-num">${(realIdx+1).toString().padStart(2,'0')}</span>
+      <button class="mlib-play-btn" onclick="_mlibToggle(${realIdx})">${isPlaying?'⏸':'▶'}</button>
+      <div class="mlib-info">
+        <div style="display:flex;align-items:center;gap:6px">
+          <span class="mlib-name" id="mlib-name-${realIdx}">${esc(t.name||'Sans titre')}</span>
+          ${_isAdmin()?`<button class="mlib-rename-btn" onclick="_mlibStartRename(${realIdx})" title="Renommer">✎</button>`:''}
+        </div>
+        <input class="mlib-edit-name" id="mlib-edit-${realIdx}"
+          onblur="_mlibSaveName(${realIdx},this.value)"
+          onkeydown="if(event.key==='Enter')this.blur();if(event.key==='Escape'){this.value=document.getElementById('mlib-name-${realIdx}').textContent;this.blur();}">
+        <div class="mlib-origin">${esc(t.origin||'')}</div>
+      </div>
+      <div class="mlib-progress-wrap">
+        <div class="mlib-progress" id="mlib-prog-${realIdx}" onclick="_mlibSeek(event,${realIdx})">
+          <div class="mlib-progress-bar" id="mlib-bar-${realIdx}"></div>
+        </div>
+        <span class="mlib-time" id="mlib-time-${realIdx}">0:00 / 0:00</span>
+      </div>
+      <input type="range" class="mlib-vol" min="0" max="100" value="${Math.round(_masterVol*100)}"
+        title="Volume" oninput="_mlibSetVol(${realIdx},this.value)">
+      <a class="mlib-dl-btn" href="${t.src}" download="${esc(t.name||'musique')}.mp3"
+        onclick="event.stopPropagation()" title="Télécharger">⬇ MP3</a>
+    </div>`;
+  }).join('');
+
+  // Drag & drop admin
+  if(_isAdmin()) _mlibInitDrag(nodeId);
+
+  // Relancer l'update de la barre de progression si une piste joue
+  if(window._mlibCurrentAudio && window._mlibCurrentIdx >= 0){
+    _mlibStartProgress(window._mlibCurrentIdx);
+  }
+}
+
+function _mlibFilter(){
+  _mlibRender();
+}
+
+function _mlibToggle(idx){
+  const nodeId = window._mlibNodeId;
+  const n = db[nodeId]; if(!n) return;
+  const t = (n._musicList||[])[idx]; if(!t) return;
+
+  // Si c'est la piste courante, pause/play
+  if(window._mlibCurrentIdx === idx && window._mlibCurrentAudio){
+    const a = window._mlibCurrentAudio;
+    if(a.paused){ a.play(); _mlibUpdateBtn(idx,'⏸'); }
+    else { a.pause(); _mlibUpdateBtn(idx,'▶'); }
+    return;
+  }
+
+  // Arrêter la piste précédente
+  if(window._mlibCurrentAudio){
+    window._mlibCurrentAudio.pause();
+    if(window._mlibCurrentIdx >= 0) _mlibUpdateBtn(window._mlibCurrentIdx,'▶');
+    const oldRow=document.getElementById('mlib-tr-'+window._mlibCurrentIdx);
+    if(oldRow) oldRow.classList.remove('playing');
+  }
+
+  // Nouvelle piste
+  const audio = new Audio(t.src);
+  audio.volume = _masterVol;
+  audio.play().catch(()=>{});
+  window._mlibCurrentAudio = audio;
+  window._mlibCurrentIdx = idx;
+
+  const row = document.getElementById('mlib-tr-'+idx);
+  if(row) row.classList.add('playing');
+  _mlibUpdateBtn(idx,'⏸');
+  _mlibStartProgress(idx);
+
+  audio.onended = ()=>{
+    _mlibUpdateBtn(idx,'▶');
+    if(row) row.classList.remove('playing');
+    window._mlibCurrentIdx = -1;
+  };
+}
+
+function _mlibUpdateBtn(idx, icon){
+  const btn = document.querySelector(`#mlib-tr-${idx} .mlib-play-btn`);
+  if(btn) btn.textContent = icon;
+}
+
+function _mlibStartProgress(idx){
+  const audio = window._mlibCurrentAudio; if(!audio) return;
+  function update(){
+    if(window._mlibCurrentIdx !== idx) return;
+    const bar = document.getElementById('mlib-bar-'+idx);
+    const time = document.getElementById('mlib-time-'+idx);
+    if(bar && audio.duration){
+      bar.style.width = (audio.currentTime/audio.duration*100)+'%';
+    }
+    if(time && audio.duration){
+      const fmt = s=>Math.floor(s/60)+':'+(Math.floor(s%60)+'').padStart(2,'0');
+      time.textContent = fmt(audio.currentTime)+' / '+fmt(audio.duration);
+    }
+    if(!audio.paused) requestAnimationFrame(update);
+  }
+  requestAnimationFrame(update);
+  audio.addEventListener('timeupdate', update);
+}
+
+function _mlibSeek(e, idx){
+  if(window._mlibCurrentIdx !== idx || !window._mlibCurrentAudio) return;
+  const bar = document.getElementById('mlib-prog-'+idx);
+  if(!bar) return;
+  const r = bar.getBoundingClientRect();
+  const pct = (e.clientX - r.left) / r.width;
+  window._mlibCurrentAudio.currentTime = pct * window._mlibCurrentAudio.duration;
+}
+
+function _mlibSetVol(idx, val){
+  if(window._mlibCurrentIdx === idx && window._mlibCurrentAudio){
+    window._mlibCurrentAudio.volume = val/100;
+  }
+}
+
+function _mlibStartRename(idx){
+  const nameEl = document.getElementById('mlib-name-'+idx);
+  const inp = document.getElementById('mlib-edit-'+idx);
+  if(!nameEl||!inp) return;
+  inp.value = nameEl.textContent;
+  nameEl.parentElement.style.display='none';
+  inp.style.display='block';
+  inp.focus(); inp.select();
+}
+
+function _mlibSaveName(idx, val){
+  const nodeId = window._mlibNodeId;
+  const n = db[nodeId]; if(!n||!n._musicList) return;
+  if(val.trim()) n._musicList[idx].name = val.trim();
+  save();
+  _mlibRender();
+}
+
+function _mlibInitDrag(nodeId){
+  const n = db[nodeId]; if(!n) return;
+  let _dragIdx = null;
+  document.querySelectorAll('.mlib-track[draggable="true"]').forEach(row=>{
+    row.addEventListener('dragstart', e=>{
+      _dragIdx = parseInt(row.dataset.idx);
+      row.style.opacity='.4';
+      e.dataTransfer.effectAllowed='move';
+    });
+    row.addEventListener('dragend', ()=>{ row.style.opacity='1'; });
+    row.addEventListener('dragover', e=>{ e.preventDefault(); row.style.background='rgba(100,70,180,.25)'; });
+    row.addEventListener('dragleave', ()=>{ row.style.background=''; });
+    row.addEventListener('drop', e=>{
+      e.preventDefault(); row.style.background='';
+      const targetIdx = parseInt(row.dataset.idx);
+      if(_dragIdx===null||_dragIdx===targetIdx) return;
+      const moved = n._musicList.splice(_dragIdx,1)[0];
+      n._musicList.splice(targetIdx,0,moved);
+      if(window._mlibCurrentIdx===_dragIdx) window._mlibCurrentIdx=targetIdx;
+      save();
+      _mlibRender();
+    });
+  });
+}
+
+function _mlibAddTrack(nodeId){
+  if(!_isAdmin()) return;
+  const n=db[nodeId];if(!n)return;
+  if(!n._musicList) n._musicList=_mlibCollect(nodeId);
+  const inp=document.createElement('input');inp.type='file';inp.accept='audio/*';
+  inp.onchange=e=>{
+    const f=e.target.files[0];if(!f)return;
+    _uploadToCloudinary(f,url=>{
+      n._musicList.push({src:url,name:f.name.replace(/\.[^.]+$/,''),origin:'',id:'usr_'+Date.now()});
+      save();_mlibRender();
+    });
+  };
+  inp.click();
+}
+
+
+
 function renderLoreImmersive(v, n){
   if(_histAnim){cancelAnimationFrame(_histAnim);_histAnim=null;}
 
@@ -12788,6 +13117,41 @@ if(document.readyState !== 'loading') _applyMode();
   if(l) l.textContent = Math.round(_masterVol * 100) + '%';
   // Appliquer le volume initial à tous les éléments audio
   ['wlc-audio','il-audio','hg-audio','gard-audio','cat-audio'].forEach(id=>{ const a=document.getElementById(id); if(a) a.volume=_masterVol; });
+})();
+
+// ════════════════════════════════════════════════════════
+//  PRÉSENCE EN LIGNE — Supabase Realtime
+// ════════════════════════════════════════════════════════
+(function(){
+  // ID unique par session
+  const _sessId = Math.random().toString(36).slice(2);
+  let _presenceChannel = null;
+
+  function _initPresence(){
+    if(!window.supabase) return;
+    try{
+      _presenceChannel = supabase.channel('goh-online', {
+        config:{ presence:{ key: _sessId } }
+      });
+      _presenceChannel
+        .on('presence', { event:'sync' }, ()=>{
+          const state = _presenceChannel.presenceState();
+          const count = Object.keys(state).length;
+          const el = document.getElementById('_online-count');
+          if(el) el.textContent = count;
+        })
+        .subscribe(async status=>{
+          if(status === 'SUBSCRIBED'){
+            await _presenceChannel.track({ user: _sessId, ts: Date.now() });
+          }
+        });
+    }catch(e){ console.warn('Presence init error',e); }
+  }
+
+  // Attendre que supabase soit prêt
+  const _pTimer = setInterval(()=>{
+    if(window.supabase){ clearInterval(_pTimer); _initPresence(); }
+  }, 500);
 })();
 </script>
 
