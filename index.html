@@ -4344,7 +4344,11 @@ function renderSecretsImmersive(v, n){
   initCatAudio(n.id);
 
   const secO=document.getElementById('sec-outer');
-  if(secO) secO.oncontextmenu=e=>{ if(e.target.closest('#sec-parchment-overlay,#sec-parchment,.sec-scroll-row,.sec-lock-inline,.sec-reveal-block')) return; e.preventDefault();e.stopPropagation();_showCatBgMenu(n.id,e.clientX,e.clientY); };
+  if(secO) secO.oncontextmenu=e=>{
+    if(e.target.closest('.sec-lock-inline,.sec-reveal-block,.sec-reveal-footer')) return;
+    if(e.target.closest('#sec-parchment-overlay,#sec-parchment,.sec-scroll-row')) return;
+    e.preventDefault();e.stopPropagation();_showCatBgMenu(n.id,e.clientX,e.clientY);
+  };
 }
 
 // ── Créer un nouveau secret (bypass openNewEntryModal) ──
@@ -5395,7 +5399,11 @@ function renderGeographieImmersive(v, n){
   const GS = {
     nodeId, mapImg,
     pois, landPolygons,
-    boat: {x:0.1, y:0.5, angle: 0, targetX:null, targetY:null, path:[], pathIdx:0, moving:false, speed:0.0015, size: boatSize},
+    boat: (()=>{
+      const saved = localStorage.getItem('goh_boat_pos');
+      const pos = saved ? JSON.parse(saved) : {x:0.1,y:0.5,angle:0};
+      return {x:pos.x,y:pos.y,angle:pos.angle||0,targetX:null,targetY:null,path:[],pathIdx:0,moving:false,speed:0.0015,size:boatSize};
+    })(),
     view: {scale:1, tx:0, ty:0, panning:false, panStartX:0, panStartY:0, panStartTx:0, panStartTy:0},
     mode: 'nav', // 'nav' | 'poi' | 'paint'
     paintMode: 'land', // 'land' | 'water'
@@ -5623,6 +5631,7 @@ function _geoStartLoop(nodeId){
         if(boat.pathIdx>=boat.path.length){
           boat.moving=false;
           boat.path=[];
+          localStorage.setItem('goh_boat_pos',JSON.stringify({x:boat.x,y:boat.y,angle:boat.angle}));
           if(GS.pendingNodeId){
             const nid=GS.pendingNodeId;
             GS.pendingNodeId=null;
@@ -5635,6 +5644,8 @@ function _geoStartLoop(nodeId){
         boat.x+=nx/W;
         boat.y+=ny/H;
         boat.angle=Math.atan2(dy,dx)+Math.PI/2;
+        // Sauvegarder position toutes les ~60 frames
+        if(t%60===0) localStorage.setItem('goh_boat_pos',JSON.stringify({x:boat.x,y:boat.y,angle:boat.angle}));
       }
     }
 
