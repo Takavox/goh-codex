@@ -12017,6 +12017,33 @@ const _CARTE_POI_TYPES = {
 // ════════════════════════════════════════════════════════
 // ── Fonctions admin pour le personnage marcheur ──
 
+
+function _carteCharLoadImg(nodeId){
+  if(!_isAdmin()) return;
+  const inp = document.createElement('input');
+  inp.type='file'; inp.accept='image/*';
+  inp.onchange = e => {
+    const f = e.target.files[0]; if(!f) return;
+    _uploadToCloudinary(f, url => {
+      const n = db[nodeId]; if(!n) return;
+      n._charImg = url;
+      save();
+      // Mettre à jour l'image du personnage sans recharger toute la carte
+      const GS = window._carteCharState;
+      if(GS) {
+        const img = new Image();
+        img.onload = () => {
+          // Remplacer l'image dans la closure du frame
+          // On recharge juste _carteInitChar
+          _carteInitChar(nodeId);
+        };
+        img.src = url;
+      }
+    });
+  };
+  inp.click();
+}
+
 function _carteCharTogglePaint(nodeId){
   const GS = window._carteCharState; if(!GS) return;
   const panel = document.getElementById('carte-char-paint-panel');
@@ -12087,7 +12114,7 @@ function _carteInitChar(nodeId){
 
   // Charger l'image du personnage
   const charImg = new Image();
-  charImg.src = _CARTE_CHAR_IMG;
+  charImg.src = n?._charImg || _CARTE_CHAR_IMG;
 
   // Lire position sauvegardée
   const saved = JSON.parse(localStorage.getItem('goh_char_'+nodeId)||'null');
@@ -12127,8 +12154,9 @@ function _carteInitChar(nodeId){
     if(!img||!img.naturalWidth) return null;
     // En mode peinture : utiliser le zoom/pan de peinture
     if(CS.paintMode_active){
-      const mx = (e.clientX - vp.left - CS._paintTx) / CS._paintScale;
-      const my = (e.clientY - vp.top - CS._paintTy) / CS._paintScale;
+      // La carte a son propre tx/scale (cs), plus le zoom de peinture (CS._paintTx/Scale)
+      const mx = (e.clientX - vp.left - cs.tx - CS._paintTx) / (cs.scale * CS._paintScale);
+      const my = (e.clientY - vp.top - cs.ty - CS._paintTy) / (cs.scale * CS._paintScale);
       return { px: mx/img.naturalWidth, py: my/img.naturalHeight,
                gx: Math.round(mx/img.naturalWidth*CS.gridW), gy: Math.round(my/img.naturalHeight*CS.gridH) };
     }
@@ -12234,8 +12262,8 @@ function _carteInitChar(nodeId){
     // Afficher la grille de terre si mode peinture
     if(CS.paintMode_active && CS.grid){
       ctx.save();
-      ctx.translate(CS._paintTx + cs.tx, CS._paintTy + cs.ty);
-      ctx.scale(CS._paintScale * cs.scale, CS._paintScale * cs.scale);
+      ctx.translate(cs.tx + CS._paintTx, cs.ty + CS._paintTy);
+      ctx.scale(cs.scale * CS._paintScale, cs.scale * CS._paintScale);
       const cw=img.naturalWidth/CS.gridW, ch=img.naturalHeight/CS.gridH;
       for(let gy=0;gy<CS.gridH;gy++){
         for(let gx=0;gx<CS.gridW;gx++){
@@ -12394,6 +12422,7 @@ function renderCarteImmersive(v, n){
       <div class="carte-tb-sep"></div>
       <button class="carte-tb-btn" id="carte-char-paint-btn" onclick="_carteCharTogglePaint('${n.id}')">🏔 Terre/Eau</button>
       <button class="carte-tb-btn" onclick="_carteCharToggleSizePanel('${n.id}')">⚖ Taille</button>
+      <button class="carte-tb-btn" onclick="_carteCharLoadImg('${n.id}')">🧍 Personnage</button>
       `:''}
     </div>
     <div id="carte-viewport"
