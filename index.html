@@ -12403,7 +12403,6 @@ function renderCarteImmersive(v, n){
     .carte-ip-btn.del{border-color:rgba(200,60,60,.2);color:rgba(200,100,100,.6)}
     .carte-ip-btn.del:hover{background:rgba(200,60,60,.15)}
     /* Canvas personnage */
-    #carte-char-canvas{position:absolute;inset:0;pointer-events:none;z-index:6}
     #carte-char-hint{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:rgba(6,4,0,.88);border:1px solid rgba(180,140,40,.3);border-radius:20px;padding:7px 18px;font-family:'Cinzel',serif;font-size:9px;color:#c8a840;letter-spacing:1.5px;pointer-events:none;z-index:25;opacity:0;transition:opacity .3s}
     #carte-char-hint.show{opacity:1}
   `;
@@ -12437,13 +12436,13 @@ function renderCarteImmersive(v, n){
     <div id="carte-viewport"
       onclick="_carteViewClick(event)"
       oncontextmenu="event.preventDefault()">
+      <canvas id="carte-char-canvas" style="position:absolute;inset:0;pointer-events:none;z-index:6"></canvas>
       <div id="carte-canvas-wrap">
         ${hasImg
           ? `<img id="carte-img" src="${n._carteImg}" draggable="false" onload="_carteImgLoaded()">`
           : `<div id="carte-img-ph" onclick="_carteLoadImg('${n.id}')"><div style="font-size:48px;opacity:.2">🗺</div><div>Cliquez pour charger votre carte</div><div style="font-size:9px;opacity:.5">Image JPG, PNG…</div></div>`}
       </div>
     </div>
-    <canvas id="carte-char-canvas"></canvas>
     <div id="carte-char-hint">🚶 Clic gauche pour marcher</div>
     <div id="carte-char-paint-panel" style="position:absolute;bottom:20px;left:50%;transform:translateX(-50%);z-index:30;background:rgba(4,6,14,.92);border:1px solid rgba(180,140,40,.3);border-radius:8px;padding:12px 18px;font-family:'Cinzel',serif;font-size:9px;color:rgba(200,175,120,.7);text-align:center;display:none;pointer-events:all">
       <div style="margin-bottom:8px;letter-spacing:1.5px">MODE PEINTURE TERRE</div>
