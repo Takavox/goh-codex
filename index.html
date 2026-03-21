@@ -12201,17 +12201,7 @@ function _carteInitChar(nodeId){
   viewport.addEventListener('mouseup', ()=>{ _charPainting=false; CS._paintPanning=false; });
   viewport.addEventListener('mouseleave', ()=>{ _charPainting=false; CS._paintPanning=false; });
   viewport.addEventListener('contextmenu', e=>{ if(CS.paintMode_active) e.preventDefault(); });
-  viewport.addEventListener('wheel', e=>{
-    if(!CS.paintMode_active) return;
-    e.preventDefault();
-    const vp2=viewport.getBoundingClientRect();
-    const mx=e.clientX-vp2.left, my=e.clientY-vp2.top;
-    const factor=e.deltaY<0?1.18:0.85;
-    const newScale=Math.max(1,Math.min(12,CS._paintScale*factor));
-    CS._paintTx=mx-(mx-CS._paintTx)*newScale/CS._paintScale;
-    CS._paintTy=my-(my-CS._paintTy)*newScale/CS._paintScale;
-    CS._paintScale=newScale;
-  },{passive:false});
+
 
   function _charPaintAt(e,nid){
     const coords = _charGetImgCoords(e); if(!coords) return;
@@ -12339,6 +12329,32 @@ function _carteInitChar(nodeId){
 
   charImg.onload = () => frame();
   if(charImg.complete) frame();
+
+  // Drag du panel peinture
+  requestAnimationFrame(()=>{
+    const handle = document.getElementById('carte-char-paint-drag-handle');
+    const panel = document.getElementById('carte-char-paint-panel');
+    if(!handle||!panel) return;
+    let _pdx=0,_pdy=0,_pdragging=false;
+    handle.addEventListener('mousedown', e=>{
+      e.preventDefault(); e.stopPropagation();
+      _pdragging=true;
+      handle.style.cursor='grabbing';
+      const r=panel.getBoundingClientRect();
+      _pdx=e.clientX-r.left; _pdy=e.clientY-r.top;
+    });
+    document.addEventListener('mousemove', e=>{
+      if(!_pdragging) return;
+      panel.style.left=(e.clientX-_pdx)+'px';
+      panel.style.top=(e.clientY-_pdy)+'px';
+      panel.style.right='auto'; panel.style.bottom='auto';
+      panel.style.transform='none';
+    });
+    document.addEventListener('mouseup', ()=>{
+      if(!_pdragging) return;
+      _pdragging=false; handle.style.cursor='grab';
+    });
+  });
 }
 
 
@@ -12444,8 +12460,9 @@ function renderCarteImmersive(v, n){
       </div>
     </div>
     <div id="carte-char-hint">🚶 Clic gauche pour marcher</div>
-    <div id="carte-char-paint-panel" style="position:absolute;bottom:20px;left:50%;transform:translateX(-50%);z-index:30;background:rgba(4,6,14,.92);border:1px solid rgba(180,140,40,.3);border-radius:8px;padding:12px 18px;font-family:'Cinzel',serif;font-size:9px;color:rgba(200,175,120,.7);text-align:center;display:none;pointer-events:all">
-      <div style="margin-bottom:8px;letter-spacing:1.5px">MODE PEINTURE TERRE</div>
+    <div id="carte-char-paint-panel" style="position:absolute;top:60px;right:20px;z-index:30;background:rgba(4,6,14,.92);border:1px solid rgba(180,140,40,.3);border-radius:8px;padding:10px 14px 12px;font-family:'Cinzel',serif;font-size:9px;color:rgba(200,175,120,.7);text-align:center;display:none;pointer-events:all;cursor:default;min-width:190px">
+      <div id="carte-char-paint-drag-handle" style="position:absolute;top:4px;right:6px;font-size:13px;color:rgba(180,140,40,.4);cursor:grab;padding:2px 4px;user-select:none" title="Déplacer">⠿</div>
+      <div style="margin-bottom:8px;letter-spacing:1.5px;padding-right:16px">MODE PEINTURE TERRE</div>
       <div style="display:flex;gap:8px;justify-content:center;margin-bottom:8px">
         <button class="carte-tb-btn active" id="carte-char-paint-land" onclick="_carteCharSetPaintMode('land')">🏔 Terre</button>
         <button class="carte-tb-btn" id="carte-char-paint-water" onclick="_carteCharSetPaintMode('water')">🌊 Eau</button>
