@@ -10003,7 +10003,7 @@ function renderComparatifView(v, n){
     .cmp-search-wrap{position:relative;margin-bottom:10px}
     .cmp-search{width:100%;background:rgba(20,10,40,.8);border:1px solid rgba(140,80,255,.3);border-radius:6px;padding:8px 16px;color:#d0c8f0;font-family:'EB Garamond',serif;font-size:14px;outline:none;box-sizing:border-box;margin-bottom:10px}
     .cmp-search:focus{border-color:rgba(140,80,255,.7)}
-    .cmp-char-list{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px;max-height:90px;overflow-y:auto}
+    .cmp-char-list{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:0;height:90px;overflow-y:auto;min-height:40px;max-height:400px}
     .cmp-char-chip{display:flex;align-items:center;gap:6px;padding:5px 10px 5px 6px;background:rgba(140,80,255,.08);border:1px solid rgba(140,80,255,.2);border-radius:20px;cursor:pointer;transition:all .15s}
     .cmp-char-chip:hover{background:rgba(140,80,255,.2);border-color:rgba(140,80,255,.5)}
     .cmp-char-chip.selected{background:rgba(140,80,255,.25);border-color:rgba(140,80,255,.7)}
@@ -10037,6 +10037,9 @@ function renderComparatifView(v, n){
         <div id="cmp-picker" class="cmp-picker"></div>
         <input id="cmp-search" class="cmp-search" placeholder="Rechercher un personnage à comparer…" oninput="_cmpRenderChips(this.value)">
         <div id="cmp-chips" class="cmp-char-list"></div>
+        <div id="cmp-resize-handle" style="width:100%;height:6px;cursor:ns-resize;display:flex;align-items:center;justify-content:center;margin-bottom:8px;opacity:.4;transition:opacity .15s" title="Glisser pour redimensionner" onmouseenter="this.style.opacity='.9'" onmouseleave="this.style.opacity='.4'">
+          <div style="width:40px;height:3px;background:rgba(140,80,255,.6);border-radius:2px"></div>
+        </div>
       </div>
     </div>
     <div id="cmp-ui-bottom" style="padding:0 30px 80px;max-width:1200px;margin:0 auto">
@@ -10048,6 +10051,28 @@ function renderComparatifView(v, n){
   _cmpRenderChips('');
   _cmpRenderTable();
   initCatAudio(n.id);
+
+  // Redimensionnement vertical de la liste
+  requestAnimationFrame(()=>{
+    const handle = document.getElementById('cmp-resize-handle');
+    const chips = document.getElementById('cmp-chips');
+    if(!handle||!chips) return;
+    let _resizing=false, _startY=0, _startH=0;
+    handle.addEventListener('mousedown', e=>{
+      e.preventDefault();
+      _resizing=true; _startY=e.clientY; _startH=chips.offsetHeight;
+      document.body.style.cursor='ns-resize';
+    });
+    document.addEventListener('mousemove', e=>{
+      if(!_resizing) return;
+      const newH=Math.max(40,Math.min(400,_startH+(e.clientY-_startY)));
+      chips.style.height=newH+'px';
+    });
+    document.addEventListener('mouseup', ()=>{
+      if(!_resizing) return;
+      _resizing=false; document.body.style.cursor='';
+    });
+  });
 }
 
 function _cmpAllChars(){
@@ -10173,7 +10198,10 @@ function _cmpRenderTable(){
 
     statKeys.forEach(sKey=>{
       const label = globalNames[sKey]||sKey;
-      const vals = chars.map(c=>((c._slotStats||c.stats||{})[cat]&&(c._slotStats||c.stats||{})[cat][sKey]||(c.stats&&c.stats[cat]&&c.stats[cat][sKey]))||0);
+      const vals = chars.map(c=>{
+        const stats = c._slotStats || c.stats || {};
+        return (stats[cat]&&stats[cat][sKey]) || 0;
+      });
       const maxVal = Math.max(...vals, 1);
       const bestVal = Math.max(...vals);
 
@@ -10191,9 +10219,9 @@ function _cmpRenderTable(){
       h += `</tr>`;
     });
 
-    // Ligne moyenne
+    // Ligne moyenne — utiliser _slotStats (stats de l'arc sélectionné)
     const avgs = chars.map(c=>{
-      const v = c.stats&&c.stats[cat]?c.stats[cat]:{};
+      const v = (c._slotStats||c.stats||{})[cat] || {};
       const vals = statKeys.map(s=>v[s]||0).filter(x=>x>0);
       return vals.length ? (vals.reduce((a,b)=>a+b,0)/vals.length).toFixed(1) : '—';
     });
