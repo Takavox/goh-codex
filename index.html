@@ -12048,7 +12048,7 @@ function _carteCharTogglePaint(nodeId){
   const GS = window._carteCharState; if(!GS) return;
   const panel = document.getElementById('carte-char-paint-panel');
   const btn = document.getElementById('carte-char-paint-btn');
-  const active = panel?.style.display !== 'none' && panel?.style.display !== '';
+  const active = panel?.style.display === 'block';
   if(panel) panel.style.display = active ? 'none' : 'block';
   if(btn) btn.classList.toggle('active', !active);
   GS.paintMode_active = !active;
@@ -12112,16 +12112,25 @@ function _carteInitChar(nodeId){
   resizeCanvas();
   new ResizeObserver(resizeCanvas).observe(viewport);
 
+  // n doit être déclaré EN PREMIER
+  const n = db[nodeId];
+
   // Charger l'image du personnage
   const charImg = new Image();
   charImg.src = n?._charImg || _CARTE_CHAR_IMG;
 
-  // Lire position sauvegardée
+  // Position initiale : localStorage, sinon POI "capitale", sinon centre
   const saved = JSON.parse(localStorage.getItem('goh_char_'+nodeId)||'null');
-  const n = db[nodeId];
+  let _initX = 0.5, _initY = 0.5;
+  if(saved){ _initX=saved.x; _initY=saved.y; }
+  else {
+    // Chercher un POI nommé "capitale" (insensible à la casse)
+    const capitalePoi = (n?._pois||[]).find(p=>(p.name||'').toLowerCase().includes('capitale'));
+    if(capitalePoi){ _initX=capitalePoi.x; _initY=capitalePoi.y; }
+  }
   const CS = {
-    x: saved?.x ?? 0.5,
-    y: saved?.y ?? 0.5,
+    x: _initX,
+    y: _initY,
     targetX: null, targetY: null,
     moving: false,
     facing: 1,
