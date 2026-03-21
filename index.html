@@ -10219,9 +10219,9 @@ function _cmpRenderTable(){
       h += `</tr>`;
     });
 
-    // Ligne moyenne
+    // Ligne moyenne — utiliser _slotStats (stats de l'arc sélectionné)
     const avgs = chars.map(c=>{
-      const v = c.stats&&c.stats[cat]?c.stats[cat]:{};
+      const v = (c._slotStats||c.stats||{})[cat] || {};
       const vals = statKeys.map(s=>v[s]||0).filter(x=>x>0);
       return vals.length ? (vals.reduce((a,b)=>a+b,0)/vals.length).toFixed(1) : '—';
     });
