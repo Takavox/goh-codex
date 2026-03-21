@@ -12011,6 +12011,148 @@ const _CARTE_POI_TYPES = {
   port:      { icon:'⚓', color:'#2080a0', label:'Port / Commerce' }
 };
 
+
+// ════════════════════════════════════════════════════════
+//  CARTE PERSONNAGE — Marcheur animé
+// ════════════════════════════════════════════════════════
+const _CARTE_CHAR_IMG = 'data:image/png;base64,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';
+let _carteCharAnim = null;
+
+function _carteInitChar(nodeId){
+  if(_carteCharAnim){ cancelAnimationFrame(_carteCharAnim); _carteCharAnim=null; }
+
+  const canvas = document.getElementById('carte-char-canvas');
+  const viewport = document.getElementById('carte-viewport');
+  if(!canvas||!viewport) return;
+
+  // Ajuster la taille du canvas au viewport
+  function resizeCanvas(){
+    canvas.width = viewport.offsetWidth;
+    canvas.height = viewport.offsetHeight;
+  }
+  resizeCanvas();
+  new ResizeObserver(resizeCanvas).observe(viewport);
+
+  // Charger l'image du personnage
+  const charImg = new Image();
+  charImg.src = _CARTE_CHAR_IMG;
+
+  // Lire position sauvegardée
+  const saved = JSON.parse(localStorage.getItem('goh_char_'+nodeId)||'null');
+  const CS = {
+    x: saved?.x ?? 0.5,  // position normalisée (0-1) sur l'image de carte
+    y: saved?.y ?? 0.5,
+    targetX: null, targetY: null,
+    moving: false,
+    facing: 1, // 1=droite, -1=gauche
+    step: 0,   // pour l'animation de marche
+    size: 60,  // taille en px
+  };
+  window._carteCharState = CS;
+
+  // Clic gauche sur le viewport → marcher vers ce point
+  viewport.addEventListener('click', function _charClick(e){
+    const st = _carteCharState;
+    const placeMode = _carteState.placeMode;
+    if(placeMode) return; // pas en mode POI
+    const overlay = document.getElementById('carte-info-overlay');
+    if(overlay?.classList.contains('open')) return;
+    // Coordonnées dans l'espace image (en pixels naturels)
+    const vp = viewport.getBoundingClientRect();
+    const mx = e.clientX - vp.left;
+    const my = e.clientY - vp.top;
+    // Convertir en coordonnées normalisées de l'image
+    const wrap = document.getElementById('carte-canvas-wrap');
+    if(!wrap) return;
+    const cs = _carteState;
+    const img = document.getElementById('carte-img');
+    if(!img||!img.naturalWidth) return;
+    // Pixel dans l'image naturelle
+    const imgX = (mx - cs.tx) / cs.scale;
+    const imgY = (my - cs.ty) / cs.scale;
+    st.targetX = imgX / img.naturalWidth;
+    st.targetY = imgY / img.naturalHeight;
+    st.moving = true;
+    // Direction
+    const dx = st.targetX - st.x;
+    if(Math.abs(dx) > 0.005) st.facing = dx > 0 ? 1 : -1;
+    // Hint
+    const hint = document.getElementById('carte-char-hint');
+    if(hint){ hint.classList.add('show'); clearTimeout(hint._ht); hint._ht=setTimeout(()=>hint.classList.remove('show'),2000); }
+  }, { capture:false });
+
+  const ctx = canvas.getContext('2d');
+  let t = 0;
+
+  function frame(){
+    _carteCharAnim = requestAnimationFrame(frame);
+    if(!document.getElementById('carte-char-canvas')){ cancelAnimationFrame(_carteCharAnim); return; }
+
+    const W = canvas.width, H = canvas.height;
+    ctx.clearRect(0,0,W,H);
+    if(!charImg.complete||!charImg.naturalWidth) return;
+
+    const cs = _carteState;
+    const img = document.getElementById('carte-img');
+    if(!img||!img.naturalWidth) return;
+
+    // Déplacer le personnage vers la cible
+    if(CS.moving && CS.targetX !== null){
+      const dx = CS.targetX - CS.x;
+      const dy = CS.targetY - CS.y;
+      const dist = Math.sqrt(dx*dx+dy*dy);
+      const speed = 0.003;
+      if(dist < speed){
+        CS.x = CS.targetX; CS.y = CS.targetY;
+        CS.moving = false;
+        // Sauvegarder position
+        localStorage.setItem('goh_char_'+nodeId, JSON.stringify({x:CS.x,y:CS.y}));
+      } else {
+        CS.x += dx/dist*speed;
+        CS.y += dy/dist*speed;
+        if(Math.abs(dx) > 0.002) CS.facing = dx > 0 ? 1 : -1;
+        CS.step = t;
+      }
+    }
+
+    // Convertir position normalisée → pixels viewport
+    const px = CS.x * img.naturalWidth * cs.scale + cs.tx;
+    const py = CS.y * img.naturalHeight * cs.scale + cs.ty;
+
+    // Animation de marche : oscillation verticale + rotation légère
+    const walking = CS.moving;
+    const bounce = walking ? Math.sin(t*0.18)*4 : 0;
+    const lean = walking ? Math.sin(t*0.18)*0.06*CS.facing : 0;
+
+    // Ombre au sol
+    ctx.save();
+    ctx.translate(px, py + CS.size*0.45);
+    ctx.scale(1, 0.3);
+    ctx.beginPath();
+    ctx.arc(0, 0, CS.size*0.28, 0, Math.PI*2);
+    ctx.fillStyle = 'rgba(0,0,0,0.25)';
+    ctx.fill();
+    ctx.restore();
+
+    // Personnage
+    ctx.save();
+    ctx.translate(px, py + bounce - CS.size/2);
+    ctx.rotate(lean);
+    ctx.scale(CS.facing, 1); // flip horizontal selon direction
+    // Jambes qui bougent (simulé par légère compression verticale)
+    const legSquish = walking ? 1 + Math.sin(t*0.36)*0.04 : 1;
+    ctx.scale(1, legSquish);
+    ctx.drawImage(charImg, -CS.size/2, 0, CS.size, CS.size*charImg.naturalHeight/charImg.naturalWidth);
+    ctx.restore();
+
+    t++;
+  }
+
+  charImg.onload = () => frame();
+  if(charImg.complete) frame();
+}
+
+
 let _carteState = { scale:1, tx:0, ty:0, dragging:false, lastX:0, lastY:0, placeMode:false, nodeId:null };
 
 function renderCarteImmersive(v, n){
@@ -12071,6 +12213,10 @@ function renderCarteImmersive(v, n){
     .carte-ip-btn:hover{background:rgba(180,140,40,.18)}
     .carte-ip-btn.del{border-color:rgba(200,60,60,.2);color:rgba(200,100,100,.6)}
     .carte-ip-btn.del:hover{background:rgba(200,60,60,.15)}
+    /* Canvas personnage */
+    #carte-char-canvas{position:absolute;inset:0;pointer-events:none;z-index:6}
+    #carte-char-hint{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:rgba(6,4,0,.88);border:1px solid rgba(180,140,40,.3);border-radius:20px;padding:7px 18px;font-family:'Cinzel',serif;font-size:9px;color:#c8a840;letter-spacing:1.5px;pointer-events:none;z-index:25;opacity:0;transition:opacity .3s}
+    #carte-char-hint.show{opacity:1}
   `;
   document.head.appendChild(st);
 
@@ -12111,6 +12257,8 @@ function renderCarteImmersive(v, n){
           : `<div id="carte-img-ph" onclick="_carteLoadImg('${n.id}')"><div style="font-size:48px;opacity:.2">🗺</div><div>Cliquez pour charger votre carte</div><div style="font-size:9px;opacity:.5">Image JPG, PNG…</div></div>`}
       </div>
     </div>
+    <canvas id="carte-char-canvas"></canvas>
+    <div id="carte-char-hint">🚶 Clic gauche pour marcher</div>
     <div id="carte-place-tip">📍 Clic gauche pour placer un point — Échap pour annuler</div>
     <div id="carte-info-overlay" onclick="_carteCloseInfoOverlay(event)">
       <div id="carte-info-panel">
@@ -12122,6 +12270,9 @@ function renderCarteImmersive(v, n){
 
   // Rendre les POIs
   _carteRenderPois(n.id);
+
+  // Initialiser le personnage marcheur
+  _carteInitChar(n.id);
 
   // Centrer la carte
   requestAnimationFrame(()=>{
