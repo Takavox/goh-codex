@@ -849,6 +849,7 @@ body.visitor-mode .il-btn-row{ display:none !important; }
       <span id="_online-count">1</span> en ligne
     </span>
     <div id="topbar-admin-group" style="display:flex;gap:7px;align-items:center">
+      <button class="topbtn" onclick="_showRemapTool()" title="Restaurer les images manquantes" style="border-color:rgba(200,80,80,.4);color:rgba(220,120,100,.8)">🖼 Restaurer</button>
       <button class="topbtn" onclick="_showExportMenu(event)" title="Sauvegarder les données"
         style="border-color:rgba(80,160,80,.4);color:rgba(120,200,120,.8)">💾 Exporter ▾</button>
       <button class="topbtn" onclick="importData()" title="Charger des données sauvegardées"
@@ -1063,6 +1064,182 @@ function save(){
 // ════════════════════════════════════════════
 //  INIT SUPABASE AU DÉMARRAGE
 // ════════════════════════════════════════════
+
+// ════════════════════════════════════════════════════════
+//  OUTIL DE REMAPPING D'IMAGES
+// ════════════════════════════════════════════════════════
+function _showRemapTool(){
+  if(!_isAdmin()) return;
+  document.getElementById('_remap-modal')?.remove();
+
+  // Collecter tous les nœuds avec des images ref: ou null
+  const nodes = Object.values(db).filter(n=>{
+    const imgs = n.images||[];
+    return imgs.some(i=>!i || (typeof i==='string' && i.includes('ref:')));
+  });
+
+  // Aussi les nœuds avec iconData, _bgImage, _secBg, _carteImg, img dans frises
+  const specialNodes = Object.values(db).filter(n=>{
+    return (n.iconData && n.iconData.includes('ref:')) ||
+           (n._bgImage && n._bgImage.includes('ref:')) ||
+           (n._secBg && n._secBg.includes('ref:')) ||
+           (n._carteImg && n._carteImg.includes('ref:')) ||
+           (n._audio?.src && n._audio.src.includes('ref:'));
+  });
+
+  // Frises avec images ref:
+  const friseNodes = Object.values(db).filter(n=>{
+    return (n._h2frises||n._frises||[]).some(f=>
+      (f.periods||[]).some(p=>p.img && p.img.includes('ref:'))
+    );
+  });
+
+  const allBroken = [...new Set([...nodes, ...specialNodes, ...friseNodes])];
+
+  if(allBroken.length === 0){
+    alert('Aucune image cassée trouvée !'); return;
+  }
+
+  const m = document.createElement('div');
+  m.id = '_remap-modal';
+  m.style.cssText = 'position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.92);overflow-y:auto;display:flex;flex-direction:column;align-items:center;padding:30px 20px';
+
+  let html = `
+    <div style="width:min(900px,98vw);background:#0e0c14;border:1px solid rgba(140,80,255,.3);border-radius:10px;padding:28px">
+      <div style="font-family:'Cinzel Decorative',serif;font-size:16px;color:#d0c0f0;letter-spacing:3px;margin-bottom:6px">🖼 RESTAURATION DES IMAGES</div>
+      <div style="font-family:'EB Garamond',serif;font-size:13px;color:rgba(180,160,220,.5);font-style:italic;margin-bottom:20px">
+        Pour chaque élément, colle l'URL Cloudinary ou clique sur 📎 pour uploader depuis ton appareil.
+      </div>
+      <div id="_remap-list">`;
+
+  allBroken.forEach((n,i)=>{
+    const imgs = (n.images||[]);
+    const brokenImgs = imgs.filter(img=>!img||(typeof img==='string'&&img.includes('ref:')));
+    
+    html += `<div style="border:1px solid rgba(140,80,255,.15);border-radius:6px;padding:14px;margin-bottom:12px;background:rgba(140,80,255,.04)">
+      <div style="font-family:'Cinzel',serif;font-size:10px;color:#c0a8e8;margin-bottom:10px;letter-spacing:1px">
+        ${esc(n.name||n.id)} <span style="opacity:.4;font-size:8px">${n.type||''} · ${n.id}</span>
+      </div>`;
+
+    // Images principales
+    brokenImgs.forEach((img,ii)=>{
+      const realIdx = imgs.indexOf(img);
+      const ref = img||'(null)';
+      html += `<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+        <div style="font-family:'EB Garamond',serif;font-size:11px;color:rgba(180,160,220,.4);min-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${esc(ref)}">${esc(ref.replace('data:image/jpeg;ref:','').replace('data:image/png;ref:','').replace('data:audio/mpeg;ref:',''))}</div>
+        <input id="_ri_${n.id}_${realIdx}" placeholder="https://res.cloudinary.com/..." 
+          style="flex:1;background:rgba(0,0,0,.4);border:1px solid rgba(140,80,255,.25);border-radius:4px;padding:6px 10px;color:#c0b8e0;font-size:12px;outline:none"
+          onchange="_remapApplyImg('${n.id}',${realIdx},this.value)">
+        <button onclick="_remapUpload('${n.id}',${realIdx},'image')" 
+          style="padding:5px 10px;background:rgba(140,80,255,.15);border:1px solid rgba(140,80,255,.3);border-radius:4px;color:#b090e8;font-size:10px;cursor:pointer;white-space:nowrap">📎 Upload</button>
+      </div>`;
+    });
+
+    // iconData
+    if(n.iconData && n.iconData.includes('ref:')){
+      html += `<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+        <div style="font-family:'EB Garamond',serif;font-size:11px;color:rgba(180,160,220,.4);min-width:120px">icône</div>
+        <input id="_ri_${n.id}_icon" placeholder="https://res.cloudinary.com/..."
+          style="flex:1;background:rgba(0,0,0,.4);border:1px solid rgba(140,80,255,.25);border-radius:4px;padding:6px 10px;color:#c0b8e0;font-size:12px;outline:none"
+          onchange="_remapApplySpecial('${n.id}','iconData',this.value)">
+        <button onclick="_remapUpload('${n.id}','icon','image')"
+          style="padding:5px 10px;background:rgba(140,80,255,.15);border:1px solid rgba(140,80,255,.3);border-radius:4px;color:#b090e8;font-size:10px;cursor:pointer">📎 Upload</button>
+      </div>`;
+    }
+
+    // _bgImage / _secBg / _carteImg
+    ['_bgImage','_secBg','_carteImg'].forEach(field=>{
+      if(n[field] && n[field].includes('ref:')){
+        html += `<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+          <div style="font-family:'EB Garamond',serif;font-size:11px;color:rgba(180,160,220,.4);min-width:120px">${field}</div>
+          <input id="_ri_${n.id}_${field}" placeholder="https://res.cloudinary.com/..."
+            style="flex:1;background:rgba(0,0,0,.4);border:1px solid rgba(140,80,255,.25);border-radius:4px;padding:6px 10px;color:#c0b8e0;font-size:12px;outline:none"
+            onchange="_remapApplySpecial('${n.id}','${field}',this.value)">
+          <button onclick="_remapUpload('${n.id}','${field}','image')"
+            style="padding:5px 10px;background:rgba(140,80,255,.15);border:1px solid rgba(140,80,255,.3);border-radius:4px;color:#b090e8;font-size:10px;cursor:pointer">📎 Upload</button>
+        </div>`;
+      }
+    });
+
+    // Audio
+    if(n._audio?.src && n._audio.src.includes('ref:')){
+      html += `<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+        <div style="font-family:'EB Garamond',serif;font-size:11px;color:rgba(180,160,220,.4);min-width:120px">🎵 audio</div>
+        <input id="_ri_${n.id}_audio" placeholder="https://res.cloudinary.com/..."
+          style="flex:1;background:rgba(0,0,0,.4);border:1px solid rgba(140,80,255,.25);border-radius:4px;padding:6px 10px;color:#c0b8e0;font-size:12px;outline:none"
+          onchange="_remapApplyAudio('${n.id}',this.value)">
+        <button onclick="_remapUpload('${n.id}','audio','audio')"
+          style="padding:5px 10px;background:rgba(140,80,255,.15);border:1px solid rgba(140,80,255,.3);border-radius:4px;color:#b090e8;font-size:10px;cursor:pointer">📎 Upload</button>
+      </div>`;
+    }
+
+    html += `</div>`;
+  });
+
+  html += `</div>
+      <div style="display:flex;gap:10px;margin-top:20px">
+        <button onclick="save();_cldToast('✓ Sauvegardé dans Supabase',2000)"
+          style="flex:1;padding:12px;background:rgba(80,200,100,.15);border:1px solid rgba(80,200,100,.4);border-radius:5px;font-family:'Cinzel',serif;font-size:10px;letter-spacing:1.5px;cursor:pointer;color:#80c870">
+          💾 Sauvegarder tout dans Supabase
+        </button>
+        <button onclick="document.getElementById('_remap-modal').remove()"
+          style="padding:12px 20px;background:rgba(80,40,10,.1);border:1px solid rgba(120,80,20,.25);border-radius:5px;font-family:'Cinzel',serif;font-size:10px;cursor:pointer;color:rgba(180,140,80,.6)">
+          Fermer
+        </button>
+      </div>
+    </div>`;
+
+  m.innerHTML = html;
+  document.body.appendChild(m);
+}
+
+function _remapApplyImg(nodeId, idx, url){
+  const n = db[nodeId]; if(!n) return;
+  if(!n.images) n.images = [];
+  n.images[idx] = url;
+  // Feedback visuel
+  const inp = document.getElementById(`_ri_${nodeId}_${idx}`);
+  if(inp) inp.style.borderColor = 'rgba(80,200,80,.6)';
+}
+
+function _remapApplySpecial(nodeId, field, url){
+  const n = db[nodeId]; if(!n) return;
+  n[field] = url;
+  const inp = document.getElementById(`_ri_${nodeId}_${field}`);
+  if(inp) inp.style.borderColor = 'rgba(80,200,80,.6)';
+}
+
+function _remapApplyAudio(nodeId, url){
+  const n = db[nodeId]; if(!n) return;
+  if(!n._audio) n._audio = {vol:0.4};
+  n._audio.src = url;
+  const inp = document.getElementById(`_ri_${nodeId}_audio`);
+  if(inp) inp.style.borderColor = 'rgba(80,200,80,.6)';
+}
+
+function _remapUpload(nodeId, fieldOrIdx, type){
+  const inp = document.createElement('input');
+  inp.type = 'file';
+  inp.accept = type === 'audio' ? 'audio/*' : 'image/*';
+  inp.onchange = e => {
+    const f = e.target.files[0]; if(!f) return;
+    _uploadToCloudinary(f, url=>{
+      if(typeof fieldOrIdx === 'number'){
+        _remapApplyImg(nodeId, fieldOrIdx, url);
+        const uiInp = document.getElementById(`_ri_${nodeId}_${fieldOrIdx}`);
+        if(uiInp){ uiInp.value = url; uiInp.style.borderColor='rgba(80,200,80,.6)'; }
+      } else {
+        if(fieldOrIdx === 'audio') _remapApplyAudio(nodeId, url);
+        else _remapApplySpecial(nodeId, fieldOrIdx, url);
+        const uiInp = document.getElementById(`_ri_${nodeId}_${fieldOrIdx}`);
+        if(uiInp){ uiInp.value = url; uiInp.style.borderColor='rgba(80,200,80,.6)'; }
+      }
+      _cldToast('✓ Uploadé', 1200);
+    });
+  };
+  inp.click();
+}
+
 async function _sbInit(){
   const remote = await _sbLoad();
   if(remote){
