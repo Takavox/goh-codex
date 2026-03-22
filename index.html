@@ -3994,6 +3994,7 @@ function renderEntry(v,n){
   // ── Portrait (large) — prend en compte l'arc actif ──
   const _pArcIdx = window._arcView&&window._arcView[n.id]!==undefined?window._arcView[n.id]:-1;
   const _pArc = (isChar&&_pArcIdx>=0&&n._arcs&&n._arcs[_pArcIdx])?n._arcs[_pArcIdx]:null;
+  const _effectiveSubtitle = (_pArc&&_pArc.subtitle) ? _pArc.subtitle : (n.subtitle||'');
   const _portSrc = _pArc&&_pArc.image ? _pArc.image : (n.images&&n.images[0]?n.images[0]:null);
   const mainImg=_portSrc?
     `<img src="${_portSrc}" style="width:220px;height:290px;object-fit:cover;border-radius:5px;border:1px solid var(--border2);display:block;cursor:zoom-in;box-shadow:0 6px 28px rgba(0,0,0,.6)" onclick="openLB('${_portSrc}')">`:
@@ -6714,10 +6715,12 @@ function renderDivisionImmersive(v, n){
     const displayName = entry ? esc(entry.name+(entry.lastName?' '+entry.lastName:'')) : esc(m.name);
     const isPlaceholder = !m.entryId;
     const adminDrag = _isAdmin() ? `draggable="true" data-div-id="${n.id}" data-member-idx="${idx}"` : '';
+    const ctxMenu = _isAdmin() ? `oncontextmenu="event.preventDefault();event.stopPropagation();_divMemberCtx(event,'${n.id}',${idx})"` : '';
     return `<div class="div-member-card${linked?' linked':''}${isPlaceholder?' div-member-ph':''}"
       ${adminDrag}
       onclick="divMemberClick('${n.id}',${idx})"
-      title="${isPlaceholder?'Cliquer pour lier à une fiche':'Voir la fiche'}">
+      ${ctxMenu}
+      title="${isPlaceholder?'Cliquer pour lier à une fiche':'Voir la fiche / Clic droit pour options'}">
       <div class="div-member-avatar">${portrait}</div>
       <div class="div-member-name">${displayName}</div>
       <div class="div-member-rank-badge">${esc(m.rank||'Membre')}</div>
@@ -6783,6 +6786,7 @@ function renderDivisionImmersive(v, n){
     </div>
     <div style="position:sticky;bottom:0;padding:12px 0;background:linear-gradient(0deg,rgba(8,6,14,.95) 70%,transparent);display:flex;gap:10px;justify-content:center;z-index:10">
       <button class="div-add-btn" onclick="divAddMember('${n.id}')">＋ Ajouter un membre</button>
+      <button class="div-add-btn" style="border-color:rgba(100,200,120,.2);color:rgba(120,200,140,.6);margin-top:6px" onclick="_divShowComparatif('${n.id}')">⚖ Comparatif des divisions</button>
       <button class="div-add-btn" onclick="divManageRanks('${n.id}')" style="opacity:.6">⚙ Rangs</button>
       <button class="div-edit-btn" onclick="openEditModal('${n.id}')" style="margin:0">✎ Modifier</button>
     </div>
@@ -6851,6 +6855,139 @@ function _divInitDragDrop(){
       if(divNode) renderDivisionImmersive(vv, divNode);
     });
   });
+}
+
+
+
+function _divShowComparatif(currentDivId){
+  document.getElementById('_div-comp-modal')?.remove();
+  // Récupérer toutes les divisions
+  const divs = Object.values(db).filter(n=>n._isDivision);
+  if(divs.length < 2){ alert('Il faut au moins 2 divisions pour comparer.'); return; }
+
+  const m = document.createElement('div');
+  m.id = '_div-comp-modal';
+  m.style.cssText = 'position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.92);overflow:auto;display:flex;flex-direction:column;align-items:center;padding:30px 16px';
+
+  // Calculer stats pour chaque division
+  function getDivStats(div){
+    const members = (div.divMembers||[]).filter(m=>m.entryId&&db[m.entryId]);
+    const totals = {phys:0,magic:0,intel:0,count:members.length};
+    members.forEach(m=>{
+      const e = db[m.entryId]; if(!e||!e.stats) return;
+      ['phys','magic','intel'].forEach(cat=>{
+        const vals = Object.values(e.stats[cat]||{});
+        totals[cat] += vals.reduce((a,b)=>a+(Number(b)||0),0);
+      });
+    });
+    return totals;
+  }
+
+  const stats = divs.map(d=>({div:d, s:getDivStats(d)}));
+  // Trier par total décroissant
+  stats.sort((a,b)=>(b.s.phys+b.s.magic+b.s.intel)-(a.s.phys+a.s.magic+a.s.intel));
+
+  const maxPhys = Math.max(...stats.map(x=>x.s.phys),1);
+  const maxMagic = Math.max(...stats.map(x=>x.s.magic),1);
+  const maxIntel = Math.max(...stats.map(x=>x.s.intel),1);
+  const maxTotal = Math.max(...stats.map(x=>x.s.phys+x.s.magic+x.s.intel),1);
+
+  function bar(val, max, color){
+    const pct = Math.round(val/max*100);
+    return `<div style="display:flex;align-items:center;gap:8px">
+      <div style="flex:1;height:8px;background:rgba(255,255,255,.06);border-radius:4px;overflow:hidden">
+        <div style="width:${pct}%;height:100%;background:${color};border-radius:4px;transition:width .3s"></div>
+      </div>
+      <span style="font-family:'Cinzel',serif;font-size:9px;color:rgba(220,200,255,.5);min-width:36px;text-align:right">${val}</span>
+    </div>`;
+  }
+
+  const rows = stats.map((x,i)=>{
+    const total = x.s.phys+x.s.magic+x.s.intel;
+    const isCurrent = x.div.id === currentDivId;
+    return `<div style="background:rgba(${isCurrent?'100,70,200':'20,12,40'},.${isCurrent?'2':'15'});border:1px solid rgba(${isCurrent?'160,120,255':'100,80,160'},.${isCurrent?'5':'2'});border-radius:8px;padding:16px 18px;margin-bottom:10px">
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px">
+        <span style="font-family:'Cinzel Decorative',serif;font-size:13px;color:rgba(180,150,255,.3);min-width:24px">#${i+1}</span>
+        <span style="font-size:20px">${x.div.icon||'⚔'}</span>
+        <div>
+          <div style="font-family:'Cinzel',serif;font-size:11px;color:#d0c0f0;letter-spacing:.5px">${esc(x.div.name)}</div>
+          <div style="font-family:'EB Garamond',serif;font-size:11px;color:rgba(180,155,240,.4);font-style:italic">${x.s.count} membre${x.s.count>1?'s':''}</div>
+        </div>
+        <div style="margin-left:auto;font-family:'Cinzel Decorative',serif;font-size:14px;color:rgba(200,175,255,.7)">${total}</div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;font-family:'Cinzel',serif;font-size:8px;letter-spacing:1px">
+        <div>
+          <div style="color:rgba(100,150,220,.6);margin-bottom:4px">PHYSIQUE</div>
+          ${bar(x.s.phys, maxPhys, 'rgba(80,130,220,.7)')}
+        </div>
+        <div>
+          <div style="color:rgba(180,100,240,.6);margin-bottom:4px">MAGIE</div>
+          ${bar(x.s.magic, maxMagic, 'rgba(160,80,220,.7)')}
+        </div>
+        <div>
+          <div style="color:rgba(80,200,140,.6);margin-bottom:4px">INTEL</div>
+          ${bar(x.s.intel, maxIntel, 'rgba(60,180,120,.7)')}
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+
+  m.innerHTML = `
+    <div style="width:min(700px,98vw)">
+      <div style="font-family:'Cinzel Decorative',serif;font-size:16px;color:#d0c0f0;letter-spacing:3px;margin-bottom:6px;text-align:center">⚖ COMPARATIF DES DIVISIONS</div>
+      <div style="font-family:'EB Garamond',serif;font-size:12px;color:rgba(180,155,240,.4);font-style:italic;text-align:center;margin-bottom:22px">Cumul de toutes les statistiques des membres liés</div>
+      ${rows}
+      <button onclick="document.getElementById('_div-comp-modal').remove()"
+        style="width:100%;margin-top:10px;padding:11px;background:rgba(80,40,160,.15);border:1px solid rgba(160,120,255,.25);border-radius:6px;font-family:'Cinzel',serif;font-size:9px;letter-spacing:1.5px;cursor:pointer;color:rgba(180,150,255,.6)">
+        Fermer
+      </button>
+    </div>`;
+  document.body.appendChild(m);
+  m.addEventListener('click', e=>{ if(e.target===m) m.remove(); });
+}
+
+function _divMemberCtx(e, nodeId, memberIdx){
+  if(!_isAdmin()) return;
+  document.getElementById('_div-mbr-ctx')?.remove();
+  const n = db[nodeId]; if(!n) return;
+  const m = (n.divMembers||[])[memberIdx]; if(!m) return;
+  const menu = document.createElement('div');
+  menu.id = '_div-mbr-ctx';
+  menu.style.cssText = `position:fixed;left:${e.clientX}px;top:${e.clientY}px;z-index:9999;
+    background:#0e0c18;border:1px solid rgba(160,120,255,.35);border-radius:6px;
+    padding:4px 0;min-width:180px;font-family:'Cinzel',serif;font-size:10px;
+    box-shadow:0 8px 28px rgba(0,0,0,.8)`;
+  const title = document.createElement('div');
+  title.style.cssText = 'padding:7px 14px 5px;font-size:8px;letter-spacing:2px;color:rgba(180,150,255,.4);border-bottom:1px solid rgba(160,120,255,.1);margin-bottom:4px';
+  title.textContent = m.entryId && db[m.entryId] ? db[m.entryId].name : (m.name||'Membre');
+  menu.appendChild(title);
+  function row(icon, label, fn, danger){
+    const r = document.createElement('div');
+    r.style.cssText = `padding:8px 14px;cursor:pointer;color:${danger?'rgba(220,80,80,.7)':'rgba(200,170,255,.7)'};display:flex;gap:8px;align-items:center`;
+    r.onmouseenter = ()=>r.style.background='rgba(160,120,255,.1)';
+    r.onmouseleave = ()=>r.style.background='';
+    r.innerHTML = `${icon} ${label}`;
+    r.onclick = ()=>{ menu.remove(); fn(); };
+    menu.appendChild(r);
+  }
+  row('✎','Modifier / Lier', ()=>_divLinkModal(nodeId, memberIdx));
+  if(m.entryId) row('🔗','Délier (garder le slot)', ()=>{
+    m.entryId=null; m.name='— À définir'; save();
+    renderContent(nodeId);
+  });
+  row('✕','Retirer ce membre', ()=>{
+    if(!confirm('Retirer ce membre de la division ?')) return;
+    n.divMembers.splice(memberIdx,1); save(); renderContent(nodeId);
+  }, true);
+  document.body.appendChild(menu);
+  requestAnimationFrame(()=>{
+    const r=menu.getBoundingClientRect();
+    if(r.right>window.innerWidth) menu.style.left=(e.clientX-r.width)+'px';
+    if(r.bottom>window.innerHeight) menu.style.top=(e.clientY-r.height)+'px';
+  });
+  setTimeout(()=>document.addEventListener('click',function _c(ev){
+    if(!menu.contains(ev.target)){ menu.remove(); document.removeEventListener('click',_c); }
+  }),10);
 }
 
 function divMemberClick(nodeId, memberIdx){
@@ -10383,8 +10520,8 @@ function _cmpRenderTable(){
   let h = `<table class="cmp-table"><thead><tr>
     <th class="cmp-th-stat">Statistique</th>
     ${chars.map(c=>`<th><div class="cmp-portrait-cell">
-      ${c.images&&c.images[0]?`<img src="${c.images[0]}">`:`<div style="font-size:28px;width:54px;height:68px;display:flex;align-items:center;justify-content:center;border:1px solid rgba(140,80,255,.35);border-radius:4px">${c.icon||'🧙'}</div>`}
-      <div class="cmp-portrait-name">${esc(c.name)}</div>
+      ${c._slotImg?`<img src="${c._slotImg}">`:`<div style="font-size:28px;width:54px;height:68px;display:flex;align-items:center;justify-content:center;border:1px solid rgba(140,80,255,.35);border-radius:4px">${c.icon||'🧙'}</div>`}
+      <div class="cmp-portrait-name">${esc(c._slotLabel||c.name)}</div>
     </div></th>`).join('')}
   </tr></thead><tbody>`;
 
@@ -11824,6 +11961,10 @@ function openArcModal(charId, arcIdx){
       <input id="arc-name" style="width:100%;background:rgba(20,10,40,.8);border:1px solid rgba(140,80,255,.3);border-radius:5px;padding:8px 12px;color:#d0c8f0;font-family:'EB Garamond',serif;font-size:14px;outline:none;box-sizing:border-box" placeholder="Ex: Enfance, Arc du Tournoi, Post-guerre…" value="${existing?esc(existing.name):''}">
     </div>
     <div style="margin-bottom:14px">
+      <label style="font-family:'Cinzel',serif;font-size:9px;letter-spacing:1.5px;color:#8070a0;display:block;margin-bottom:5px">TITRE / RÔLE (laisser vide = garder celui de la fiche)</label>
+      <input id="arc-subtitle" style="width:100%;background:rgba(20,10,40,.8);border:1px solid rgba(140,80,255,.3);border-radius:5px;padding:8px 12px;color:#d0c8f0;font-family:'EB Garamond',serif;font-size:13px;outline:none;box-sizing:border-box" placeholder="Ex: Capitaine de la 2e Division, Exilé, Roi…" value="${existing?esc(existing.subtitle||''):''}">
+    </div>
+    <div style="margin-bottom:14px">
       <label style="font-family:'Cinzel',serif;font-size:9px;letter-spacing:1.5px;color:#8070a0;display:block;margin-bottom:5px">PORTRAIT (laisser vide = même portrait)</label>
       <div style="display:flex;gap:10px;align-items:center">
         <div id="arc-portrait-preview" style="width:60px;height:78px;border:1px dashed rgba(140,80,255,.3);border-radius:4px;overflow:hidden;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0" onclick="document.getElementById('arc-portrait-file').click()">
@@ -11923,7 +12064,8 @@ function _arcSave(charId, arcIdx){
     }
   });
 
-  const arc={name, bio, powers, image:window._arcPortrait||null, stats:hasStats?stats:null};
+  const subtitle=document.getElementById('arc-subtitle')?.value.trim()||'';
+  const arc={name, subtitle, bio, powers, image:window._arcPortrait||null, stats:hasStats?stats:null};
 
   const ch=db[charId]; if(!ch) return;
   if(!ch._arcs) ch._arcs=[];
