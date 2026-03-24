@@ -1282,7 +1282,8 @@ async function _sbInit(){
           }
         });
         window._sbReady = true; // Supabase chargé avec succès
-        _arcPrefLoad(); // Charger les préférences arc des visiteurs
+        _arcPrefLoad();
+        _ensureSolaris(); // Créer le nœud Solaris si absent
         renderTree();
         renderWelcome();
       }
@@ -3502,6 +3503,30 @@ function _cgCropSave(charId){
 }
 
 // ── Préférences arc visiteur (localStorage) ──
+
+function _ensureSolaris(){
+  // Chercher si une catégorie Solaris existe déjà
+  const existing = Object.values(db).find(n=>n.kind==='solaris'||n.name==='Solaris');
+  if(existing) return; // déjà là
+
+  // Trouver le nœud Factions pour y rattacher Solaris
+  const factionsNode = Object.values(db).find(n=>n.type==='category'&&n.name==='Factions');
+  if(!factionsNode) return; // pas encore de Factions dans ce codex
+
+  const id = 'solaris_'+Date.now();
+  db[id] = {
+    id, type:'category', kind:'solaris',
+    name:'Solaris', icon:'☀',
+    subtitle:'Faction du système solaire',
+    parentId: factionsNode.id,
+    children: [], iconData: null,
+    _solarBodies: {}
+  };
+  if(!factionsNode.children) factionsNode.children=[];
+  factionsNode.children.push(id);
+  save();
+}
+
 function _arcPrefLoad(){
   try{
     const raw = localStorage.getItem('goh_arc_prefs');
@@ -3956,6 +3981,479 @@ function _injectCatBg(containerId, nodeId){
   container.oncontextmenu = e=>{ e.preventDefault(); _showCatBgMenu(nodeId, e.clientX, e.clientY); };
 }
 
+
+// ══════════════════════════════════════════════════════════════════
+//  SOLARIS — Système solaire 3D immersif
+// ══════════════════════════════════════════════════════════════════
+function renderSolarisImmersive(v, n){
+  v.style.padding='0'; v.style.overflow='hidden';
+  v.style.background='#000008';
+
+  // Nettoyer
+  v.innerHTML='';
+  if(window._solarisAnim){ cancelAnimationFrame(window._solarisAnim); window._solarisAnim=null; }
+  if(window._solarisRenderer){ window._solarisRenderer.dispose(); window._solarisRenderer=null; }
+
+  // Données des astres
+  const BODIES = [
+    { id:'sun',     name:'Le Soleil',  r:2.8,  dist:0,    speed:0,      color:0xffcc44, emissive:0xff8800, type:'star',    ring:false, tilt:0 },
+    { id:'mercury', name:'Mercure',    r:0.28, dist:5,    speed:4.7,    color:0x9a8870, emissive:0x221100, type:'rocky',   ring:false, tilt:0.03 },
+    { id:'venus',   name:'Vénus',      r:0.45, dist:7.5,  speed:3.5,    color:0xe8c56a, emissive:0x331100, type:'rocky',   ring:false, tilt:2.6 },
+    { id:'earth',   name:'La Terre',   r:0.50, dist:10,   speed:2.98,   color:0x2a6ab8, emissive:0x001133, type:'rocky',   ring:false, tilt:0.41, cloud:0x99ccee },
+    { id:'mars',    name:'Mars',       r:0.38, dist:13,   speed:2.4,    color:0xc1440e, emissive:0x220500, type:'rocky',   ring:false, tilt:0.44 },
+    { id:'jupiter', name:'Jupiter',    r:1.20, dist:21,   speed:1.3,    color:0xc88b4a, emissive:0x110500, type:'gas',     ring:false, tilt:0.05 },
+    { id:'saturn',  name:'Saturne',    r:1.00, dist:28,   speed:0.97,   color:0xd4b483, emissive:0x110800, type:'gas',     ring:true,  tilt:0.47 },
+    { id:'uranus',  name:'Uranus',     r:0.75, dist:35,   speed:0.68,   color:0x7de8e8, emissive:0x002222, type:'gas',     ring:false, tilt:1.71 },
+    { id:'neptune', name:'Neptune',    r:0.70, dist:42,   speed:0.54,   color:0x3f54ba, emissive:0x000820, type:'gas',     ring:false, tilt:0.49 },
+  ];
+
+  // Données liées depuis db
+  function getLinkedEntry(bodyId){
+    return n._solarBodies && n._solarBodies[bodyId] ? db[n._solarBodies[bodyId]] : null;
+  }
+  function isBodyVisible(bodyId){
+    const entry = getLinkedEntry(bodyId);
+    return _isAdmin() || !entry || !entry._hidden;
+  }
+
+  // Conteneur
+  const wrap = document.createElement('div');
+  wrap.style.cssText='position:relative;width:100%;height:100%;overflow:hidden;background:#000008';
+  v.appendChild(wrap);
+
+  // Canvas Three.js
+  const canvas = document.createElement('canvas');
+  canvas.style.cssText='position:absolute;inset:0;width:100%;height:100%;cursor:grab';
+  wrap.appendChild(canvas);
+
+  // Panneau info
+  const panel = document.createElement('div');
+  panel.id='_solar-panel';
+  panel.style.cssText=`position:absolute;right:0;top:0;bottom:0;width:280px;background:rgba(4,2,16,.92);
+    border-left:1px solid rgba(255,200,50,.15);transform:translateX(100%);transition:transform .35s cubic-bezier(.4,0,.2,1);
+    display:flex;flex-direction:column;z-index:10;padding:24px 20px;overflow-y:auto`;
+  wrap.appendChild(panel);
+
+  // Tooltip
+  const tooltip = document.createElement('div');
+  tooltip.style.cssText=`position:absolute;pointer-events:none;background:rgba(0,0,0,.8);border:1px solid rgba(255,200,50,.3);
+    border-radius:4px;padding:4px 10px;font-family:'Cinzel',serif;font-size:10px;color:#ffd060;display:none;z-index:20`;
+  wrap.appendChild(tooltip);
+
+  // Bouton fermer
+  const btnClose = document.createElement('button');
+  btnClose.style.cssText=`position:absolute;top:12px;left:12px;z-index:20;background:rgba(0,0,0,.6);
+    border:1px solid rgba(255,200,50,.2);border-radius:4px;color:#ffd060;font-family:'Cinzel',serif;
+    font-size:9px;letter-spacing:1px;padding:5px 10px;cursor:pointer`;
+  btnClose.textContent='← Retour';
+  btnClose.onclick=()=>{ if(window._solarisAnim) cancelAnimationFrame(window._solarisAnim);
+    if(window._solarisRenderer) window._solarisRenderer.dispose();
+    renderContent(n.parentId||n.id); };
+  wrap.appendChild(btnClose);
+
+  // Titre
+  const title = document.createElement('div');
+  title.style.cssText=`position:absolute;top:14px;left:50%;transform:translateX(-50%);z-index:10;
+    font-family:'Cinzel Decorative',serif;font-size:clamp(12px,1.5vw,18px);color:#ffd060;
+    letter-spacing:4px;text-shadow:0 0 20px rgba(255,180,0,.5);pointer-events:none;white-space:nowrap`;
+  title.textContent='✦ SOLARIS ✦';
+  wrap.appendChild(title);
+
+  // Charger Three.js si pas déjà là
+  function initThree(){
+    const THREE = window.THREE;
+    const W = wrap.clientWidth, H = wrap.clientHeight;
+
+    // Scene
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x000008);
+
+    // Étoiles fond
+    const starGeo = new THREE.BufferGeometry();
+    const starVerts = [];
+    for(let i=0;i<8000;i++){
+      const r=300+Math.random()*200;
+      const theta=Math.random()*Math.PI*2, phi=Math.acos(2*Math.random()-1);
+      starVerts.push(r*Math.sin(phi)*Math.cos(theta), r*Math.cos(phi), r*Math.sin(phi)*Math.sin(theta));
+    }
+    starGeo.setAttribute('position', new THREE.Float32BufferAttribute(starVerts,3));
+    scene.add(new THREE.Points(starGeo, new THREE.PointsMaterial({color:0xffffff,size:.3,sizeAttenuation:true})));
+
+    // Camera
+    const camera = new THREE.PerspectiveCamera(60, W/H, 0.1, 2000);
+    camera.position.set(0, 30, 70);
+    camera.lookAt(0,0,0);
+
+    // Renderer
+    const renderer = new THREE.WebGLRenderer({canvas, antialias:true, alpha:false});
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio,2));
+    renderer.setSize(W, H);
+    renderer.shadowMap.enabled=true;
+    window._solarisRenderer = renderer;
+
+    // Lumière solaire
+    const sunLight = new THREE.PointLight(0xffcc66, 3, 300);
+    sunLight.position.set(0,0,0);
+    scene.add(sunLight);
+    scene.add(new THREE.AmbientLight(0x111133, 0.5));
+
+    // Créer les astres
+    const meshes = {}; // id -> {mesh, pivot, body, angle}
+    const pivots = {};
+
+    BODIES.forEach(b=>{
+      const pivot = new THREE.Object3D();
+      scene.add(pivot);
+      pivots[b.id]=pivot;
+
+      // Orbite (sauf soleil)
+      if(b.dist>0){
+        const orbitGeo = new THREE.RingGeometry(b.dist-.02, b.dist+.02, 128);
+        const orbitMat = new THREE.MeshBasicMaterial({color:0x445566,side:THREE.DoubleSide,transparent:true,opacity:.25});
+        const orbit = new THREE.Mesh(orbitGeo, orbitMat);
+        orbit.rotation.x=-Math.PI/2;
+        scene.add(orbit);
+      }
+
+      // Planète
+      const geo = new THREE.SphereGeometry(b.r, 32, 32);
+
+      let mat;
+      if(b.id==='sun'){
+        mat = new THREE.MeshStandardMaterial({color:b.color,emissive:0xff6600,emissiveIntensity:1,roughness:.8,metalness:.1});
+      } else if(b.type==='rocky'){
+        mat = new THREE.MeshStandardMaterial({color:b.color,emissive:b.emissive,emissiveIntensity:.3,roughness:.85,metalness:.05});
+      } else {
+        // Gazeuse — bandes
+        mat = new THREE.MeshStandardMaterial({color:b.color,emissive:b.emissive,emissiveIntensity:.2,roughness:.7,metalness:.0});
+      }
+
+      const mesh = new THREE.Mesh(geo, mat);
+      mesh.rotation.z = b.tilt||0;
+      mesh.castShadow=true; mesh.receiveShadow=true;
+      mesh.userData={bodyId:b.id, bodyName:b.name};
+
+      // Position initiale
+      const angle0 = Math.random()*Math.PI*2;
+      mesh.position.set(Math.cos(angle0)*b.dist, 0, Math.sin(angle0)*b.dist);
+      scene.add(mesh);
+
+      // Anneaux Saturne
+      if(b.ring){
+        const rGeo=new THREE.RingGeometry(b.r*1.4, b.r*2.4, 80);
+        const rMat=new THREE.MeshStandardMaterial({color:0xc8a870,side:THREE.DoubleSide,transparent:true,opacity:.65,roughness:.9});
+        const ring=new THREE.Mesh(rGeo,rMat);
+        ring.rotation.x=Math.PI/2*0.3;
+        mesh.add(ring);
+      }
+
+      // Nuages Terre
+      if(b.cloud){
+        const cGeo=new THREE.SphereGeometry(b.r*1.02,32,32);
+        const cMat=new THREE.MeshStandardMaterial({color:b.cloud,transparent:true,opacity:.25,roughness:.5});
+        const cloud=new THREE.Mesh(cGeo,cMat);
+        mesh.add(cloud);
+      }
+
+      // Halo soleil
+      if(b.id==='sun'){
+        const hGeo=new THREE.SphereGeometry(b.r*1.15,32,32);
+        const hMat=new THREE.MeshBasicMaterial({color:0xff9900,transparent:true,opacity:.12,side:THREE.BackSide});
+        scene.add(new THREE.Mesh(hGeo,hMat));
+      }
+
+      // Bandes Jupiter/Saturne/Uranus/Neptune
+      if(b.type==='gas'&&b.id!=='saturn'){
+        for(let band=0;band<5;band++){
+          const bGeo=new THREE.TorusGeometry(b.r*.92,b.r*.08,8,32);
+          const bMat=new THREE.MeshBasicMaterial({color:b.id==='uranus'?0x5fd8d8:b.id==='neptune'?0x2a40aa:0xb87838,transparent:true,opacity:.12});
+          const bMesh=new THREE.Mesh(bGeo,bMat);
+          bMesh.rotation.x=Math.PI/2;
+          bMesh.position.y=(band-2)*b.r*.22;
+          mesh.add(bMesh);
+        }
+      }
+
+      meshes[b.id]={mesh, body:b, angle:angle0};
+    });
+
+    // Ceinture astéroïdes intérieure (Mars-Jupiter: dist ~17)
+    function makeAsteroidBelt(innerR, outerR, count, color, ySpread){
+      const geo=new THREE.BufferGeometry();
+      const pos=[];
+      for(let i=0;i<count;i++){
+        const r=innerR+Math.random()*(outerR-innerR);
+        const a=Math.random()*Math.PI*2;
+        const y=(Math.random()-.5)*ySpread;
+        pos.push(Math.cos(a)*r, y, Math.sin(a)*r);
+      }
+      geo.setAttribute('position',new THREE.Float32BufferAttribute(pos,3));
+      scene.add(new THREE.Points(geo,new THREE.PointsMaterial({color,size:.12,sizeAttenuation:true,transparent:true,opacity:.7})));
+    }
+    makeAsteroidBelt(15.5, 19, 2500, 0x887766, 0.6);  // Ceinture principale
+    makeAsteroidBelt(46, 54, 3000, 0x445566, 2.0);     // Ceinture de Kuiper
+
+    // Contrôles orbitaux maison
+    let isDragging=false, lastMouse={x:0,y:0};
+    let spherical={theta:0.3, phi:1.1, r:70};
+    let targetSpherical={...spherical};
+    let panOffset={x:0,y:0}, targetPan={x:0,y:0};
+    let selectedBody=null;
+
+    function updateCamera(){
+      const x=spherical.r*Math.sin(spherical.phi)*Math.cos(spherical.theta)+panOffset.x;
+      const y=spherical.r*Math.cos(spherical.phi);
+      const z=spherical.r*Math.sin(spherical.phi)*Math.sin(spherical.theta);
+      camera.position.set(x,y,z);
+      camera.lookAt(panOffset.x,0,panOffset.y||0);
+    }
+
+    canvas.addEventListener('mousedown',e=>{
+      isDragging=true; canvas.style.cursor='grabbing';
+      lastMouse={x:e.clientX,y:e.clientY};
+    });
+    canvas.addEventListener('mouseup',()=>{ isDragging=false; canvas.style.cursor='grab'; });
+    canvas.addEventListener('mouseleave',()=>{ isDragging=false; canvas.style.cursor='grab'; tooltip.style.display='none'; });
+    canvas.addEventListener('mousemove',e=>{
+      if(isDragging){
+        const dx=e.clientX-lastMouse.x, dy=e.clientY-lastMouse.y;
+        targetSpherical.theta-=dx*.005;
+        targetSpherical.phi=Math.max(.1,Math.min(Math.PI-.1,targetSpherical.phi+dy*.005));
+        lastMouse={x:e.clientX,y:e.clientY};
+        return;
+      }
+      // Hover tooltip
+      const rect=canvas.getBoundingClientRect();
+      const mouse=new THREE.Vector2(
+        ((e.clientX-rect.left)/rect.width)*2-1,
+        -((e.clientY-rect.top)/rect.height)*2+1
+      );
+      const raycaster=new THREE.Raycaster();
+      raycaster.setFromCamera(mouse,camera);
+      const hits=raycaster.intersectObjects(Object.values(meshes).map(m=>m.mesh),true);
+      if(hits.length){
+        const obj=hits[0].object;
+        let root=obj; while(root.parent&&!root.userData.bodyId) root=root.parent;
+        if(!root.userData.bodyId&&obj.userData.bodyId) root=obj;
+        if(root.userData.bodyId){
+          tooltip.style.display='block';
+          tooltip.style.left=(e.clientX-rect.left+12)+'px';
+          tooltip.style.top=(e.clientY-rect.top-20)+'px';
+          tooltip.textContent=root.userData.bodyName||root.userData.bodyId;
+          canvas.style.cursor='pointer';
+          return;
+        }
+      }
+      tooltip.style.display='none';
+      if(!isDragging) canvas.style.cursor='grab';
+    });
+    canvas.addEventListener('wheel',e=>{
+      e.preventDefault();
+      targetSpherical.r=Math.max(8,Math.min(200,targetSpherical.r+e.deltaY*.08));
+    },{passive:false});
+
+    // Clic sur astre
+    canvas.addEventListener('click',e=>{
+      const rect=canvas.getBoundingClientRect();
+      const mouse=new THREE.Vector2(
+        ((e.clientX-rect.left)/rect.width)*2-1,
+        -((e.clientY-rect.top)/rect.height)*2+1
+      );
+      const raycaster=new THREE.Raycaster();
+      raycaster.setFromCamera(mouse,camera);
+      const allMeshes=Object.values(meshes).map(m=>m.mesh);
+      const hits=raycaster.intersectObjects(allMeshes,true);
+      if(hits.length){
+        let obj=hits[0].object;
+        while(obj&&!obj.userData.bodyId) obj=obj.parent;
+        if(obj&&obj.userData.bodyId){
+          openBodyPanel(obj.userData.bodyId);
+        }
+      }
+    });
+
+    // Touch support
+    let lastTouchDist=0;
+    canvas.addEventListener('touchstart',e=>{
+      if(e.touches.length===1){ isDragging=true; lastMouse={x:e.touches[0].clientX,y:e.touches[0].clientY}; }
+      else if(e.touches.length===2){ lastTouchDist=Math.hypot(e.touches[0].clientX-e.touches[1].clientX,e.touches[0].clientY-e.touches[1].clientY); }
+    });
+    canvas.addEventListener('touchmove',e=>{
+      e.preventDefault();
+      if(e.touches.length===1&&isDragging){
+        const dx=e.touches[0].clientX-lastMouse.x, dy=e.touches[0].clientY-lastMouse.y;
+        targetSpherical.theta-=dx*.005; targetSpherical.phi=Math.max(.1,Math.min(Math.PI-.1,targetSpherical.phi+dy*.005));
+        lastMouse={x:e.touches[0].clientX,y:e.touches[0].clientY};
+      } else if(e.touches.length===2){
+        const d=Math.hypot(e.touches[0].clientX-e.touches[1].clientX,e.touches[0].clientY-e.touches[1].clientY);
+        targetSpherical.r=Math.max(8,Math.min(200,targetSpherical.r+(lastTouchDist-d)*.15));
+        lastTouchDist=d;
+      }
+    },{passive:false});
+    canvas.addEventListener('touchend',()=>{ isDragging=false; });
+
+    // Panneau info astre
+    function openBodyPanel(bodyId){
+      selectedBody=bodyId;
+      const b=BODIES.find(x=>x.id===bodyId);
+      const entry=getLinkedEntry(bodyId);
+      const visible=isBodyVisible(bodyId);
+
+      const typeLabel = b.type==='star'?'Étoile':b.type==='rocky'?'Planète tellurique':'Planète gazeuse';
+      const colorHex = '#'+b.color.toString(16).padStart(6,'0');
+
+      let portraitHTML='';
+      if(!visible){
+        portraitHTML=`<div style="width:120px;height:150px;border:2px dashed rgba(255,200,50,.2);border-radius:6px;display:flex;align-items:center;justify-content:center;margin:0 auto 16px;background:rgba(255,200,50,.03)">
+          <span style="font-size:36px;opacity:.3">?</span></div>`;
+      } else if(entry&&entry.images&&entry.images[0]){
+        portraitHTML=`<img src="${entry.images[0]}" style="width:120px;height:150px;object-fit:cover;border-radius:6px;border:1px solid rgba(255,200,50,.3);display:block;margin:0 auto 16px">`;
+      } else {
+        portraitHTML=`<div style="width:120px;height:150px;border:2px dashed rgba(255,200,50,.2);border-radius:6px;display:flex;align-items:center;justify-content:center;margin:0 auto 16px;background:rgba(${(b.color>>16)&255},${(b.color>>8)&255},${b.color&255},.08)">
+          <span style="font-size:48px">✦</span></div>`;
+      }
+
+      const nameHTML = !visible&&!_isAdmin()
+        ? `<div style="font-family:'Cinzel Decorative',serif;font-size:18px;color:rgba(255,200,50,.3);text-align:center;margin-bottom:4px">???</div>`
+        : `<div style="font-family:'Cinzel Decorative',serif;font-size:clamp(14px,1.4vw,20px);color:#ffd060;text-align:center;margin-bottom:4px;text-shadow:0 0 12px rgba(255,180,0,.4)">${b.name}</div>`;
+
+      let actionHTML='';
+      if(_isAdmin()){
+        if(entry){
+          actionHTML=`
+            <button onclick="selectNode('${entry.id}');document.getElementById('_solar-panel').style.transform='translateX(100%)'"
+              style="width:100%;padding:10px;background:rgba(255,200,50,.12);border:1px solid rgba(255,200,50,.4);border-radius:5px;
+              font-family:'Cinzel',serif;font-size:10px;letter-spacing:1.5px;cursor:pointer;color:#ffd060;margin-top:8px">
+              ✦ Voir la fiche
+            </button>
+            <button onclick="_solarToggleVisible('${bodyId}','${n.id}')"
+              style="width:100%;padding:8px;background:rgba(255,200,50,.05);border:1px solid rgba(255,200,50,.15);border-radius:5px;
+              font-family:'Cinzel',serif;font-size:9px;letter-spacing:1px;cursor:pointer;color:rgba(255,200,50,.5);margin-top:6px">
+              ${entry._hidden?'👁 Rendre visible':'🚫 Masquer aux visiteurs'}
+            </button>`;
+        } else {
+          actionHTML=`
+            <button onclick="_solarLinkEntry('${bodyId}','${n.id}')"
+              style="width:100%;padding:10px;background:rgba(255,200,50,.08);border:1.5px dashed rgba(255,200,50,.3);border-radius:5px;
+              font-family:'Cinzel',serif;font-size:9px;letter-spacing:1px;cursor:pointer;color:rgba(255,200,50,.6);margin-top:8px">
+              ＋ Lier une fiche personnage
+            </button>`;
+        }
+      } else if(visible&&entry){
+        actionHTML=`
+          <button onclick="selectNode('${entry.id}');document.getElementById('_solar-panel').style.transform='translateX(100%)'"
+            style="width:100%;padding:10px;background:rgba(255,200,50,.12);border:1px solid rgba(255,200,50,.4);border-radius:5px;
+            font-family:'Cinzel',serif;font-size:10px;letter-spacing:1.5px;cursor:pointer;color:#ffd060;margin-top:8px">
+            ✦ Voir la fiche
+          </button>`;
+      }
+
+      const subtitleHTML = visible&&entry&&entry.subtitle
+        ? `<div style="font-family:'EB Garamond',serif;font-size:13px;color:rgba(255,200,50,.5);text-align:center;font-style:italic;margin-bottom:12px">${esc(entry.subtitle)}</div>`
+        : '';
+
+      panel.innerHTML=`
+        <div style="display:flex;justify-content:flex-end;margin-bottom:12px">
+          <span style="cursor:pointer;font-size:16px;color:rgba(255,200,50,.4);padding:4px 8px" onclick="document.getElementById('_solar-panel').style.transform='translateX(100%)'">✕</span>
+        </div>
+        ${portraitHTML}
+        ${nameHTML}
+        ${subtitleHTML}
+        <div style="display:flex;align-items:center;gap:8px;justify-content:center;margin-bottom:14px">
+          <div style="width:10px;height:10px;border-radius:50%;background:${colorHex};box-shadow:0 0 6px ${colorHex}"></div>
+          <span style="font-family:'Cinzel',serif;font-size:8px;letter-spacing:1.5px;color:rgba(255,200,50,.4)">${typeLabel}</span>
+        </div>
+        ${actionHTML}
+        ${!visible&&!_isAdmin()?'<div style="font-family:EB Garamond,serif;font-size:12px;color:rgba(255,200,50,.25);text-align:center;font-style:italic;margin-top:12px">Cet astre est encore inconnu…</div>':''}
+      `;
+      panel.style.transform='translateX(0)';
+    }
+
+    // Fonctions admin
+    window._solarLinkEntry=function(bodyId, catId){
+      const chars=Object.values(db).filter(e=>e.type==='entry'&&e.entryType==='character');
+      document.getElementById('_solar-link-modal')?.remove();
+      const m=document.createElement('div');
+      m.id='_solar-link-modal';
+      m.style.cssText='position:fixed;inset:0;z-index:10000;background:rgba(0,0,0,.8);display:flex;align-items:center;justify-content:center;padding:20px';
+      m.innerHTML=`<div style="background:#0a0800;border:1px solid rgba(255,200,50,.3);border-radius:8px;padding:22px;width:min(440px,96vw);max-height:80vh;display:flex;flex-direction:column;gap:10px">
+        <div style="font-family:'Cinzel',serif;font-size:11px;color:#ffd060;letter-spacing:2px">Lier une fiche à ${BODIES.find(b=>b.id===bodyId)?.name||bodyId}</div>
+        <input placeholder="Rechercher…" oninput="
+          const q=this.value.toLowerCase();
+          this.nextElementSibling.innerHTML=Object.values(db).filter(e=>e.type==='entry'&&e.entryType==='character'&&(e.name+' '+(e.lastName||'')).toLowerCase().includes(q))
+            .map(e=>'<div style=\"padding:8px 12px;cursor:pointer;border-radius:4px;color:#ffd060;font-family:EB Garamond,serif;font-size:13px;display:flex;align-items:center;gap:8px\" onmouseenter=\"this.style.background=\\'rgba(255,200,50,.1)\\'\" onmouseleave=\"this.style.background=\\'\\'\" onclick=\"_solarDoLink(\\'${bodyId}\\',\\'${catId}\\',\\''+e.id+'\\')\">'+(e.images&&e.images[0]?'<img src=\"'+e.images[0]+'\" style=\"width:28px;height:28px;border-radius:50%;object-fit:cover\">':\\'<span>\\'+(e.icon||'🧙')+'</span>\\')+'<span>'+e.name+(e.lastName?' '+e.lastName:'')+\\'</span></div>\\').join('') || '<div style=\"color:rgba(255,200,50,.3);font-style:italic;padding:8px\">Aucun résultat</div>';
+        " style="background:rgba(0,0,0,.4);border:1px solid rgba(255,200,50,.2);border-radius:4px;padding:8px 12px;color:#ffd060;font-family:'EB Garamond',serif;font-size:14px;outline:none">
+        <div style="overflow-y:auto;max-height:50vh;display:flex;flex-direction:column;gap:3px">
+          ${chars.map(e=>`<div style="padding:8px 12px;cursor:pointer;border-radius:4px;color:#ffd060;font-family:'EB Garamond',serif;font-size:13px;display:flex;align-items:center;gap:8px" onmouseenter="this.style.background='rgba(255,200,50,.1)'" onmouseleave="this.style.background=''" onclick="_solarDoLink('${bodyId}','${catId}','${e.id}')">${e.images&&e.images[0]?`<img src="${e.images[0]}" style="width:28px;height:28px;border-radius:50%;object-fit:cover">`:`<span>${e.icon||'🧙'}</span>`} ${esc(e.name+(e.lastName?' '+e.lastName:''))}</div>`).join('')}
+        </div>
+        <button onclick="document.getElementById('_solar-link-modal').remove()" style="padding:8px;border:1px solid rgba(255,200,50,.2);border-radius:4px;background:rgba(80,40,0,.1);color:rgba(255,200,50,.5);font-family:'Cinzel',serif;font-size:9px;cursor:pointer">Annuler</button>
+      </div>`;
+      document.body.appendChild(m);
+      m.addEventListener('click',e=>{ if(e.target===m) m.remove(); });
+    };
+    window._solarDoLink=function(bodyId, catId, entryId){
+      document.getElementById('_solar-link-modal')?.remove();
+      const cat=db[catId]; if(!cat) return;
+      if(!cat._solarBodies) cat._solarBodies={};
+      cat._solarBodies[bodyId]=entryId;
+      // Masquer par défaut aux visiteurs
+      const entry=db[entryId]; if(entry) entry._hidden=true;
+      save();
+      openBodyPanel(bodyId);
+    };
+    window._solarToggleVisible=function(bodyId, catId){
+      const cat=db[catId]; if(!cat||!cat._solarBodies) return;
+      const entryId=cat._solarBodies[bodyId]; if(!entryId) return;
+      const entry=db[entryId]; if(!entry) return;
+      entry._hidden=!entry._hidden;
+      save();
+      openBodyPanel(bodyId);
+    };
+
+    // Animation
+    let time=0;
+    const SPEED_SCALE=0.004;
+    function animate(){
+      window._solarisAnim=requestAnimationFrame(animate);
+      time+=1;
+      // Orbites
+      Object.values(meshes).forEach(({mesh,body,angle},_)=>{
+        if(body.dist===0) return;
+        const a=angle+time*body.speed*SPEED_SCALE;
+        mesh.position.set(Math.cos(a)*body.dist, 0, Math.sin(a)*body.dist);
+        mesh.rotation.y+=0.005*(1/body.r);
+      });
+      // Soleil pulse
+      if(meshes.sun) meshes.sun.mesh.material.emissiveIntensity=.8+Math.sin(time*.04)*.2;
+      // Smooth camera
+      spherical.theta+=(targetSpherical.theta-spherical.theta)*.08;
+      spherical.phi+=(targetSpherical.phi-spherical.phi)*.08;
+      spherical.r+=(targetSpherical.r-spherical.r)*.08;
+      updateCamera();
+      renderer.render(scene,camera);
+    }
+    animate();
+
+    // Resize
+    const ro=new ResizeObserver(()=>{
+      const W2=wrap.clientWidth, H2=wrap.clientHeight;
+      camera.aspect=W2/H2; camera.updateProjectionMatrix();
+      renderer.setSize(W2,H2);
+    });
+    ro.observe(wrap);
+  }
+
+  // Charger Three.js si besoin
+  if(!window.THREE){
+    const s=document.createElement('script');
+    s.src='https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js';
+    s.onload=initThree;
+    document.head.appendChild(s);
+  } else {
+    initThree();
+  }
+}
+
 function renderCategory(v,n){
   // ── Histoire — check en premier (priorité absolue) ──
   if(n.kind==='histoire-root' || n.name==='Histoire' || n.name==='Histoire de Pyli'){
@@ -3968,6 +4466,12 @@ function renderCategory(v,n){
   // ── Special immersive render for gate-root ──
   if(isGateRoot){
     renderGateRootImmersive(v,n);
+    return;
+  }
+
+  // ── Solaris — système solaire immersif ──
+  if(n.kind==='solaris' || n.name==='Solaris'){
+    renderSolarisImmersive(v,n);
     return;
   }
 
