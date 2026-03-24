@@ -1282,6 +1282,7 @@ async function _sbInit(){
           }
         });
         window._sbReady = true; // Supabase chargé avec succès
+        _arcPrefLoad(); // Charger les préférences arc des visiteurs
         renderTree();
         renderWelcome();
       }
@@ -3500,9 +3501,34 @@ function _cgCropSave(charId){
   renderContent(n.parentId||charId);
 }
 
+// ── Préférences arc visiteur (localStorage) ──
+function _arcPrefLoad(){
+  try{
+    const raw = localStorage.getItem('goh_arc_prefs');
+    if(!raw) return;
+    const prefs = JSON.parse(raw);
+    // Appliquer les prefs visiteur sur db sans écraser les choix admin
+    if(!_isAdmin()){
+      Object.entries(prefs).forEach(([id, idx])=>{
+        if(db[id] && !(db[id]._hiddenArcs||[]).includes(idx)) db[id]._cgGridArc = idx;
+      });
+    }
+  } catch(e){}
+}
+function _arcPrefSave(charId, idx){
+  try{
+    const raw = localStorage.getItem('goh_arc_prefs');
+    const prefs = raw ? JSON.parse(raw) : {};
+    if(idx === -1) delete prefs[charId];
+    else prefs[charId] = idx;
+    localStorage.setItem('goh_arc_prefs', JSON.stringify(prefs));
+  } catch(e){}
+}
+
 function _cgArcPicker(e, charId, anchor){
   e.stopPropagation();
   document.getElementById('_cgap')?.remove();
+  document.getElementById('_cgap-ov')?.remove();
   const n = db[charId]; if(!n) return;
   const currentArc = n._cgGridArc !== undefined ? n._cgGridArc : -1;
   const menu = document.createElement('div');
@@ -3510,8 +3536,15 @@ function _cgArcPicker(e, charId, anchor){
   const r = anchor.getBoundingClientRect();
   menu.style.cssText = `position:fixed;left:${r.left}px;top:${r.top-4}px;transform:translateY(-100%);z-index:9999;
     background:rgba(12,8,24,.97);border:1px solid rgba(140,80,255,.4);border-radius:6px;
-    padding:4px 0;min-width:150px;font-family:'Cinzel',serif;font-size:9px;
+    padding:4px 0;min-width:160px;font-family:'Cinzel',serif;font-size:9px;
     box-shadow:0 -4px 20px rgba(0,0,0,.8)`;
+  // Overlay bloqueur
+  const ov = document.createElement('div');
+  ov.id = '_cgap-ov';
+  ov.style.cssText = 'position:fixed;inset:0;z-index:9998;background:transparent;cursor:default';
+  const closeAll = ()=>{ menu.remove(); ov.remove(); };
+  ov.onclick = (ev)=>{ ev.stopPropagation(); closeAll(); };
+  ov.oncontextmenu = (ev)=>{ ev.preventDefault(); ev.stopPropagation(); closeAll(); };
   function row(label, idx, active){
     const r2 = document.createElement('div');
     r2.style.cssText = `padding:7px 14px;cursor:pointer;color:${active?'rgba(220,195,255,.9)':'rgba(180,155,240,.55)'};
@@ -3521,12 +3554,11 @@ function _cgArcPicker(e, charId, anchor){
     r2.innerHTML = `${active?'✓':'◈'} ${label}`;
     r2.onclick = (ev)=>{
       ev.stopPropagation();
-      menu.remove();
+      closeAll();
       n._cgGridArc = idx;
-      if(_isAdmin()) save();
-      // Re-render just the card
-      const card = document.getElementById('cgc-'+charId);
-      if(card) { renderContent(n.parentId||charId); }
+      if(_isAdmin()) save();         // Admin → Supabase
+      else _arcPrefSave(charId, idx); // Visiteur → localStorage
+      renderContent(n.parentId||charId);
     };
     menu.appendChild(r2);
   }
@@ -3535,6 +3567,7 @@ function _cgArcPicker(e, charId, anchor){
     if(!_isAdmin() && (n._hiddenArcs||[]).includes(i)) return;
     row(arc.name||'Arc '+(i+1), i, currentArc === i);
   });
+  document.body.appendChild(ov);
   document.body.appendChild(menu);
   // Ajuster si déborde
   requestAnimationFrame(()=>{
@@ -3543,9 +3576,6 @@ function _cgArcPicker(e, charId, anchor){
     if(br.right > window.innerWidth) menu.style.left = (window.innerWidth - br.width - 4)+'px';
     if(br.top < 4) { menu.style.top = r.bottom+'px'; menu.style.transform = ''; }
   });
-  setTimeout(()=>document.addEventListener('click', function _c(ev){
-    if(!menu.contains(ev.target)){ menu.remove(); document.removeEventListener('click',_c); }
-  }), 10);
 }
 
 function _cgCardCtx(e, entryId, parentId){
