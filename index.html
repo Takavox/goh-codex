@@ -4886,6 +4886,103 @@ function _startMagieCanvas(){
 // ═══════════════════════════════════════════════════
 //  SECRETS — Rouleaux de parchemin scellés
 // ═══════════════════════════════════════════════════
+
+function _secGlobalSoundsModal(secretId){
+  document.getElementById('_sec-gsounds')?.remove();
+  const n = db[secretId]; if(!n) return;
+  const m = document.createElement('div');
+  m.id = '_sec-gsounds';
+  m.style.cssText = 'position:fixed;inset:0;z-index:9200;background:rgba(0,0,0,.8);display:flex;align-items:center;justify-content:center;padding:20px';
+
+  const lblStyle = "font-family:'Cinzel',serif;font-size:8px;letter-spacing:1.5px;color:rgba(120,90,40,.7);display:block;margin-bottom:5px;text-transform:uppercase";
+  const inpStyle = "width:100%;background:rgba(0,0,0,.3);border:1px solid rgba(120,80,20,.25);border-radius:4px;padding:7px 10px;color:#a08030;font-family:'Cinzel',serif;font-size:10px;outline:none;box-sizing:border-box";
+
+  m.innerHTML = `
+    <div style="background:#0a0800;border:1px solid rgba(120,80,20,.5);border-radius:8px;padding:24px;width:min(460px,96vw);display:flex;flex-direction:column;gap:16px">
+      <div style="font-family:'Cinzel Decorative',serif;font-size:13px;color:#a08030;letter-spacing:2px">🔊 SONS GLOBAUX DES VERROUS</div>
+      <div style="font-family:'EB Garamond',serif;font-size:13px;color:rgba(160,130,80,.6);font-style:italic">
+        Ces sons s'appliquent à <b>tous les verrous</b> de cette page Secrets.
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
+        <div>
+          <label style="${lblStyle}">✓ BONNE RÉPONSE</label>
+          <div style="display:flex;gap:6px;align-items:center;margin-bottom:8px">
+            <button onclick="_secGsLoad('${secretId}','correct')" style="flex:1;padding:6px 10px;background:rgba(40,100,40,.1);border:1px solid rgba(40,100,40,.3);border-radius:4px;font-family:'Cinzel',serif;font-size:8px;cursor:pointer;color:#2a6030">
+              🎵 ${n._soundCorrect?'Changer':'Charger'}
+            </button>
+            ${n._soundCorrect?`<button onclick="_secGsClear('${secretId}','correct')" style="padding:5px 8px;background:rgba(180,60,40,.08);border:1px solid rgba(180,60,40,.2);border-radius:4px;font-size:10px;cursor:pointer;color:#a03020">✕</button>`:''}
+          </div>
+          ${n._soundCorrect?`<div style="font-size:10px;color:rgba(80,140,80,.7);font-family:'EB Garamond',serif;font-style:italic;margin-bottom:6px">✓ Son chargé</div>`:''}
+          <label style="${lblStyle}">DÉCALAGE (ms)</label>
+          <input type="number" id="_sgs-cd" value="${n._soundCorrectDelay||0}" style="${inpStyle}" placeholder="0">
+        </div>
+        <div>
+          <label style="${lblStyle}">✗ MAUVAISE RÉPONSE</label>
+          <div style="display:flex;gap:6px;align-items:center;margin-bottom:8px">
+            <button onclick="_secGsLoad('${secretId}','wrong')" style="flex:1;padding:6px 10px;background:rgba(140,40,20,.1);border:1px solid rgba(140,40,20,.3);border-radius:4px;font-family:'Cinzel',serif;font-size:8px;cursor:pointer;color:#7a2810">
+              🎵 ${n._soundWrong?'Changer':'Charger'}
+            </button>
+            ${n._soundWrong?`<button onclick="_secGsClear('${secretId}','wrong')" style="padding:5px 8px;background:rgba(180,60,40,.08);border:1px solid rgba(180,60,40,.2);border-radius:4px;font-size:10px;cursor:pointer;color:#a03020">✕</button>`:''}
+          </div>
+          ${n._soundWrong?`<div style="font-size:10px;color:rgba(80,140,80,.7);font-family:'EB Garamond',serif;font-style:italic;margin-bottom:6px">✓ Son chargé</div>`:''}
+          <label style="${lblStyle}">DÉCALAGE (ms)</label>
+          <input type="number" id="_sgs-wd" value="${n._soundWrongDelay||0}" style="${inpStyle}" placeholder="0">
+        </div>
+      </div>
+      <div style="display:flex;gap:8px;margin-top:4px">
+        <button onclick="_secGsSave('${secretId}')" style="flex:1;padding:10px;background:rgba(120,80,20,.2);border:1px solid rgba(120,80,20,.5);border-radius:4px;font-family:'Cinzel',serif;font-size:9px;cursor:pointer;color:#a08030">✓ Enregistrer</button>
+        <button onclick="document.getElementById('_sec-gsounds').remove()" style="padding:10px 16px;background:rgba(80,40,10,.08);border:1px solid rgba(120,80,20,.2);border-radius:4px;font-family:'Cinzel',serif;font-size:9px;cursor:pointer;color:rgba(160,120,60,.5)">Fermer</button>
+      </div>
+    </div>`;
+  document.body.appendChild(m);
+  m.addEventListener('click', e=>{ if(e.target===m) m.remove(); });
+}
+
+function _secGsSave(secretId){
+  const n = db[secretId]; if(!n) return;
+  n._soundCorrectDelay = parseInt(document.getElementById('_sgs-cd')?.value)||0;
+  n._soundWrongDelay   = parseInt(document.getElementById('_sgs-wd')?.value)||0;
+  save();
+  document.getElementById('_sec-gsounds')?.remove();
+}
+
+function _secGsLoad(secretId, type){
+  const inp = document.createElement('input'); inp.type='file'; inp.accept='audio/*';
+  inp.onchange = e=>{
+    const f=e.target.files[0]; if(!f) return;
+    _uploadToCloudinary(f, url=>{
+      const n=db[secretId]; if(!n) return;
+      if(type==='correct') n._soundCorrect=url;
+      else n._soundWrong=url;
+      save();
+      // Rafraîchir la modale ouverte
+      if(document.getElementById('_sec-gsounds')){
+        document.getElementById('_sec-gsounds').remove();
+        _secGlobalSoundsModal(secretId);
+      } else if(document.getElementById('_sec-lock-edit')){
+        // On vient de l'éditeur de verrou — récupérer l'index du verrou courant
+        const lockEdit = document.getElementById('_sec-lock-edit');
+        const lockIdx = parseInt(lockEdit.dataset.lockIdx||'0');
+        lockEdit.remove();
+        _secEditLock(secretId, lockIdx);
+      }
+    });
+  };
+  inp.click();
+}
+
+function _secGsClear(secretId, type){
+  const n=db[secretId]; if(!n) return;
+  if(type==='correct') delete n._soundCorrect;
+  else delete n._soundWrong;
+  save();
+  if(document.getElementById('_sec-gsounds')){
+    document.getElementById('_sec-gsounds').remove();
+    _secGlobalSoundsModal(secretId);
+  }
+  // Si on vient de l'éditeur de verrou, il sera rechargé par le bouton ✕ inline
+}
+
 function renderSecretsImmersive(v, n){
   const oldS=document.getElementById('sec-style');if(oldS)oldS.remove();
   const s=document.createElement('style');s.id='sec-style';
@@ -5547,14 +5644,17 @@ function _secOnCorrect(secretId, lockIdx, lockId){
   const n=db[secretId];
   const lock=(n._locks||[])[lockIdx];
 
-  // Jouer le son correct
-  if(lock.soundCorrect){
-    const delay = lock.soundCorrectDelay||0;
+  // Jouer le son correct (global du nœud Secrets, ou fallback sur le verrou)
+  const _secNode = db[window._secState?.id];
+  // Sons toujours globaux — stockés sur le nœud Secrets, jamais sur le verrou
+  const _soundCorrect = _secNode&&_secNode._soundCorrect;
+  const _soundCorrectDelay = (_secNode&&_secNode._soundCorrectDelay!==undefined) ? _secNode._soundCorrectDelay : 0;
+  if(_soundCorrect){
     setTimeout(()=>{
-      const a=new Audio(lock.soundCorrect);
+      const a=new Audio(_soundCorrect);
       a.volume=_masterVol;
       a.play().catch(()=>{});
-    }, delay);
+    }, _soundCorrectDelay);
   }
 
   // Animation : verrou qui se brise
@@ -5583,14 +5683,17 @@ function _secOnWrong(lockIdx){
   const n=db[window._secState?.id];
   const lock=n?((n._locks||[])[lockIdx]):null;
 
-  // Son mauvais
-  if(lock&&lock.soundWrong){
-    const delay = lock.soundWrongDelay||0;
+  // Son mauvais (global du nœud Secrets, ou fallback sur le verrou)
+  const _secNodeW = db[window._secState?.id];
+  // Sons toujours globaux — stockés sur le nœud Secrets, jamais sur le verrou
+  const _soundWrong = _secNodeW&&_secNodeW._soundWrong;
+  const _soundWrongDelay = (_secNodeW&&_secNodeW._soundWrongDelay!==undefined) ? _secNodeW._soundWrongDelay : 0;
+  if(_soundWrong){
     setTimeout(()=>{
-      const a=new Audio(lock.soundWrong);
+      const a=new Audio(_soundWrong);
       a.volume=_masterVol;
       a.play().catch(()=>{});
-    }, delay);
+    }, _soundWrongDelay);
   }
 
   // Animation tremblement
@@ -5654,6 +5757,8 @@ function _secLockManager(secretId){
       <div id="_slm-list">${locksList||'<div style="text-align:center;color:rgba(80,50,20,.4);font-style:italic;font-family:\'EB Garamond\',serif;padding:20px">Aucun verrou</div>'}</div>
       <button onclick="_secAddLock('${secretId}')"
         style="width:100%;margin-top:14px;padding:11px;background:rgba(120,80,20,.12);border:1.5px dashed rgba(120,80,20,.3);border-radius:4px;font-family:'Cinzel',serif;font-size:9px;letter-spacing:1.5px;cursor:pointer;color:rgba(60,30,10,.6)">＋ Ajouter un verrou</button>
+      <button onclick="_secGlobalSoundsModal('${secretId}')"
+        style="width:100%;margin-top:8px;padding:11px;background:rgba(40,80,40,.08);border:1px solid rgba(40,80,40,.25);border-radius:4px;font-family:'Cinzel',serif;font-size:9px;letter-spacing:1px;cursor:pointer;color:rgba(20,60,20,.7)">🔊 Sons globaux (bonne / mauvaise réponse)</button>
       <button onclick="document.getElementById('_sec-lock-mgr').remove()"
         style="width:100%;margin-top:8px;padding:10px;background:rgba(80,40,10,.1);border:1px solid rgba(120,80,20,.25);border-radius:4px;font-family:'Cinzel',serif;font-size:9px;cursor:pointer;color:#3a2008">Fermer</button>
     </div>`;
@@ -5720,7 +5825,7 @@ function _secEditLock(secretId, lockIdx){
   const n=db[secretId];if(!n)return;
   const lock=(n._locks||[])[lockIdx];if(!lock)return;
 
-  const m=document.createElement('div');m.id='_sec-lock-edit';
+  const m=document.createElement('div');m.id='_sec-lock-edit';m.dataset.lockIdx=lockIdx;
   m.style.cssText='position:fixed;inset:0;z-index:1400;background:rgba(0,0,0,.9);display:flex;align-items:center;justify-content:center;padding:20px;overflow:auto';
 
   const inpStyle='width:100%;box-sizing:border-box;background:rgba(255,245,220,.85);border:1px solid rgba(120,80,20,.3);border-radius:4px;padding:8px 12px;font-family:\'EB Garamond\',serif;font-size:14px;color:#2a1808;outline:none;margin-bottom:10px';
@@ -5759,24 +5864,29 @@ function _secEditLock(secretId, lockIdx){
         ${lock.revealImg?`<button onclick="_sleRemoveRevealImg(${lockIdx},'${secretId}')" style="padding:6px 12px;background:rgba(180,60,40,.08);border:1px solid rgba(180,60,40,.2);border-radius:4px;font-family:'Cinzel',serif;font-size:8px;cursor:pointer;color:#a03020">✕</button>`:''}
       </div>
 
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:6px">
-        <div>
-          <label style="${lblStyle}">SON — BONNE RÉPONSE</label>
-          <div style="display:flex;gap:6px;align-items:center">
-            <button onclick="_sleLoadSound(${lockIdx},'${secretId}','correct')" style="padding:6px 10px;background:rgba(40,100,40,.1);border:1px solid rgba(40,100,40,.25);border-radius:4px;font-family:'Cinzel',serif;font-size:8px;cursor:pointer;color:#2a6030">🎵 ${lock.soundCorrect?'Changer':'Charger'}</button>
-            ${lock.soundCorrect?`<button onclick="_sleClearSound(${lockIdx},'${secretId}','correct')" style="padding:5px 8px;background:rgba(180,60,40,.08);border:1px solid rgba(180,60,40,.2);border-radius:4px;font-size:9px;cursor:pointer;color:#a03020">✕</button>`:''}
+      <div style="padding:12px 14px;background:rgba(100,60,10,.08);border:1px solid rgba(120,80,20,.15);border-radius:5px;margin-bottom:6px">
+        <div style="font-family:'Cinzel',serif;font-size:8px;letter-spacing:1.5px;color:rgba(160,120,60,.5);margin-bottom:10px">🔊 SONS — communs à tous les verrous</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+          <div>
+            <div style="font-family:'Cinzel',serif;font-size:7.5px;letter-spacing:1px;color:rgba(40,100,40,.7);margin-bottom:5px">✓ BONNE RÉPONSE</div>
+            <div style="display:flex;gap:5px;align-items:center;margin-bottom:5px">
+              <button onclick="_secGsLoad('${secretId}','correct')" style="flex:1;padding:5px 8px;background:rgba(40,100,40,.1);border:1px solid rgba(40,100,40,.3);border-radius:4px;font-family:'Cinzel',serif;font-size:7.5px;cursor:pointer;color:#2a6030">
+                🎵 ${n._soundCorrect?'Changer':'Charger'}
+              </button>
+              ${n._soundCorrect?`<button onclick="_secGsClear('${secretId}','correct');document.getElementById('_sec-lock-edit')?.remove();_secEditLock('${secretId}',${lockIdx})" style="padding:4px 7px;background:rgba(180,60,40,.08);border:1px solid rgba(180,60,40,.2);border-radius:4px;font-size:9px;cursor:pointer;color:#a03020">✕</button>`:''}
+            </div>
+            ${n._soundCorrect?`<div style="font-size:9px;color:rgba(60,120,60,.7);font-style:italic">✓ Son chargé</div>`:`<div style="font-size:9px;color:rgba(160,120,60,.4);font-style:italic">Aucun son</div>`}
           </div>
-          <label style="${lblStyle};margin-top:8px">DÉCALAGE (ms)</label>
-          <input type="number" id="_sle-cd" value="${lock.soundCorrectDelay||0}" style="${inpStyle}" placeholder="0">
-        </div>
-        <div>
-          <label style="${lblStyle}">SON — MAUVAISE RÉPONSE</label>
-          <div style="display:flex;gap:6px;align-items:center">
-            <button onclick="_sleLoadSound(${lockIdx},'${secretId}','wrong')" style="padding:6px 10px;background:rgba(140,40,20,.1);border:1px solid rgba(140,40,20,.25);border-radius:4px;font-family:'Cinzel',serif;font-size:8px;cursor:pointer;color:#7a2810">🎵 ${lock.soundWrong?'Changer':'Charger'}</button>
-            ${lock.soundWrong?`<button onclick="_sleClearSound(${lockIdx},'${secretId}','wrong')" style="padding:5px 8px;background:rgba(180,60,40,.08);border:1px solid rgba(180,60,40,.2);border-radius:4px;font-size:9px;cursor:pointer;color:#a03020">✕</button>`:''}
+          <div>
+            <div style="font-family:'Cinzel',serif;font-size:7.5px;letter-spacing:1px;color:rgba(140,40,20,.7);margin-bottom:5px">✗ MAUVAISE RÉPONSE</div>
+            <div style="display:flex;gap:5px;align-items:center;margin-bottom:5px">
+              <button onclick="_secGsLoad('${secretId}','wrong')" style="flex:1;padding:5px 8px;background:rgba(140,40,20,.1);border:1px solid rgba(140,40,20,.3);border-radius:4px;font-family:'Cinzel',serif;font-size:7.5px;cursor:pointer;color:#7a2810">
+                🎵 ${n._soundWrong?'Changer':'Charger'}
+              </button>
+              ${n._soundWrong?`<button onclick="_secGsClear('${secretId}','wrong');document.getElementById('_sec-lock-edit')?.remove();_secEditLock('${secretId}',${lockIdx})" style="padding:4px 7px;background:rgba(180,60,40,.08);border:1px solid rgba(180,60,40,.2);border-radius:4px;font-size:9px;cursor:pointer;color:#a03020">✕</button>`:''}
+            </div>
+            ${n._soundWrong?`<div style="font-size:9px;color:rgba(60,120,60,.7);font-style:italic">✓ Son chargé</div>`:`<div style="font-size:9px;color:rgba(160,120,60,.4);font-style:italic">Aucun son</div>`}
           </div>
-          <label style="${lblStyle};margin-top:8px">DÉCALAGE (ms)</label>
-          <input type="number" id="_sle-wd" value="${lock.soundWrongDelay||0}" style="${inpStyle}" placeholder="0">
         </div>
       </div>
 
