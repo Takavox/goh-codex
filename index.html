@@ -3136,8 +3136,13 @@ function renderCharacterGridView(v, n){
     return Infinity;
   }
   function statTotal(e, cat){
-    if(!e.stats||!e.stats[cat]) return -1;
-    const vals=Object.values(e.stats[cat]);
+    // Utiliser les stats de la version choisie dans la grille si disponible
+    const _gArcIdx = e._cgGridArc !== undefined ? e._cgGridArc : -1;
+    const _gArc = (_gArcIdx>=0 && e._arcs && e._arcs[_gArcIdx]) ? e._arcs[_gArcIdx] : null;
+    const _stats = (_gArc && _gArc.stats && Object.keys(_gArc.stats[cat]||{}).length > 0)
+      ? _gArc.stats : e.stats;
+    if(!_stats||!_stats[cat]) return -1;
+    const vals=Object.values(_stats[cat]);
     return vals.length ? vals.reduce((a,b)=>a+(Number(b)||0),0) : -1;
   }
   function fullName(e){ return e.name+(e.lastName?' '+e.lastName:''); }
