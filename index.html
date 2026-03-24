@@ -3262,6 +3262,64 @@ function renderCharacterGridView(v, n){
   }
 
   // Non-character entries in this category (subcats, other entries)
+
+  // Build card HTML (uses charSourceMap from outer scope)
+  function charCardHTML(e){
+      const _gridArcIdx = e._cgGridArc !== undefined ? e._cgGridArc : -1;
+      const _gridArc = (_gridArcIdx>=0 && e._arcs && e._arcs[_gridArcIdx]) ? e._arcs[_gridArcIdx] : null;
+      const _gridImg = (_gridArc && _gridArc.image) || (e.images&&e.images[0]) || null;
+      const _gridAge = (_gridArc && _gridArc.age) || e.charAge || '';
+      const img=_gridImg
+        ? `<div class="cg-portrait"><img src="${_gridImg}" alt=""></div>`
+        : `<div class="cg-portrait cg-portrait-ph">${e.icon||'🧙'}</div>`;
+      const age=_gridAge?`<span class="cg-age">${esc(_gridAge)}</span>`:'';
+      const sourceName=charSourceMap[e.id];
+      const sourceBadge=sourceName?`<div class="cg-source-badge">${esc(sourceName)}</div>`:'';
+      if(!_isAdmin() && e._hidden) return `<div class="cg-card card-hidden-visitor"><div class="chv-mark">?</div></div>`;
+      if(_isAdmin() && e._hidden) {
+        // Admin voit la carte normalement mais avec une légère teinte
+      }
+      // Effet visuel selon le statut
+      const statusStyle = e.charStatus==='Décédé'
+        ? 'filter:grayscale(.85) brightness(.75);opacity:.7;'
+        : e.charStatus==='Disparu'
+        ? 'filter:sepia(.6) hue-rotate(160deg) brightness(.8);opacity:.8;'
+        : '';
+      const statusDot = e.charStatus==='Vivant'
+        ? '<span style="position:absolute;top:6px;right:6px;width:7px;height:7px;border-radius:50%;background:#6acd8d;box-shadow:0 0 5px #6acd8d"></span>'
+        : e.charStatus==='Décédé'
+        ? '<span style="position:absolute;top:6px;right:6px;font-size:10px">💀</span>'
+        : e.charStatus==='Disparu'
+        ? '<span style="position:absolute;top:6px;right:6px;font-size:10px">🌀</span>'
+        : '';
+      const ctxHandler = _isAdmin() ? `oncontextmenu="event.preventDefault();event.stopPropagation();_cgCardCtx(event,'${e.id}','${n.id}')"` : '';
+      return `<div class="cg-card${e._hidden?' cg-card-admin-hidden':''}" id="cgc-${e.id}" draggable="true"
+        style="${statusStyle}"
+        ondragstart="cgDragStart(event,'${e.id}','${n.id}')"
+        ondragover="cgDragOver(event,'${e.id}','${n.id}')"
+        ondrop="cgDrop(event,'${e.id}','${n.id}')"
+        ondragend="cgDragEnd(event)"
+        onclick="selectNode('${e.id}')"
+        ${ctxHandler}>
+        ${img}
+        ${statusDot}
+        ${sourceBadge}
+        <div class="cg-info">
+          <div class="cg-name">${esc(fullName(e))}</div>
+          ${_gridSub?`<div class="cg-sub">${esc(_gridSub)}</div>`:''}
+          ${age}
+        </div>
+        ${e._arcs&&e._arcs.length?`<div style="position:absolute;bottom:3px;left:3px;display:flex;gap:2px;flex-wrap:wrap;max-width:90%">
+          ${e._arcs.map((arc,ai)=>{
+            if(!_isAdmin()&&(e._hiddenArcs||[]).includes(ai)) return '';
+            const arcHidden = (e._hiddenArcs||[]).includes(ai);
+            return `<div style="font-size:6.5px;padding:1px 4px;border-radius:3px;background:rgba(140,80,255,${arcHidden?'.15':'.35'});color:rgba(220,200,255,${arcHidden?'.4':'.85'});font-family:'Cinzel',serif;cursor:pointer;white-space:nowrap;overflow:hidden;max-width:60px;text-overflow:ellipsis"
+              onclick="event.stopPropagation();window._arcView=window._arcView||{};window._arcView['${e.id}']=${ai};selectNode('${e.id}')"
+              title="${esc(arc.name||'Arc '+(ai+1))}">${esc((arc.name||'Arc '+(ai+1)).slice(0,8))}</div>`;
+          }).join('')}
+        </div>`:''}
+      </div>`;
+    }
   const nonCharChildren = (n.children||[]).map(id=>db[id]).filter(e=>e&&!(e.type==='entry'&&e.entryType==='character'));
 
   // Build card HTML
@@ -3352,62 +3410,6 @@ function _toggleArcHidden(charId, arcIdx){
   renderContent(n.parentId||charId);
 }
 
-function charCardHTML(e){
-    const _gridArcIdx = e._cgGridArc !== undefined ? e._cgGridArc : -1;
-    const _gridArc = (_gridArcIdx>=0 && e._arcs && e._arcs[_gridArcIdx]) ? e._arcs[_gridArcIdx] : null;
-    const _gridImg = (_gridArc && _gridArc.image) || (e.images&&e.images[0]) || null;
-    const _gridAge = (_gridArc && _gridArc.age) || e.charAge || '';
-    const img=_gridImg
-      ? `<div class="cg-portrait"><img src="${_gridImg}" alt=""></div>`
-      : `<div class="cg-portrait cg-portrait-ph">${e.icon||'🧙'}</div>`;
-    const age=_gridAge?`<span class="cg-age">${esc(_gridAge)}</span>`:'';
-    const sourceName=charSourceMap[e.id];
-    const sourceBadge=sourceName?`<div class="cg-source-badge">${esc(sourceName)}</div>`:'';
-    if(!_isAdmin() && e._hidden) return `<div class="cg-card card-hidden-visitor"><div class="chv-mark">?</div></div>`;
-    if(_isAdmin() && e._hidden) {
-      // Admin voit la carte normalement mais avec une légère teinte
-    }
-    // Effet visuel selon le statut
-    const statusStyle = e.charStatus==='Décédé'
-      ? 'filter:grayscale(.85) brightness(.75);opacity:.7;'
-      : e.charStatus==='Disparu'
-      ? 'filter:sepia(.6) hue-rotate(160deg) brightness(.8);opacity:.8;'
-      : '';
-    const statusDot = e.charStatus==='Vivant'
-      ? '<span style="position:absolute;top:6px;right:6px;width:7px;height:7px;border-radius:50%;background:#6acd8d;box-shadow:0 0 5px #6acd8d"></span>'
-      : e.charStatus==='Décédé'
-      ? '<span style="position:absolute;top:6px;right:6px;font-size:10px">💀</span>'
-      : e.charStatus==='Disparu'
-      ? '<span style="position:absolute;top:6px;right:6px;font-size:10px">🌀</span>'
-      : '';
-    const ctxHandler = _isAdmin() ? `oncontextmenu="event.preventDefault();event.stopPropagation();_cgCardCtx(event,'${e.id}','${n.id}')"` : '';
-    return `<div class="cg-card${e._hidden?' cg-card-admin-hidden':''}" id="cgc-${e.id}" draggable="true"
-      style="${statusStyle}"
-      ondragstart="cgDragStart(event,'${e.id}','${n.id}')"
-      ondragover="cgDragOver(event,'${e.id}','${n.id}')"
-      ondrop="cgDrop(event,'${e.id}','${n.id}')"
-      ondragend="cgDragEnd(event)"
-      onclick="selectNode('${e.id}')"
-      ${ctxHandler}>
-      ${img}
-      ${statusDot}
-      ${sourceBadge}
-      <div class="cg-info">
-        <div class="cg-name">${esc(fullName(e))}</div>
-        ${_gridSub?`<div class="cg-sub">${esc(_gridSub)}</div>`:''}
-        ${age}
-      </div>
-      ${e._arcs&&e._arcs.length?`<div style="position:absolute;bottom:3px;left:3px;display:flex;gap:2px;flex-wrap:wrap;max-width:90%">
-        ${e._arcs.map((arc,ai)=>{
-          if(!_isAdmin()&&(e._hiddenArcs||[]).includes(ai)) return '';
-          const arcHidden = (e._hiddenArcs||[]).includes(ai);
-          return `<div style="font-size:6.5px;padding:1px 4px;border-radius:3px;background:rgba(140,80,255,${arcHidden?'.15':'.35'});color:rgba(220,200,255,${arcHidden?'.4':'.85'});font-family:'Cinzel',serif;cursor:pointer;white-space:nowrap;overflow:hidden;max-width:60px;text-overflow:ellipsis"
-            onclick="event.stopPropagation();window._arcView=window._arcView||{};window._arcView['${e.id}']=${ai};selectNode('${e.id}')"
-            title="${esc(arc.name||'Arc '+(ai+1))}">${esc((arc.name||'Arc '+(ai+1)).slice(0,8))}</div>`;
-        }).join('')}
-      </div>`:''}
-    </div>`;
-  }
 
   const sortBtns=[
     {key:'manual', label:'✥ Manuel'},
