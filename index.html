@@ -1931,6 +1931,11 @@ function _stopAllAudio(){
 }
 
 function renderContent(id){
+  // Arrêter la musique de la bibliothèque si pas persistante
+  if(!window._mlibPersist && window._mlibCurrentAudio && window._mlibCurrentIdx >= 0){
+    const isMlib = db[id]?.kind !== 'music-lib';
+    if(isMlib){ window._mlibCurrentAudio.pause(); }
+  }
   const n=db[id];if(!n)return;
   const v=document.getElementById('view');
   v.style.padding='';v.style.overflow='';
@@ -3221,6 +3226,41 @@ function renderCharacterGridView(v, n){
     });
   }
 
+  // Mode catégories personnalisées
+  let customCatHTML = '';
+  if(sortMode === 'custom_cat' && n._cgCats && n._cgCats.length > 0){
+    customCatHTML = n._cgCats.map(cat=>{
+      const members = (cat.members||[]).map(id=>db[id]).filter(Boolean)
+        .filter(e=>{ // apply search/status filter
+          if(statusFilter && e.charStatus !== statusFilter) return false;
+          if(!searchQ) return true;
+          return (fullName(e)+' '+(e.subtitle||'')).toLowerCase().includes(searchQ);
+        });
+      return `<div style="margin-bottom:24px">
+        <div style="font-family:'Cinzel',serif;font-size:9px;letter-spacing:2.5px;text-transform:uppercase;color:rgba(200,168,76,.5);margin-bottom:12px;display:flex;align-items:center;gap:10px">
+          <span style="flex:1;height:1px;background:linear-gradient(90deg,rgba(200,168,76,.2),transparent)"></span>
+          🏷 ${esc(cat.name||'Sans nom')}
+          <span style="flex:1;height:1px;background:linear-gradient(90deg,transparent,rgba(200,168,76,.2))"></span>
+        </div>
+        <div class="cg-grid">${members.map(e=>charCardHTML(e)).join('')||'<div style="color:rgba(200,168,76,.2);font-family:EB Garamond,serif;font-style:italic;padding:12px">Aucun personnage</div>'}</div>
+      </div>`;
+    }).join('');
+    // personnages sans catégorie
+    const assignedIds = new Set(n._cgCats.flatMap(c=>c.members||[]));
+    const uncatChars = displayEnts.filter(e=>!assignedIds.has(e.id));
+    if(uncatChars.length > 0){
+      customCatHTML += `<div style="margin-bottom:24px">
+        <div style="font-family:'Cinzel',serif;font-size:9px;letter-spacing:2.5px;text-transform:uppercase;color:rgba(160,140,200,.3);margin-bottom:12px;display:flex;align-items:center;gap:10px">
+          <span style="flex:1;height:1px;background:linear-gradient(90deg,rgba(160,140,200,.1),transparent)"></span>
+          Non classés
+          <span style="flex:1;height:1px;background:linear-gradient(90deg,transparent,rgba(160,140,200,.1))"></span>
+        </div>
+        <div class="cg-grid">${uncatChars.map(e=>charCardHTML(e)).join('')}</div>
+      </div>`;
+    }
+    displayEnts = []; // on gère l'affichage nous-mêmes
+  }
+
   // Non-character entries in this category (subcats, other entries)
   const nonCharChildren = (n.children||[]).map(id=>db[id]).filter(e=>e&&!(e.type==='entry'&&e.entryType==='character'));
 
@@ -3338,7 +3378,7 @@ function charCardHTML(e){
           if(!_isAdmin()&&(e._hiddenArcs||[]).includes(ai)) return '';
           const arcHidden = (e._hiddenArcs||[]).includes(ai);
           return `<div style="font-size:6.5px;padding:1px 4px;border-radius:3px;background:rgba(140,80,255,${arcHidden?'.15':'.35'});color:rgba(220,200,255,${arcHidden?'.4':'.85'});font-family:'Cinzel',serif;cursor:pointer;white-space:nowrap;overflow:hidden;max-width:60px;text-overflow:ellipsis"
-            onclick="event.stopPropagation();window._arcView=window._arcView||{};window._arcView['${e.id}']='+ai+';selectNode('${e.id}')"
+            onclick="event.stopPropagation();window._arcView=window._arcView||{};window._arcView['${e.id}']=${ai};selectNode('${e.id}')"
             title="${esc(arc.name||'Arc '+(ai+1))}">${esc((arc.name||'Arc '+(ai+1)).slice(0,8))}</div>`;
         }).join('')}
       </div>`:''}
@@ -3353,6 +3393,7 @@ function charCardHTML(e){
     {key:'phys',   label:'⚔ Physique'},
     {key:'magic',  label:'🔮 Magie'},
     {key:'intel',  label:'📜 Intellect'},
+    {key:'custom_cat', label:'🏷 Catégories'},
   ];
 
   const catIcon = n.iconData ? `<img class="cv-icon-img" src="${n.iconData}" alt="">` : `<div class="cv-icon-big">${n.icon||'🧙'}</div>`;
@@ -3400,6 +3441,7 @@ function charCardHTML(e){
     </div>
 
     ${displayEnts.length===0?`<div class="empty">Aucun personnage trouvé.</div>`:''}
+    ${customCatHTML}
     <div class="cg-grid" id="cg-grid">
       ${displayEnts.map(e=>charCardHTML(e)).join('')}
     </div>
@@ -3412,10 +3454,134 @@ function charCardHTML(e){
     </div>
   </div>`;
   _injectCatBg('cg-wrap', n.id);
-  const cgw=document.getElementById('cg-wrap');if(cgw)cgw.oncontextmenu=e=>{ if(e.target.closest('.cg-card')||e.target.closest('.card')) return; e.preventDefault();_showCatBgMenu(n.id,e.clientX,e.clientY);};
+  const cgw=document.getElementById('cg-wrap');if(cgw)cgw.oncontextmenu=e=>{
+    e.preventDefault();
+    const card = e.target.closest('.cg-card[id^="cgc-"]');
+    if(card && _isAdmin()){
+      const eid = card.id.replace('cgc-','');
+      _cgCardCtx(e, eid, n.id); return;
+    }
+    if(e.target.closest('.cg-card')||e.target.closest('.card')) return;
+    _showCatBgMenu(n.id,e.clientX,e.clientY);
+  };
+}
+
+
+// ════════════════════════════════════════════════════════
+//  CATÉGORIES PERSONNALISÉES — Grille Personnages
+// ════════════════════════════════════════════════════════
+function _cgShowCatManager(nodeId){
+  document.getElementById('_cgcat-modal')?.remove();
+  const n = db[nodeId]; if(!n) return;
+  if(!n._cgCats) n._cgCats = [];
+  const cats = n._cgCats;
+
+  const m = document.createElement('div');
+  m.id = '_cgcat-modal';
+  m.style.cssText = 'position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.88);overflow-y:auto;display:flex;flex-direction:column;align-items:center;padding:30px 20px';
+
+  function rebuild(){
+    const inner = document.getElementById('_cgcat-inner'); if(!inner) return;
+    inner.innerHTML = cats.map((cat,ci)=>`
+      <div style="background:rgba(20,12,40,.85);border:1px solid rgba(200,168,76,.15);border-radius:7px;padding:14px 16px;margin-bottom:10px">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
+          <input value="${esc(cat.name||'')}" placeholder="Nom de la catégorie"
+            style="flex:1;background:rgba(0,0,0,.4);border:1px solid rgba(200,168,76,.25);border-radius:4px;padding:6px 10px;color:#f0e0a0;font-family:'Cinzel',serif;font-size:10px;outline:none"
+            oninput="if(window._cgcats_data){window._cgcats_data[${ci}].name=this.value;}">
+          <button onclick="_cgCatDelete(${ci},'${nodeId}')" style="padding:4px 10px;background:rgba(200,60,40,.08);border:1px solid rgba(200,60,40,.2);border-radius:4px;color:rgba(200,100,80,.6);font-size:9px;cursor:pointer">✕</button>
+        </div>
+        <div style="font-family:'Cinzel',serif;font-size:8px;letter-spacing:1.5px;color:rgba(200,168,76,.4);margin-bottom:8px">MEMBRES (${(cat.members||[]).length})</div>
+        <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px">
+          ${(cat.members||[]).map((eid,mi)=>{
+            const e=db[eid]; if(!e) return '';
+            const img=e.images&&e.images[0]?`<img src="${e.images[0]}" style="width:20px;height:20px;border-radius:50%;object-fit:cover">`:`<span style="font-size:12px">${e.icon||'🧙'}</span>`;
+            return `<div style="display:flex;align-items:center;gap:4px;background:rgba(200,168,76,.08);border:1px solid rgba(200,168,76,.15);border-radius:20px;padding:3px 8px;font-family:'Cinzel',serif;font-size:8px;color:#d4b860">
+              ${img} ${esc(e.name||eid)}
+              <span onclick="_cgCatRemoveMember(${ci},${mi},'${nodeId}')" style="cursor:pointer;color:rgba(200,100,80,.5);margin-left:2px">✕</span>
+            </div>`;
+          }).join('')}
+        </div>
+        <button onclick="_cgCatAddMember(${ci},'${nodeId}')" style="padding:4px 12px;background:rgba(200,168,76,.06);border:1px solid rgba(200,168,76,.15);border-radius:4px;color:rgba(200,168,76,.5);font-family:'Cinzel',serif;font-size:8px;cursor:pointer">＋ Ajouter un personnage</button>
+      </div>`).join('') || '<div style="text-align:center;color:rgba(200,168,76,.25);font-family:EB Garamond,serif;font-style:italic;padding:20px">Aucune catégorie — créez-en une !</div>';
+  }
+
+  m.innerHTML = `
+    <div style="width:min(700px,98vw);background:#0e0a02;border:1px solid rgba(200,168,76,.3);border-radius:10px;padding:28px">
+      <div style="font-family:'Cinzel Decorative',serif;font-size:14px;color:#d4b860;letter-spacing:3px;margin-bottom:6px">🏷 CATÉGORIES PERSONNALISÉES</div>
+      <div style="font-family:'EB Garamond',serif;font-size:12px;color:rgba(200,168,76,.4);font-style:italic;margin-bottom:18px">Crée des groupes personnalisés pour classer tes personnages</div>
+      <div id="_cgcat-inner"></div>
+      <div style="display:flex;gap:10px;margin-top:16px">
+        <button onclick="_cgCatAdd('${nodeId}')" style="flex:1;padding:10px;background:rgba(200,168,76,.1);border:1.5px dashed rgba(200,168,76,.25);border-radius:5px;font-family:'Cinzel',serif;font-size:9px;letter-spacing:1.5px;cursor:pointer;color:rgba(200,168,76,.6)">＋ Nouvelle catégorie</button>
+        <button onclick="_cgCatSaveAll('${nodeId}');document.getElementById('_cgcat-modal').remove();catSortState['${nodeId}']='custom_cat';renderContent('${nodeId}')"
+          style="flex:1;padding:10px;background:rgba(80,200,100,.1);border:1px solid rgba(80,200,100,.35);border-radius:5px;font-family:'Cinzel',serif;font-size:9px;letter-spacing:1.5px;cursor:pointer;color:rgba(80,200,100,.7)">
+          ✓ Appliquer & Afficher
+        </button>
+        <button onclick="document.getElementById('_cgcat-modal').remove()" style="padding:10px 18px;background:rgba(80,40,10,.1);border:1px solid rgba(120,80,20,.2);border-radius:5px;font-family:'Cinzel',serif;font-size:9px;cursor:pointer;color:rgba(180,140,80,.5)">Fermer</button>
+      </div>
+    </div>`;
+  window._cgcats_data = cats;
+  document.body.appendChild(m);
+  rebuild();
+}
+
+function _cgCatAdd(nodeId){
+  const n=db[nodeId]; if(!n) return;
+  if(!n._cgCats) n._cgCats=[];
+  n._cgCats.push({name:'Nouvelle catégorie',members:[]});
+  window._cgcats_data=n._cgCats;
+  _cgShowCatManager(nodeId);
+}
+function _cgCatDelete(ci, nodeId){
+  const n=db[nodeId]; if(!n||!n._cgCats) return;
+  n._cgCats.splice(ci,1); window._cgcats_data=n._cgCats;
+  _cgShowCatManager(nodeId);
+}
+function _cgCatRemoveMember(ci, mi, nodeId){
+  const n=db[nodeId]; if(!n||!n._cgCats||!n._cgCats[ci]) return;
+  n._cgCats[ci].members.splice(mi,1); window._cgcats_data=n._cgCats;
+  _cgShowCatManager(nodeId);
+}
+function _cgCatAddMember(ci, nodeId){
+  const n=db[nodeId]; if(!n) return;
+  // Picker rapide
+  document.getElementById('_cgcat-picker')?.remove();
+  const picker = document.createElement('div');
+  picker.id='_cgcat-picker';
+  picker.style.cssText='position:fixed;inset:0;z-index:10000;background:rgba(0,0,0,.6);display:flex;align-items:center;justify-content:center';
+  const chars=Object.values(db).filter(e=>e.type==='entry'&&e.entryType==='character');
+  picker.innerHTML=`<div style="background:#0e0a02;border:1px solid rgba(200,168,76,.3);border-radius:8px;padding:20px;width:min(480px,96vw);max-height:80vh;display:flex;flex-direction:column;gap:10px">
+    <div style="font-family:'Cinzel',serif;font-size:11px;color:#d4b860;letter-spacing:2px">Sélectionner un personnage</div>
+    <input placeholder="Rechercher…" oninput="this.nextElementSibling.innerHTML=this.value?Object.values(db).filter(e=>e.type==='entry'&&e.entryType==='character'&&e.name.toLowerCase().includes(this.value.toLowerCase())).map(e=>'<div style=\"padding:8px 12px;cursor:pointer;border-radius:4px;display:flex;align-items:center;gap:8px;color:#d4b860;font-family:EB Garamond,serif;font-size:13px\" onmouseenter=\"this.style.background=\\'rgba(200,168,76,.1)\\'\" onmouseleave=\"this.style.background=\\'\\'\" onclick=\"_cgCatPickMember(\\'${ci}\\',\\'${nodeId}\\',\\''+e.id+'\\')\">'+(e.images&&e.images[0]?'<img src=\"'+e.images[0]+'\" style=\"width:28px;height:28px;border-radius:50%;object-fit:cover\">':\\'<span>\\'+e.icon+\\'</span>\\')+\\'<span>\\'+esc(e.name)+\\'</span></div>\\').join(\\'\\'):\\'\\'"
+      style="background:rgba(0,0,0,.4);border:1px solid rgba(200,168,76,.2);border-radius:4px;padding:8px 12px;color:#d4b860;font-family:EB Garamond,serif;font-size:14px;outline:none">
+    <div style="overflow-y:auto;max-height:50vh;display:flex;flex-direction:column;gap:3px">
+      ${chars.map(e=>`<div style="padding:8px 12px;cursor:pointer;border-radius:4px;display:flex;align-items:center;gap:8px;color:#d4b860;font-family:'EB Garamond',serif;font-size:13px" onmouseenter="this.style.background='rgba(200,168,76,.1)'" onmouseleave="this.style.background=''" onclick="_cgCatPickMember('${ci}','${nodeId}','${e.id}')">${e.images&&e.images[0]?`<img src="${e.images[0]}" style="width:28px;height:28px;border-radius:50%;object-fit:cover">`:e.icon||'🧙'} ${esc(e.name)}</div>`).join('')}
+    </div>
+    <button onclick="document.getElementById('_cgcat-picker').remove()" style="padding:8px;border:1px solid rgba(200,168,76,.2);border-radius:4px;background:rgba(80,40,10,.1);color:rgba(200,168,76,.5);font-family:'Cinzel',serif;font-size:9px;cursor:pointer">Annuler</button>
+  </div>`;
+  document.body.appendChild(picker);
+}
+function _cgCatPickMember(ci, nodeId, entryId){
+  document.getElementById('_cgcat-picker')?.remove();
+  const n=db[nodeId]; if(!n||!n._cgCats||!n._cgCats[ci]) return;
+  if(!(n._cgCats[ci].members||[]).includes(entryId)){
+    n._cgCats[ci].members = n._cgCats[ci].members||[];
+    n._cgCats[ci].members.push(entryId);
+  }
+  window._cgcats_data=n._cgCats;
+  _cgShowCatManager(nodeId);
+}
+function _cgCatSaveAll(nodeId){
+  const n=db[nodeId]; if(!n) return;
+  // Sauvegarder les noms édités
+  if(window._cgcats_data) n._cgCats=window._cgcats_data;
+  save();
 }
 
 function catSort(nodeId, mode){
+  if(mode === 'custom_cat'){
+    _cgShowCatManager(nodeId);
+    return;
+  }
   catSortState[nodeId]=mode;
   renderContent(nodeId);
 }
@@ -9515,6 +9681,20 @@ function _artNew(parentId){
 //  MUSICOTHÈQUE — Bibliothèque musicale du Codex
 // ══════════════════════════════════════════════════════
 
+
+function _mlibTogglePersist(){
+  window._mlibPersist = !window._mlibPersist;
+  localStorage.setItem('goh_mlib_persist', window._mlibPersist?'1':'0');
+  const btn = document.getElementById('mlib-persist-btn');
+  if(btn){
+    btn.style.background = window._mlibPersist?'rgba(140,100,220,.25)':'rgba(140,100,220,.06)';
+    btn.style.color = window._mlibPersist?'rgba(200,175,255,.9)':'rgba(160,130,230,.5)';
+    btn.textContent = window._mlibPersist?'🎵 Musique persistante : ON':'🎵 Musique persistante : OFF';
+  }
+}
+// Initialiser depuis localStorage
+window._mlibPersist = localStorage.getItem('goh_mlib_persist')==='1';
+
 function renderMusicLib(v, n){
   if(_geoAnim){cancelAnimationFrame(_geoAnim);_geoAnim=null;}
 
@@ -9579,6 +9759,10 @@ function renderMusicLib(v, n){
     <div id="mlib-ui">
       <div class="mlib-title">♪ Bibliothèque Musicale</div>
       <div class="mlib-sub">${esc(n.subtitle||'Les musiques du monde')}</div>
+      <button id="mlib-persist-btn" onclick="_mlibTogglePersist()"
+        style="margin-bottom:16px;padding:6px 16px;border-radius:20px;font-family:'Cinzel',serif;font-size:9px;letter-spacing:1px;cursor:pointer;transition:all .2s;border:1px solid rgba(140,100,220,.3);background:${window._mlibPersist?'rgba(140,100,220,.25)':'rgba(140,100,220,.06)'};color:${window._mlibPersist?'rgba(200,175,255,.9)':'rgba(160,130,230,.5)'}">
+        ${window._mlibPersist?'🎵 Musique persistante : ON':'🎵 Musique persistante : OFF'}
+      </button>
       ${_isAdmin()?`<button onclick="_mlibAddTrack('${n.id}')" style="margin-bottom:20px;padding:7px 18px;background:rgba(100,70,180,.12);border:1px solid rgba(120,90,200,.3);border-radius:5px;color:rgba(160,130,230,.7);font-family:'Cinzel',serif;font-size:9px;letter-spacing:1.5px;cursor:pointer">＋ Ajouter une musique</button>`:''}
       <div id="mlib-search-wrap">
         <input id="mlib-search" type="text" placeholder="Rechercher une musique…" oninput="_mlibFilter()">
@@ -12056,12 +12240,20 @@ function openArcModal(charId, arcIdx){
       </div>
     </div>
     <div style="margin-bottom:14px">
+      <label style="font-family:'Cinzel',serif;font-size:9px;letter-spacing:1.5px;color:#8070a0;display:block;margin-bottom:5px">ÂGE (laisser vide = garder celui de la fiche)</label>
+      <input id="arc-age" style="width:100%;background:rgba(20,10,40,.8);border:1px solid rgba(140,80,255,.3);border-radius:5px;padding:8px 12px;color:#d0c8f0;font-family:'EB Garamond',serif;font-size:13px;outline:none;box-sizing:border-box" placeholder="Ex: 25 ans" value="${existing?esc(existing.age||''):''}">
+    </div>
+    <div style="margin-bottom:14px">
       <label style="font-family:'Cinzel',serif;font-size:9px;letter-spacing:1.5px;color:#8070a0;display:block;margin-bottom:5px">BIOGRAPHIE</label>
       <textarea id="arc-bio" style="width:100%;background:rgba(20,10,40,.8);border:1px solid rgba(140,80,255,.3);border-radius:5px;padding:8px 12px;color:#d0c8f0;font-family:'EB Garamond',serif;font-size:13px;outline:none;box-sizing:border-box;min-height:80px;resize:vertical" placeholder="Biographie pour cet arc…">${existing?esc(existing.bio||''):''}</textarea>
     </div>
     <div style="margin-bottom:14px">
       <label style="font-family:'Cinzel',serif;font-size:9px;letter-spacing:1.5px;color:#8070a0;display:block;margin-bottom:5px">CAPACITÉS & POUVOIRS</label>
       <textarea id="arc-powers" style="width:100%;background:rgba(20,10,40,.8);border:1px solid rgba(140,80,255,.3);border-radius:5px;padding:8px 12px;color:#d0c8f0;font-family:'EB Garamond',serif;font-size:13px;outline:none;box-sizing:border-box;min-height:60px;resize:vertical" placeholder="Pouvoirs à cet arc…">${existing?esc(existing.powers||''):''}</textarea>
+    </div>
+    <div style="margin-bottom:14px">
+      <label style="font-family:'Cinzel',serif;font-size:9px;letter-spacing:1.5px;color:#8070a0;display:block;margin-bottom:5px">ARTEFACTS (laisser vide = garder ceux de la fiche)</label>
+      <textarea id="arc-artefacts" style="width:100%;background:rgba(20,10,40,.8);border:1px solid rgba(140,80,255,.3);border-radius:5px;padding:8px 12px;color:#d0c8f0;font-family:'EB Garamond',serif;font-size:13px;outline:none;box-sizing:border-box;min-height:50px;resize:vertical" placeholder="Artefacts / équipements à cet arc…">${existing?esc(existing.artefacts||''):''}</textarea>
     </div>
     <div style="margin-bottom:20px">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
@@ -12143,7 +12335,9 @@ function _arcSave(charId, arcIdx){
   });
 
   const subtitle=document.getElementById('arc-subtitle')?.value.trim()||'';
-  const arc={name, subtitle, bio, powers, image:window._arcPortrait||null, stats:hasStats?stats:null};
+  const age=document.getElementById('arc-age')?.value.trim()||'';
+  const artefacts=document.getElementById('arc-artefacts')?.value.trim()||'';
+  const arc={name, subtitle, age, artefacts, bio, powers, image:window._arcPortrait||null, stats:hasStats?stats:null};
 
   const ch=db[charId]; if(!ch) return;
   if(!ch._arcs) ch._arcs=[];
