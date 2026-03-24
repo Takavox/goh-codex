@@ -4025,566 +4025,534 @@ function renderSolarisImmersive(v, n){
   v.style.padding='0'; v.style.overflow='hidden'; v.style.background='#000';
   v.innerHTML='';
   if(window._solarisAnim){ cancelAnimationFrame(window._solarisAnim); window._solarisAnim=null; }
-  if(window._solarisRenderer){ try{window._solarisRenderer.dispose();}catch(e){} window._solarisRenderer=null; }
 
-  // ── Données des astres ──
-  const BODIES = [
-    { id:'sun',     name:'SOLARIS PRIME',  r:18, dist:0,   speed:0,    role:'NOYAU CENTRAL',    rank:0 },
-    { id:'mercury', name:'MERCURE',        r:6,  dist:90,  speed:2.4,  role:'AGENT INFILTRATION', rank:1 },
-    { id:'venus',   name:'VÉNUS',          r:9,  dist:140, speed:1.8,  role:'CELLULE SÉDUCTION',  rank:1 },
-    { id:'earth',   name:'TERRA',          r:10, dist:190, speed:1.4,  role:'BASE OPÉRATIONNELLE',rank:1 },
-    { id:'mars',    name:'MARS',           r:7,  dist:245, speed:1.1,  role:'DIVISION COMBAT',    rank:1 },
-    { id:'jupiter', name:'JUPITER',        r:15, dist:340, speed:0.7,  role:'CONSEIL EXTERNE',    rank:2 },
-    { id:'saturn',  name:'SATURNE',        r:13, dist:420, speed:0.55, role:'ARCHIVES SECRÈTES',  rank:2 },
-    { id:'uranus',  name:'URANUS',         r:11, dist:500, speed:0.4,  role:'CELLULE DORMANTE',   rank:2 },
-    { id:'neptune', name:'NEPTUNE',        r:10, dist:575, speed:0.3,  role:'UNITÉ FANTÔME',      rank:2 },
+  // ── Nœuds de la toile ──
+  const NODES = [
+    { id:'sun',     name:'SOLARIS PRIME', role:'NOYAU CENTRAL',       rank:0, ring:0, idx:0 },
+    { id:'mercury', name:'MERCURE',       role:'AGENT INFILTRATION',   rank:1, ring:1, idx:0 },
+    { id:'venus',   name:'VÉNUS',         role:'CELLULE SÉDUCTION',    rank:1, ring:1, idx:1 },
+    { id:'earth',   name:'TERRA',         role:'BASE OPÉRATIONNELLE',  rank:1, ring:1, idx:2 },
+    { id:'mars',    name:'MARS',          role:'DIVISION COMBAT',      rank:1, ring:1, idx:3 },
+    { id:'jupiter', name:'JUPITER',       role:'CONSEIL EXTERNE',      rank:2, ring:2, idx:0 },
+    { id:'saturn',  name:'SATURNE',       role:'ARCHIVES SECRÈTES',    rank:2, ring:2, idx:1 },
+    { id:'uranus',  name:'URANUS',        role:'CELLULE DORMANTE',     rank:2, ring:2, idx:2 },
+    { id:'neptune', name:'NEPTUNE',       role:'UNITÉ FANTÔME',        rank:2, ring:2, idx:3 },
   ];
 
-  const ACCENT = '#00ff88';
-  const ACCENT2 = '#00ccff';
-  const DANGER = '#ff3333';
-  const GOLD = '#ffd060';
-  const DIM = 'rgba(0,255,136,.12)';
+  const C = { // Couleurs
+    bg:'#00020a', accent:'#00e5ff', dim:'rgba(0,229,255,.08)',
+    gold:'#ffd060', danger:'#ff2244', web:'rgba(0,180,255,.18)',
+    webHover:'rgba(0,229,255,.5)', pulse:'rgba(0,229,255,.35)',
+    r1:'#00e5ff', r2:'#7040ff', core:'#ffe080'
+  };
 
-  function getLinkedEntry(bodyId){ return n._solarBodies&&n._solarBodies[bodyId] ? db[n._solarBodies[bodyId]] : null; }
-  function isBodyVisible(bodyId){ const e=getLinkedEntry(bodyId); return _isAdmin()||!e||!e._hidden; }
+  function getEntry(id){ return n._solarBodies&&n._solarBodies[id]?db[n._solarBodies[id]]:null; }
+  function isVisible(id){ const e=getEntry(id); return _isAdmin()||!e||!e._hidden; }
 
-  // ── Conteneur principal ──
-  const wrap = document.createElement('div');
-  wrap.style.cssText='position:relative;width:100%;height:100%;overflow:hidden;background:#000308;font-family:monospace';
+  // ── DOM ──
+  const wrap=document.createElement('div');
+  wrap.style.cssText=`position:relative;width:100%;height:100%;overflow:hidden;background:${C.bg};font-family:'Courier New',monospace`;
   v.appendChild(wrap);
 
-  // ── Canvas principal ──
-  const canvas = document.createElement('canvas');
-  canvas.style.cssText='position:absolute;inset:0;width:100%;height:100%;cursor:crosshair';
+  const canvas=document.createElement('canvas');
+  canvas.style.cssText='position:absolute;inset:0;width:100%;height:100%;cursor:crosshair;z-index:1';
   wrap.appendChild(canvas);
 
-  // ── Overlay scanlines ──
-  const scan = document.createElement('div');
-  scan.style.cssText=`position:absolute;inset:0;pointer-events:none;z-index:3;
-    background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,255,136,.015) 2px,rgba(0,255,136,.015) 4px)`;
-  wrap.appendChild(scan);
+  // Scanlines overlay
+  const scans=document.createElement('div');
+  scans.style.cssText=`position:absolute;inset:0;pointer-events:none;z-index:4;
+    background:repeating-linear-gradient(0deg,transparent,transparent 3px,rgba(0,229,255,.012) 3px,rgba(0,229,255,.012) 4px)`;
+  wrap.appendChild(scans);
 
-  // ── HUD coin haut-gauche ──
-  const hudTL = document.createElement('div');
-  hudTL.style.cssText='position:absolute;top:18px;left:18px;z-index:10;pointer-events:none';
-  hudTL.innerHTML=`
-    <div style="font-size:10px;color:${ACCENT};letter-spacing:3px;margin-bottom:4px">◈ SOLARIS NETWORK</div>
-    <div style="font-size:8px;color:rgba(0,255,136,.4);letter-spacing:1px" id="_sol-status">SYSTÈME ACTIF — ${BODIES.length} NŒUDS</div>
-    <div style="font-size:7px;color:rgba(0,255,136,.25);margin-top:3px" id="_sol-coords">COORD: ---.--- / ---.---</div>`;
-  wrap.appendChild(hudTL);
+  // HUD haut-gauche
+  const hud=document.createElement('div');
+  hud.style.cssText='position:absolute;top:16px;left:16px;z-index:10;pointer-events:none';
+  hud.innerHTML=`
+    <div style="font-size:11px;color:${C.accent};letter-spacing:3px;margin-bottom:3px;text-shadow:0 0 8px ${C.accent}">◈ SOLARIS NETWORK</div>
+    <div style="font-size:7px;color:rgba(0,229,255,.35);letter-spacing:2px" id="_sn-sub">TOILE ACTIVE — ${NODES.length} NŒUDS</div>
+    <div style="font-size:7px;color:rgba(0,229,255,.2);margin-top:2px" id="_sn-coord">--</div>`;
+  wrap.appendChild(hud);
 
-  // ── HUD coin haut-droit : alerte ──
-  const hudTR = document.createElement('div');
-  hudTR.style.cssText='position:absolute;top:18px;right:18px;z-index:10;pointer-events:none;text-align:right';
-  hudTR.innerHTML=`
-    <div style="font-size:9px;color:${DANGER};letter-spacing:2px;animation:_solBlink 2s infinite" id="_sol-alert">● ACCÈS RESTREINT</div>
-    <div style="font-size:7px;color:rgba(255,51,51,.4);margin-top:3px">NIVEAU AUTORISATION : ${_isAdmin()?'OMEGA':'LIMITÉ'}</div>`;
-  wrap.appendChild(hudTR);
+  // HUD haut-droit
+  const hudr=document.createElement('div');
+  hudr.style.cssText='position:absolute;top:16px;right:16px;z-index:10;pointer-events:none;text-align:right';
+  hudr.innerHTML=`
+    <div style="font-size:9px;color:${C.danger};letter-spacing:2px" id="_sn-alert">● RÉSEAU CHIFFRÉ</div>
+    <div style="font-size:7px;color:rgba(255,34,68,.35);margin-top:2px">ACCÈS : ${_isAdmin()?'OMEGA':'RESTREINT'}</div>`;
+  wrap.appendChild(hudr);
 
-  // ── Bouton retour ──
-  const btnBack = document.createElement('button');
-  btnBack.style.cssText=`position:absolute;bottom:20px;left:20px;z-index:10;
-    background:rgba(0,255,136,.05);border:1px solid rgba(0,255,136,.3);
-    color:${ACCENT};font-family:monospace;font-size:10px;letter-spacing:2px;
-    padding:8px 16px;cursor:pointer;transition:all .2s`;
-  btnBack.textContent='◄ DÉCONNEXION';
-  btnBack.onmouseenter=()=>btnBack.style.background='rgba(0,255,136,.12)';
-  btnBack.onmouseleave=()=>btnBack.style.background='rgba(0,255,136,.05)';
-  btnBack.onclick=()=>{
-    if(window._solarisAnim) cancelAnimationFrame(window._solarisAnim);
-    renderContent(n.parentId||n.id);
-  };
-  wrap.appendChild(btnBack);
+  // Bouton retour
+  const btn=document.createElement('button');
+  btn.style.cssText=`position:absolute;bottom:18px;left:18px;z-index:10;
+    background:transparent;border:1px solid rgba(0,229,255,.2);
+    color:rgba(0,229,255,.5);font-family:monospace;font-size:9px;letter-spacing:2px;
+    padding:7px 14px;cursor:pointer`;
+  btn.textContent='◄ QUITTER';
+  btn.onclick=()=>{ cancelAnimationFrame(window._solarisAnim); renderContent(n.parentId||n.id); };
+  btn.onmouseenter=()=>btn.style.borderColor='rgba(0,229,255,.5)';
+  btn.onmouseleave=()=>btn.style.borderColor='rgba(0,229,255,.2)';
+  wrap.appendChild(btn);
 
-  // ── Panneau dossier classifié ──
-  const dossier = document.createElement('div');
-  dossier.id='_sol-dossier';
-  dossier.style.cssText=`position:absolute;right:0;top:0;bottom:0;width:300px;
-    background:#000a04;border-left:1px solid rgba(0,255,136,.2);
-    transform:translateX(100%);transition:transform .4s cubic-bezier(.4,0,.2,1);
-    z-index:20;display:flex;flex-direction:column;overflow:hidden`;
-  wrap.appendChild(dossier);
+  // Panneau dossier
+  const panel=document.createElement('div');
+  panel.id='_sn-panel';
+  panel.style.cssText=`position:absolute;right:0;top:0;bottom:0;width:290px;z-index:20;
+    background:rgba(0,2,12,.96);border-left:1px solid rgba(0,229,255,.12);
+    transform:translateX(100%);transition:transform .35s cubic-bezier(.4,0,.2,1);
+    display:flex;flex-direction:column;overflow:hidden`;
+  wrap.appendChild(panel);
 
-  // ── CSS animations ──
-  if(!document.getElementById('_sol-style')){
-    const st=document.createElement('style'); st.id='_sol-style';
-    st.textContent=`
-      @keyframes _solBlink{0%,100%{opacity:1}50%{opacity:.3}}
-      @keyframes _solPulse{0%,100%{box-shadow:0 0 8px rgba(0,255,136,.4)}50%{box-shadow:0 0 20px rgba(0,255,136,.8)}}
-      @keyframes _solScan{0%{top:-100%}100%{top:100%}}
-      @keyframes _solTypeIn{from{opacity:0;transform:translateX(-4px)}to{opacity:1;transform:translateX(0)}}
-      ._sol-scanline{position:absolute;left:0;right:0;height:2px;background:rgba(0,255,136,.06);animation:_solScan 4s linear infinite;pointer-events:none;z-index:5}
+  // CSS anim
+  if(!document.getElementById('_sn-css')){
+    const s=document.createElement('style');s.id='_sn-css';
+    s.textContent=`
+      @keyframes _snBlink{0%,100%{opacity:1}50%{opacity:.25}}
+      @keyframes _snPulseRing{0%{transform:scale(1);opacity:.6}100%{transform:scale(2.5);opacity:0}}
+      #_sn-alert{animation:_snBlink 2.5s ease-in-out infinite}
     `;
-    document.head.appendChild(st);
+    document.head.appendChild(s);
   }
 
-  // Ligne de scan
-  const scanLine = document.createElement('div');
-  scanLine.className='_sol-scanline';
-  wrap.appendChild(scanLine);
-
-  // ── Init canvas ──
+  // ── Canvas state ──
   let W=wrap.clientWidth, H=wrap.clientHeight;
   canvas.width=W; canvas.height=H;
   const ctx=canvas.getContext('2d');
 
-  // État
-  let selectedBody=null;
-  let hoveredBody=null;
-  let cameraX=W/2, cameraY=H/2;
-  let zoom=1;
-  let targetZoom=1;
+  let cx=W/2, cy=H/2; // camera pan
+  let zoom=1, targetZoom=1;
   let isDragging=false, dragStart={x:0,y:0}, camStart={x:0,y:0};
-  let bodyAngles={}; BODIES.forEach(b=>{ bodyAngles[b.id]=Math.random()*Math.PI*2; });
-  let dataPackets=[]; // Lignes de données animées entre planètes
-  let radarAngle=0;
+  let hovered=null, selected=null;
   let time=0;
-  let glitchTimer=0;
 
-  // Position d'un astre dans le monde
-  function bodyWorldPos(b){
-    if(b.dist===0) return {x:0, y:0};
-    const a=bodyAngles[b.id]||0;
-    return {x:Math.cos(a)*b.dist, y:Math.sin(a)*b.dist};
+  // Positions des nœuds (toile d'araignée — rayons concentriques + fils)
+  // Anneau 0 = centre, anneau 1 = 4 nœuds, anneau 2 = 4 nœuds extérieurs
+  const RING_R = [0, 170, 340]; // rayons en px monde
+  function nodeWorldPos(nd){
+    if(nd.ring===0) return {x:0,y:0};
+    const count = NODES.filter(x=>x.ring===nd.ring).length;
+    const baseAngle = nd.ring===1 ? -Math.PI/4 : 0;
+    const a = baseAngle + (nd.idx/count)*Math.PI*2 - Math.PI/2;
+    return {x:Math.cos(a)*RING_R[nd.ring], y:Math.sin(a)*RING_R[nd.ring]};
   }
+  function toScreen(wx,wy){ return {x:cx+wx*zoom, y:cy+wy*zoom}; }
+  function toWorld(sx,sy){ return {x:(sx-cx)/zoom, y:(sy-cy)/zoom}; }
 
-  // World → screen
-  function toScreen(wx,wy){
-    return {x:cameraX+(wx)*zoom, y:cameraY+(wy)*zoom};
-  }
-  function toWorld(sx,sy){
-    return {x:(sx-cameraX)/zoom, y:(sy-cameraY)/zoom};
-  }
+  // Fils de la toile (toutes les connexions)
+  // On connecte : centre→ring1, centre→ring2, ring1→ring1 (adjacent), ring1→ring2 (same idx), ring2→ring2 (adjacent)
+  const THREADS = [];
+  function addThread(a,b){ THREADS.push({a,b}); }
+  const ring1 = NODES.filter(x=>x.ring===1);
+  const ring2 = NODES.filter(x=>x.ring===2);
+  NODES.filter(x=>x.ring===1).forEach(nd=>addThread('sun',nd.id));
+  NODES.filter(x=>x.ring===2).forEach(nd=>addThread('sun',nd.id));
+  // Anneau 1 → anneau 1 (entre voisins)
+  ring1.forEach((nd,i)=>addThread(nd.id, ring1[(i+1)%ring1.length].id));
+  // Anneau 2 → anneau 2 (entre voisins)
+  ring2.forEach((nd,i)=>addThread(nd.id, ring2[(i+1)%ring2.length].id));
+  // Diagonales anneau 1 → anneau 2 (même idx)
+  ring1.forEach((nd)=>{ const match=ring2.find(x=>x.idx===nd.idx); if(match) addThread(nd.id,match.id); });
+  // Quelques fils diagonaux supplémentaires pour remplir la toile
+  ring1.forEach((nd,i)=>addThread(nd.id, ring2[(i+1)%ring2.length].id));
 
-  // Paquets de données
+  // Particules sur les fils (données qui transitent)
+  const PACKETS = [];
   function spawnPacket(){
-    const from=BODIES[Math.floor(Math.random()*(BODIES.length-1))+1];
-    const to=BODIES[0];
-    dataPackets.push({
-      fromId:from.id, toId:to.id,
-      progress:0, speed:.004+Math.random()*.006,
-      alpha:.8+Math.random()*.2
+    const t2=THREADS[Math.floor(Math.random()*THREADS.length)];
+    const fromA=Math.random()>.5;
+    PACKETS.push({
+      from:fromA?t2.a:t2.b, to:fromA?t2.b:t2.a,
+      progress:0, speed:.004+Math.random()*.008,
+      alpha:.6+Math.random()*.4, size:1+Math.random()*1.5
     });
   }
-  setInterval(spawnPacket, 800);
+  const spawnInterval=setInterval(spawnPacket,400);
 
-  // ── Draw ──
+  // Vibrations des fils au survol
+  const threadVibs={};
+
+  // ── DRAW ──
   function draw(){
     ctx.clearRect(0,0,W,H);
 
     // Fond
-    const bg=ctx.createRadialGradient(cameraX,cameraY,0,cameraX,cameraY,Math.max(W,H)*.8);
-    bg.addColorStop(0,'#000d06');
-    bg.addColorStop(.5,'#000408');
-    bg.addColorStop(1,'#000002');
+    const bg=ctx.createRadialGradient(cx,cy,0,cx,cy,Math.max(W,H)*.8);
+    bg.addColorStop(0,'#00060f'); bg.addColorStop(.6,'#000208'); bg.addColorStop(1,'#000002');
     ctx.fillStyle=bg; ctx.fillRect(0,0,W,H);
 
-    // Grille perspective subtile
-    ctx.strokeStyle='rgba(0,255,136,.03)'; ctx.lineWidth=1;
-    const gridStep=60*zoom;
-    const startX=(cameraX%gridStep);
-    const startY=(cameraY%gridStep);
-    for(let x=startX;x<W;x+=gridStep){ ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x,H); ctx.stroke(); }
-    for(let y=startY;y<H;y+=gridStep){ ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(W,y); ctx.stroke(); }
-
-    // Radar sweep
-    radarAngle+=.004;
-    const radarPos=toScreen(0,0);
-    const radarR=600*zoom;
-    const sweepGrad=ctx.createConicalGradient?null:null;
-    ctx.save();
-    ctx.translate(radarPos.x, radarPos.y);
-    for(let i=0;i<40;i++){
-      const a=radarAngle - i*.04;
-      ctx.fillStyle=`rgba(0,255,136,${(1-i/40)*.04})`;
-      ctx.beginPath();
-      ctx.moveTo(0,0);
-      ctx.arc(0,0,radarR,a-.02,a+.02);
-      ctx.closePath();
-      ctx.fill();
-    }
-    // Cercles radar
-    [1,2,3].forEach(ring=>{
-      ctx.strokeStyle=`rgba(0,255,136,${.04-ring*.01})`;
+    // Cercles concentriques de la toile
+    [1,2].forEach(ring=>{
+      const sp=toScreen(0,0);
+      const r=RING_R[ring]*zoom;
+      ctx.strokeStyle=`rgba(0,150,200,${.06+ring*.02})`;
       ctx.lineWidth=.5;
-      ctx.beginPath(); ctx.arc(0,0,radarR*ring/3,0,Math.PI*2); ctx.stroke();
-    });
-    ctx.restore();
-
-    // Connexions nerveuses (orbes → soleil)
-    BODIES.slice(1).forEach(b=>{
-      if(!isBodyVisible(b.id)) return;
-      const pS=toScreen(0,0);
-      const pB=toScreen(bodyWorldPos(b).x, bodyWorldPos(b).y);
-      // Courbe nerveuse
-      const cpX=(pS.x+pB.x)/2+(Math.sin(time*.3+b.dist))*30;
-      const cpY=(pS.y+pB.y)/2+(Math.cos(time*.2+b.dist))*20;
-      const grd=ctx.createLinearGradient(pS.x,pS.y,pB.x,pB.y);
-      grd.addColorStop(0,`rgba(0,255,136,.3)`);
-      grd.addColorStop(.5,`rgba(0,204,255,.08)`);
-      grd.addColorStop(1,`rgba(0,255,136,.15)`);
-      ctx.strokeStyle=grd; ctx.lineWidth=.6;
-      ctx.setLineDash([3,8]);
-      ctx.beginPath(); ctx.moveTo(pS.x,pS.y);
-      ctx.quadraticCurveTo(cpX,cpY,pB.x,pB.y);
-      ctx.stroke(); ctx.setLineDash([]);
+      ctx.setLineDash([6,10]);
+      ctx.beginPath(); ctx.arc(sp.x,sp.y,r,0,Math.PI*2); ctx.stroke();
+      ctx.setLineDash([]);
     });
 
-    // Paquets de données animés
-    dataPackets.forEach((pk,i)=>{
-      const from=BODIES.find(b=>b.id===pk.fromId);
-      const to=BODIES.find(b=>b.id===pk.toId);
-      if(!from||!to||!isBodyVisible(from.id)) return;
-      pk.progress+=pk.speed;
-      if(pk.progress>1){ dataPackets.splice(i,1); return; }
-      const fp=bodyWorldPos(from), tp=bodyWorldPos(to);
-      const t2=pk.progress;
-      const x=fp.x+(tp.x-fp.x)*t2;
-      const y=fp.y+(tp.y-fp.y)*t2;
-      const sp=toScreen(x,y);
-      const trail=8;
-      for(let j=0;j<trail;j++){
-        const jt=Math.max(0,t2-j*.015);
-        const jx=fp.x+(tp.x-fp.x)*jt, jy=fp.y+(tp.y-fp.y)*jt;
-        const jsp=toScreen(jx,jy);
-        ctx.fillStyle=`rgba(0,255,136,${(1-j/trail)*pk.alpha*.6})`;
-        ctx.beginPath(); ctx.arc(jsp.x,jsp.y,1.5-j*.15,0,Math.PI*2); ctx.fill();
-      }
-      ctx.fillStyle=`rgba(0,255,255,${pk.alpha})`;
-      ctx.beginPath(); ctx.arc(sp.x,sp.y,2.5,0,Math.PI*2); ctx.fill();
-    });
+    // ── Fils de la toile ──
+    THREADS.forEach(th=>{
+      const na=NODES.find(x=>x.id===th.a), nb=NODES.find(x=>x.id===th.b);
+      if(!na||!nb) return;
+      const pA=toScreen(nodeWorldPos(na).x,nodeWorldPos(na).y);
+      const pB=toScreen(nodeWorldPos(nb).x,nodeWorldPos(nb).y);
+      const key=th.a+':'+th.b;
+      const isHovThread=(hovered&&(hovered===th.a||hovered===th.b));
+      const isSelThread=(selected&&(selected===th.a||selected===th.b));
 
-    // Astres
-    BODIES.forEach(b=>{
-      if(!isBodyVisible(b.id)&&!_isAdmin()) return;
-      const wp=bodyWorldPos(b);
-      const sp=toScreen(wp.x,wp.y);
-      const visible=isBodyVisible(b.id);
-      const isHovered=hoveredBody===b.id;
-      const isSelected=selectedBody===b.id;
-      const linkedEntry=getLinkedEntry(b.id);
-      const sr=b.r*zoom;
+      // Vibration
+      if(isHovThread&&!threadVibs[key]) threadVibs[key]={amp:3,phase:Math.random()*Math.PI*2};
+      if(!isHovThread&&threadVibs[key]){ threadVibs[key].amp*=.92; if(threadVibs[key].amp<.05) delete threadVibs[key]; }
 
-      if(!visible&&_isAdmin()){
-        // Admin voit les planètes cachées en grisé fantôme
-        ctx.strokeStyle='rgba(255,51,51,.15)'; ctx.lineWidth=1;
-        ctx.setLineDash([3,4]);
-        ctx.beginPath(); ctx.arc(sp.x,sp.y,sr,0,Math.PI*2); ctx.stroke();
-        ctx.setLineDash([]);
-        ctx.fillStyle='rgba(255,0,0,.04)';
-        ctx.beginPath(); ctx.arc(sp.x,sp.y,sr,0,Math.PI*2); ctx.fill();
-        ctx.fillStyle='rgba(255,51,51,.3)';
-        ctx.font=`${7*zoom}px monospace`;
-        ctx.textAlign='center';
-        ctx.fillText('HIDDEN',sp.x,sp.y+3);
-        return;
-      }
-
-      // Halo externe pulsant
-      const pulse=Math.sin(time*1.5+b.dist*.01)*.5+.5;
-      if(b.id==='sun'){
-        const hg=ctx.createRadialGradient(sp.x,sp.y,sr*.5,sp.x,sp.y,sr*3);
-        hg.addColorStop(0,`rgba(255,180,0,${.12+pulse*.08})`);
-        hg.addColorStop(.5,`rgba(255,120,0,${.04+pulse*.03})`);
-        hg.addColorStop(1,'transparent');
-        ctx.fillStyle=hg; ctx.beginPath(); ctx.arc(sp.x,sp.y,sr*3,0,Math.PI*2); ctx.fill();
+      const vib=threadVibs[key];
+      const mid={x:(pA.x+pB.x)/2, y:(pA.y+pB.y)/2};
+      let cpX=mid.x, cpY=mid.y;
+      if(vib){
+        vib.phase+=.15;
+        const perp={x:-(pB.y-pA.y),y:pB.x-pA.x};
+        const len=Math.hypot(perp.x,perp.y)||1;
+        cpX=mid.x+(perp.x/len)*Math.sin(vib.phase)*vib.amp;
+        cpY=mid.y+(perp.y/len)*Math.sin(vib.phase)*vib.amp;
       } else {
-        const hColor=b.rank===1?`rgba(0,255,136,`:`rgba(0,180,255,`;
-        const hg=ctx.createRadialGradient(sp.x,sp.y,sr*.8,sp.x,sp.y,sr*2.2);
-        hg.addColorStop(0,`${hColor}${.06+pulse*.04})`);
-        hg.addColorStop(1,'transparent');
-        ctx.fillStyle=hg; ctx.beginPath(); ctx.arc(sp.x,sp.y,sr*2.2,0,Math.PI*2); ctx.fill();
+        // Légère courbure naturelle de la toile
+        const perp={x:-(pB.y-pA.y),y:pB.x-pA.x};
+        const len=Math.hypot(perp.x,perp.y)||1;
+        const curve=(Math.sin(time*.3+na.idx+nb.idx))*1.5*zoom;
+        cpX=mid.x+(perp.x/len)*curve;
+        cpY=mid.y+(perp.y/len)*curve;
       }
 
-      // Corps principal
-      let bodyColor;
-      if(b.id==='sun') bodyColor=ctx.createRadialGradient(sp.x-sr*.2,sp.y-sr*.2,sr*.1,sp.x,sp.y,sr);
-      else bodyColor=ctx.createRadialGradient(sp.x-sr*.3,sp.y-sr*.3,sr*.1,sp.x,sp.y,sr);
+      const alpha = isSelThread?.55:isHovThread?.4:.14;
+      const col = isSelThread?C.accent:isHovThread?C.accent:C.web;
 
-      if(b.id==='sun'){
-        bodyColor.addColorStop(0,'#fff4a0'); bodyColor.addColorStop(.4,'#ffb020'); bodyColor.addColorStop(1,'#c84000');
-      } else if(b.rank===1){
-        bodyColor.addColorStop(0,`rgba(0,255,136,.9)`); bodyColor.addColorStop(.5,`rgba(0,180,80,.7)`); bodyColor.addColorStop(1,`rgba(0,80,30,.8)`);
-      } else {
-        bodyColor.addColorStop(0,`rgba(0,200,255,.9)`); bodyColor.addColorStop(.5,`rgba(0,120,200,.7)`); bodyColor.addColorStop(1,`rgba(0,40,100,.8)`);
-      }
+      // Fil principal
+      ctx.strokeStyle=isSelThread||isHovThread?C.accent:`rgba(0,180,220,${alpha})`;
+      ctx.lineWidth=isSelThread?1.2:.5;
+      ctx.globalAlpha=alpha;
+      ctx.beginPath(); ctx.moveTo(pA.x,pA.y); ctx.quadraticCurveTo(cpX,cpY,pB.x,pB.y); ctx.stroke();
+      ctx.globalAlpha=1;
 
-      ctx.fillStyle=bodyColor;
-      ctx.beginPath(); ctx.arc(sp.x,sp.y,sr,0,Math.PI*2); ctx.fill();
-
-      // Anneau sélection
-      if(isSelected||isHovered){
-        ctx.strokeStyle=isSelected?ACCENT:ACCENT2;
-        ctx.lineWidth=isSelected?2:1;
-        ctx.globalAlpha=isSelected?1:.6;
-        ctx.setLineDash(isSelected?[]:[4,4]);
-        ctx.beginPath(); ctx.arc(sp.x,sp.y,sr+(isSelected?6:4)*zoom,0,Math.PI*2); ctx.stroke();
-        ctx.setLineDash([]); ctx.globalAlpha=1;
-        // Petits coins décoratifs
-        if(isSelected){
-          const cr=sr+10*zoom;
-          [[-.3,-.3],[.3,-.3],[.3,.3],[-.3,.3]].forEach(([dx,dy])=>{
-            const cx2=sp.x+dx*cr*2, cy2=sp.y+dy*cr*2;
-            ctx.strokeStyle=ACCENT; ctx.lineWidth=1.5;
-            ctx.beginPath(); ctx.moveTo(cx2-dx*8,cy2); ctx.lineTo(cx2,cy2); ctx.lineTo(cx2,cy2-dy*8); ctx.stroke();
-          });
-        }
-      }
-
-      // Nom en dessous
-      if(zoom>.4||b.id==='sun'){
-        ctx.fillStyle=b.id==='sun'?GOLD:isSelected?ACCENT:ACCENT2;
-        ctx.font=`${Math.max(7,8*zoom)}px monospace`;
-        ctx.textAlign='center';
-        ctx.globalAlpha=.8;
-        ctx.fillText(b.name, sp.x, sp.y+sr+14*zoom);
+      // Reflet lumineux sur fil sélectionné
+      if(isSelThread){
+        const grad=ctx.createLinearGradient(pA.x,pA.y,pB.x,pB.y);
+        grad.addColorStop(0,'transparent'); grad.addColorStop(.5,`rgba(0,229,255,.25)`); grad.addColorStop(1,'transparent');
+        ctx.strokeStyle=grad; ctx.lineWidth=3; ctx.globalAlpha=.4;
+        ctx.beginPath(); ctx.moveTo(pA.x,pA.y); ctx.quadraticCurveTo(cpX,cpY,pB.x,pB.y); ctx.stroke();
         ctx.globalAlpha=1;
       }
     });
 
-    // Glitch occasionnel
-    glitchTimer--;
-    if(glitchTimer<0){
-      glitchTimer=150+Math.floor(Math.random()*300);
-      if(Math.random()>.7){
-        ctx.fillStyle='rgba(0,255,136,.03)';
-        ctx.fillRect(0,Math.random()*H,W,1+Math.random()*3);
+    // ── Paquets de données sur les fils ──
+    PACKETS.forEach((pk,i)=>{
+      const na=NODES.find(x=>x.id===pk.from), nb=NODES.find(x=>x.id===pk.to);
+      if(!na||!nb){ PACKETS.splice(i,1); return; }
+      pk.progress+=pk.speed;
+      if(pk.progress>1){ PACKETS.splice(i,1); return; }
+      const pA=toScreen(nodeWorldPos(na).x,nodeWorldPos(na).y);
+      const pB=toScreen(nodeWorldPos(nb).x,nodeWorldPos(nb).y);
+      const mid={x:(pA.x+pB.x)/2,y:(pA.y+pB.y)/2};
+      const t2=pk.progress;
+      // Bézier
+      const x=(1-t2)*(1-t2)*pA.x+2*(1-t2)*t2*mid.x+t2*t2*pB.x;
+      const y=(1-t2)*(1-t2)*pA.y+2*(1-t2)*t2*mid.y+t2*t2*pB.y;
+      // Traîne
+      for(let j=0;j<6;j++){
+        const jt=Math.max(0,t2-j*.02);
+        const jx=(1-jt)*(1-jt)*pA.x+2*(1-jt)*jt*mid.x+jt*jt*pB.x;
+        const jy=(1-jt)*(1-jt)*pA.y+2*(1-jt)*jt*mid.y+jt*jt*pB.y;
+        ctx.fillStyle=`rgba(0,229,255,${pk.alpha*(1-j/6)*.5})`;
+        ctx.beginPath(); ctx.arc(jx,jy,.8,0,Math.PI*2); ctx.fill();
       }
-    }
+      ctx.fillStyle=`rgba(180,240,255,${pk.alpha})`;
+      ctx.beginPath(); ctx.arc(x,y,pk.size,0,Math.PI*2); ctx.fill();
+    });
+
+    // ── Nœuds ──
+    NODES.forEach(nd=>{
+      const vis=isVisible(nd.id);
+      if(!vis&&!_isAdmin()) return;
+      const wp=nodeWorldPos(nd);
+      const sp=toScreen(wp.x,wp.y);
+      const isHov=hovered===nd.id, isSel=selected===nd.id;
+      const entry=getEntry(nd.id);
+      const r=(nd.ring===0?22:nd.ring===1?13:11)*zoom;
+
+      if(!vis&&_isAdmin()){
+        ctx.strokeStyle='rgba(255,34,68,.2)'; ctx.lineWidth=1; ctx.setLineDash([3,4]);
+        ctx.beginPath(); ctx.arc(sp.x,sp.y,r,0,Math.PI*2); ctx.stroke();
+        ctx.setLineDash([]);
+        ctx.fillStyle='rgba(255,34,68,.35)';
+        ctx.font=`${Math.max(6,6*zoom)}px monospace`; ctx.textAlign='center';
+        ctx.fillText('◌',sp.x,sp.y+2);
+        return;
+      }
+
+      // Anneaux de pulse (nœud sélectionné)
+      if(isSel){
+        [1.8,2.6].forEach((mult,pi)=>{
+          const pr=(r*mult)*(1+Math.sin(time*2+pi*1.2)*.08);
+          ctx.strokeStyle=`rgba(0,229,255,${.15-pi*.05})`;
+          ctx.lineWidth=.8; ctx.globalAlpha=.6+Math.sin(time*2+pi)*(.2);
+          ctx.beginPath(); ctx.arc(sp.x,sp.y,pr,0,Math.PI*2); ctx.stroke();
+          ctx.globalAlpha=1;
+        });
+      }
+
+      // Halo
+      const haloA=isHov?.18:isSel?.22:.08+Math.sin(time*1.2+nd.idx)*.03;
+      const haloCol=nd.ring===0?C.core:nd.ring===1?C.r1:C.r2;
+      const hg=ctx.createRadialGradient(sp.x,sp.y,r*.3,sp.x,sp.y,r*2.5);
+      hg.addColorStop(0,haloCol.replace(')',`,${haloA})`).replace('#',`rgba(`).replace(/([0-9a-f]{2})/gi,(m)=>parseInt(m,16)+','));
+      // Simple approach:
+      if(nd.ring===0){
+        const hg2=ctx.createRadialGradient(sp.x,sp.y,r*.2,sp.x,sp.y,r*2.8);
+        hg2.addColorStop(0,`rgba(255,210,80,${haloA})`); hg2.addColorStop(1,'transparent');
+        ctx.fillStyle=hg2; ctx.beginPath(); ctx.arc(sp.x,sp.y,r*2.8,0,Math.PI*2); ctx.fill();
+      } else if(nd.ring===1){
+        const hg2=ctx.createRadialGradient(sp.x,sp.y,r*.2,sp.x,sp.y,r*2.5);
+        hg2.addColorStop(0,`rgba(0,229,255,${haloA})`); hg2.addColorStop(1,'transparent');
+        ctx.fillStyle=hg2; ctx.beginPath(); ctx.arc(sp.x,sp.y,r*2.5,0,Math.PI*2); ctx.fill();
+      } else {
+        const hg2=ctx.createRadialGradient(sp.x,sp.y,r*.2,sp.x,sp.y,r*2.2);
+        hg2.addColorStop(0,`rgba(112,64,255,${haloA})`); hg2.addColorStop(1,'transparent');
+        ctx.fillStyle=hg2; ctx.beginPath(); ctx.arc(sp.x,sp.y,r*2.2,0,Math.PI*2); ctx.fill();
+      }
+
+      // Corps du nœud
+      let nodeGrad;
+      if(nd.ring===0){
+        nodeGrad=ctx.createRadialGradient(sp.x-r*.3,sp.y-r*.3,r*.1,sp.x,sp.y,r);
+        nodeGrad.addColorStop(0,'#fff8c0'); nodeGrad.addColorStop(.5,'#ffa820'); nodeGrad.addColorStop(1,'#c05000');
+      } else if(nd.ring===1){
+        nodeGrad=ctx.createRadialGradient(sp.x-r*.3,sp.y-r*.3,r*.1,sp.x,sp.y,r);
+        nodeGrad.addColorStop(0,'rgba(160,240,255,.95)'); nodeGrad.addColorStop(.6,'rgba(0,180,220,.85)'); nodeGrad.addColorStop(1,'rgba(0,60,100,.9)');
+      } else {
+        nodeGrad=ctx.createRadialGradient(sp.x-r*.3,sp.y-r*.3,r*.1,sp.x,sp.y,r);
+        nodeGrad.addColorStop(0,'rgba(180,140,255,.95)'); nodeGrad.addColorStop(.6,'rgba(100,60,220,.85)'); nodeGrad.addColorStop(1,'rgba(30,10,80,.9)');
+      }
+      ctx.fillStyle=nodeGrad;
+      ctx.beginPath(); ctx.arc(sp.x,sp.y,r,0,Math.PI*2); ctx.fill();
+
+      // Contour
+      ctx.strokeStyle=isHov||isSel?'rgba(0,229,255,.8)':'rgba(0,200,255,.3)';
+      ctx.lineWidth=isHov||isSel?1.5:.6;
+      ctx.beginPath(); ctx.arc(sp.x,sp.y,r,0,Math.PI*2); ctx.stroke();
+
+      // Portrait miniature si disponible
+      if(entry&&entry.images&&entry.images[0]&&vis&&zoom>.5){
+        try{
+          const img=new Image(); img.src=entry.images[0];
+          if(img.complete&&img.naturalWidth>0){
+            ctx.save(); ctx.beginPath(); ctx.arc(sp.x,sp.y,r*.85,0,Math.PI*2); ctx.clip();
+            ctx.globalAlpha=.75;
+            ctx.drawImage(img,sp.x-r*.85,sp.y-r*.85,r*1.7,r*1.7);
+            ctx.globalAlpha=1; ctx.restore();
+          }
+        }catch(e){}
+      }
+
+      // Label
+      if(zoom>.35){
+        const labelY=sp.y+r+(nd.ring===0?18:14)*zoom;
+        ctx.fillStyle=nd.ring===0?C.gold:isHov||isSel?C.accent:'rgba(0,210,255,.7)';
+        ctx.font=`${Math.max(7,nd.ring===0?10:8)*zoom}px monospace`;
+        ctx.textAlign='center'; ctx.globalAlpha=.9;
+        ctx.fillText(nd.name,sp.x,labelY);
+        if(zoom>.6&&nd.ring>0){
+          ctx.fillStyle='rgba(0,180,255,.35)';
+          ctx.font=`${Math.max(6,6*zoom)}px monospace`;
+          ctx.fillText(nd.role,sp.x,labelY+(nd.ring===0?14:12)*zoom);
+        }
+        ctx.globalAlpha=1;
+      }
+
+      // Indicateur CLASSIFIÉ
+      if(entry&&entry._hidden&&_isAdmin()){
+        ctx.fillStyle='rgba(255,34,68,.7)';
+        ctx.font=`${Math.max(6,6*zoom)}px monospace`;
+        ctx.textAlign='center';
+        ctx.fillText('◈',sp.x,sp.y-r-4*zoom);
+      }
+    });
 
     // Coords HUD
     const wc=toWorld(W/2,H/2);
-    const coordEl=document.getElementById('_sol-coords');
-    if(coordEl) coordEl.textContent=`COORD: ${wc.x.toFixed(1)} / ${wc.y.toFixed(1)} | ZOOM: ${(zoom*100).toFixed(0)}%`;
+    const el=document.getElementById('_sn-coord');
+    if(el) el.textContent=`PAN ${wc.x.toFixed(0)},${wc.y.toFixed(0)} · ZOOM ${(zoom*100).toFixed(0)}%`;
   }
 
-  // ── Animation loop ──
-  function animate(){
-    window._solarisAnim=requestAnimationFrame(animate);
-    time+=.008;
-    // Orbites
-    BODIES.forEach(b=>{
-      if(b.dist>0) bodyAngles[b.id]=(bodyAngles[b.id]||0)+b.speed*.00025;
-    });
-    // Smooth zoom
-    zoom+=(targetZoom-zoom)*.08;
+  // ── Loop ──
+  function loop(){
+    window._solarisAnim=requestAnimationFrame(loop);
+    time+=.005;
+    zoom+=(targetZoom-zoom)*.1;
     draw();
   }
-  animate();
+  loop();
 
-  // ── Interactions ──
-  function getBodyAt(sx,sy){
+  // ── Interactions souris ──
+  function getNodeAt(sx,sy){
     const wp=toWorld(sx,sy);
-    let closest=null, minDist=Infinity;
-    BODIES.forEach(b=>{
-      if(!isBodyVisible(b.id)&&!_isAdmin()) return;
-      if(!isBodyVisible(b.id)) return; // Admin voit mais ne sélectionne pas les cachés
-      const p=bodyWorldPos(b);
+    let best=null, bestD=Infinity;
+    NODES.forEach(nd=>{
+      if(!isVisible(nd.id)) return;
+      const p=nodeWorldPos(nd);
       const d=Math.hypot(p.x-wp.x,p.y-wp.y);
-      const hitR=(b.r*1.8)/zoom;
-      if(d<hitR&&d<minDist){ minDist=d; closest=b; }
+      const hr=(nd.ring===0?28:16)/zoom;
+      if(d<hr&&d<bestD){ bestD=d; best=nd; }
     });
-    return closest;
+    return best;
   }
 
   canvas.addEventListener('mousemove',e=>{
-    const r=canvas.getBoundingClientRect();
-    const sx=e.clientX-r.left, sy=e.clientY-r.top;
-    if(isDragging){
-      cameraX=camStart.x+(sx-dragStart.x);
-      cameraY=camStart.y+(sy-dragStart.y);
-      canvas.style.cursor='grabbing';
-      return;
-    }
-    const b=getBodyAt(sx,sy);
-    hoveredBody=b?b.id:null;
-    canvas.style.cursor=b?'pointer':'crosshair';
+    const r=canvas.getBoundingClientRect(), sx=e.clientX-r.left, sy=e.clientY-r.top;
+    if(isDragging){ cameraX_=camStart.x+(sx-dragStart.x); cy=camStart.y+(sy-dragStart.y); cx=cameraX_; return; }
+    const nd=getNodeAt(sx,sy);
+    hovered=nd?nd.id:null;
+    canvas.style.cursor=nd?'pointer':'crosshair';
   });
-
   canvas.addEventListener('mousedown',e=>{
     const r=canvas.getBoundingClientRect();
-    isDragging=true; dragStart={x:e.clientX-r.left,y:e.clientY-r.top};
-    camStart={x:cameraX,y:cameraY};
+    isDragging=true; dragStart={x:e.clientX-r.left,y:e.clientY-r.top}; camStart={x:cx,y:cy};
   });
+  let cameraX_=cx;
   canvas.addEventListener('mouseup',e=>{
     const r=canvas.getBoundingClientRect();
     const dx=Math.abs(e.clientX-r.left-dragStart.x), dy=Math.abs(e.clientY-r.top-dragStart.y);
     isDragging=false;
-    if(dx<4&&dy<4){
-      const b=getBodyAt(e.clientX-r.left,e.clientY-r.top);
-      if(b){ selectedBody=b.id; openDossier(b.id); }
-      else { selectedBody=null; closeDossier(); }
+    if(dx<5&&dy<5){
+      const nd=getNodeAt(e.clientX-r.left,e.clientY-r.top);
+      if(nd){ selected=nd.id; openPanel(nd.id); }
+      else { selected=null; panel.style.transform='translateX(100%)'; }
     }
   });
-  canvas.addEventListener('mouseleave',()=>{ isDragging=false; hoveredBody=null; });
+  canvas.addEventListener('mouseleave',()=>{ isDragging=false; hovered=null; });
   canvas.addEventListener('wheel',e=>{
     e.preventDefault();
-    targetZoom=Math.max(.15,Math.min(3,targetZoom*( e.deltaY>0?.9:1.1)));
+    targetZoom=Math.max(.2,Math.min(3,targetZoom*(e.deltaY>0?.88:1.14)));
   },{passive:false});
 
   // Touch
-  let lastTD=0;
+  let ltd=0;
   canvas.addEventListener('touchstart',e=>{
-    if(e.touches.length===1){ isDragging=true; const t2=e.touches[0]; dragStart={x:t2.clientX,y:t2.clientY}; camStart={x:cameraX,y:cameraY}; }
-    else if(e.touches.length===2){ lastTD=Math.hypot(e.touches[0].clientX-e.touches[1].clientX,e.touches[0].clientY-e.touches[1].clientY); }
+    if(e.touches.length===1){ isDragging=true; dragStart={x:e.touches[0].clientX,y:e.touches[0].clientY}; camStart={x:cx,y:cy}; }
+    else if(e.touches.length===2) ltd=Math.hypot(e.touches[0].clientX-e.touches[1].clientX,e.touches[0].clientY-e.touches[1].clientY);
   });
   canvas.addEventListener('touchmove',e=>{
     e.preventDefault();
-    if(e.touches.length===1&&isDragging){ cameraX=camStart.x+(e.touches[0].clientX-dragStart.x); cameraY=camStart.y+(e.touches[0].clientY-dragStart.y); }
-    else if(e.touches.length===2){ const d=Math.hypot(e.touches[0].clientX-e.touches[1].clientX,e.touches[0].clientY-e.touches[1].clientY); targetZoom=Math.max(.15,Math.min(3,targetZoom*(d/lastTD))); lastTD=d; }
+    if(e.touches.length===1&&isDragging){ cx=camStart.x+(e.touches[0].clientX-dragStart.x); cy=camStart.y+(e.touches[0].clientY-dragStart.y); cameraX_=cx; }
+    else if(e.touches.length===2){ const d=Math.hypot(e.touches[0].clientX-e.touches[1].clientX,e.touches[0].clientY-e.touches[1].clientY); targetZoom=Math.max(.2,Math.min(3,targetZoom*(d/ltd))); ltd=d; }
   },{passive:false});
-  canvas.addEventListener('touchend',e=>{ isDragging=false; });
+  canvas.addEventListener('touchend',()=>{ isDragging=false; });
 
-  // ── Dossier classifié ──
-  function openDossier(bodyId){
-    const b=BODIES.find(x=>x.id===bodyId); if(!b) return;
-    const entry=getLinkedEntry(bodyId);
-    const visible=isBodyVisible(bodyId);
-
-    // En-tête avec effet typage
-    const headerBg=b.id==='sun'?'rgba(255,150,0,.05)':b.rank===1?'rgba(0,255,136,.04)':'rgba(0,180,255,.04)';
-    const headerColor=b.id==='sun'?GOLD:b.rank===1?ACCENT:ACCENT2;
+  // ── Panneau dossier ──
+  function openPanel(bodyId){
+    const nd=NODES.find(x=>x.id===bodyId); if(!nd) return;
+    const entry=getEntry(bodyId);
+    const vis=isVisible(bodyId);
+    const hcol=nd.ring===0?C.gold:nd.ring===1?C.r1:C.r2;
 
     let portraitHTML;
-    if(!visible){
-      portraitHTML=`<div style="width:100%;height:160px;border:1px solid rgba(255,51,51,.2);display:flex;flex-direction:column;align-items:center;justify-content:center;background:rgba(255,0,0,.03);margin-bottom:16px">
-        <div style="font-size:32px;color:rgba(255,51,51,.3);margin-bottom:8px">⛔</div>
-        <div style="color:rgba(255,51,51,.5);font-size:9px;letter-spacing:3px">ACCÈS REFUSÉ</div>
-        <div style="color:rgba(255,51,51,.25);font-size:7px;letter-spacing:1px;margin-top:4px">HABILITATION INSUFFISANTE</div>
+    if(!vis){
+      portraitHTML=`<div style="height:140px;border:1px solid rgba(255,34,68,.15);display:flex;flex-direction:column;align-items:center;justify-content:center;background:rgba(255,34,68,.02);margin-bottom:14px">
+        <div style="font-size:11px;color:rgba(255,34,68,.4);letter-spacing:3px">ACCÈS REFUSÉ</div>
+        <div style="font-size:8px;color:rgba(255,34,68,.2);margin-top:4px;letter-spacing:1px">HABILITATION INSUFFISANTE</div>
       </div>`;
     } else if(entry&&entry.images&&entry.images[0]){
-      portraitHTML=`<div style="position:relative;margin-bottom:16px">
-        <img src="${entry.images[0]}" style="width:100%;height:160px;object-fit:cover;display:block;filter:${_isAdmin()&&entry._hidden?'grayscale(.8) brightness(.5)':'none'}">
-        <div style="position:absolute;inset:0;background:linear-gradient(transparent 60%,#000a04);pointer-events:none"></div>
-        <div style="position:absolute;bottom:0;left:0;right:0;padding:6px 10px;font-size:7px;color:${headerColor};letter-spacing:2px">IDENTIFIÉ</div>
+      portraitHTML=`<div style="position:relative;height:150px;overflow:hidden;margin-bottom:14px">
+        <img src="${entry.images[0]}" style="width:100%;height:100%;object-fit:cover;filter:${entry._hidden?'brightness(.4)':'none'}">
+        <div style="position:absolute;inset:0;background:linear-gradient(transparent 55%,rgba(0,2,12,.95))"></div>
+        <div style="position:absolute;bottom:6px;left:10px;font-size:7px;color:${hcol};letter-spacing:2px">${entry._hidden?'CLASSIFIÉ':'IDENTIFIÉ'}</div>
       </div>`;
     } else {
-      portraitHTML=`<div style="width:100%;height:120px;border:1px dashed rgba(0,255,136,.15);display:flex;align-items:center;justify-content:center;margin-bottom:16px;background:rgba(0,255,136,.02)">
-        <div style="text-align:center">
-          <div style="font-size:24px;color:rgba(0,255,136,.2);margin-bottom:6px">◈</div>
-          <div style="font-size:7px;color:rgba(0,255,136,.25);letter-spacing:2px">DOSSIER VIDE</div>
-        </div>
+      portraitHTML=`<div style="height:80px;border:1px dashed rgba(0,229,255,.1);display:flex;align-items:center;justify-content:center;margin-bottom:14px">
+        <div style="font-size:8px;color:rgba(0,229,255,.2);letter-spacing:2px">AUCUN DOSSIER VISUEL</div>
       </div>`;
     }
 
-    const nameDisplay = !visible&&!_isAdmin()
-      ? `<div style="font-size:14px;color:rgba(255,51,51,.4);letter-spacing:4px;margin-bottom:4px">████████</div>`
-      : `<div style="font-size:13px;color:${headerColor};letter-spacing:3px;margin-bottom:4px">${b.name}</div>`;
-
-    // Barres stats
-    const statsHTML = entry&&entry.stats?`
-      <div style="border-top:1px solid rgba(0,255,136,.1);padding-top:12px;margin-top:12px">
-        <div style="font-size:7px;color:rgba(0,255,136,.4);letter-spacing:2px;margin-bottom:8px">CAPACITÉS</div>
+    const statsHTML=entry&&entry.stats&&vis?`
+      <div style="border-top:1px solid rgba(0,229,255,.08);padding-top:10px;margin-top:10px">
         ${['phys','magic','intel'].map(cat=>{
-          const vals=Object.values(entry.stats[cat]||{});
+          const vals=Object.values(entry.stats[cat]||{}).map(Number).filter(v=>v>0);
           if(!vals.length) return '';
-          const avg=Math.round(vals.reduce((a,b2)=>a+(Number(b2)||0),0)/vals.length);
+          const avg=Math.round(vals.reduce((a,b2)=>a+b2,0)/vals.length);
           const label=cat==='phys'?'PHYSIQUE':cat==='magic'?'MAGIE':'INTEL';
-          const col=cat==='phys'?'#ff8040':cat==='magic'?'#a040ff':'#40c8ff';
-          return `<div style="margin-bottom:6px">
-            <div style="display:flex;justify-content:space-between;font-size:7px;color:${col};margin-bottom:2px;letter-spacing:1px">
-              <span>${label}</span><span>${avg}</span>
-            </div>
-            <div style="height:2px;background:rgba(255,255,255,.06);border-radius:1px">
-              <div style="height:100%;width:${avg}%;background:${col};border-radius:1px;transition:width 1s ease"></div>
-            </div>
+          const col=cat==='phys'?'#ff7040':cat==='magic'?'#9050ff':'#30c8ff';
+          return `<div style="margin-bottom:5px">
+            <div style="display:flex;justify-content:space-between;font-size:7px;color:${col};margin-bottom:2px;letter-spacing:1px"><span>${label}</span><span>${avg}</span></div>
+            <div style="height:1px;background:rgba(255,255,255,.06)"><div style="height:100%;width:${avg}%;background:${col}"></div></div>
           </div>`;
         }).join('')}
       </div>`:'' ;
 
-    let actionHTML='';
+    let actions='';
     if(_isAdmin()){
       if(entry){
-        actionHTML=`
-          <button onclick="selectNode('${entry.id}');closeDossier?closeDossier():null;document.getElementById('_sol-dossier').style.transform='translateX(100%)'"
-            style="width:100%;padding:9px;background:rgba(0,255,136,.06);border:1px solid rgba(0,255,136,.3);
-            color:${ACCENT};font-family:monospace;font-size:9px;letter-spacing:2px;cursor:pointer;margin-bottom:6px;transition:all .2s"
-            onmouseenter="this.style.background='rgba(0,255,136,.14)'" onmouseleave="this.style.background='rgba(0,255,136,.06)'">
-            ► OUVRIR DOSSIER
-          </button>
+        actions=`
+          <button onclick="selectNode('${entry.id}');document.getElementById('_sn-panel').style.transform='translateX(100%)'"
+            style="width:100%;padding:8px;background:rgba(0,229,255,.05);border:1px solid rgba(0,229,255,.25);color:${C.accent};font-family:monospace;font-size:9px;letter-spacing:2px;cursor:pointer;margin-bottom:5px"
+            onmouseenter="this.style.background='rgba(0,229,255,.12)'" onmouseleave="this.style.background='rgba(0,229,255,.05)'">► OUVRIR DOSSIER</button>
           <button onclick="window._solarToggleVisible('${bodyId}','${n.id}')"
-            style="width:100%;padding:7px;background:${entry._hidden?'rgba(255,51,51,.06)':'rgba(255,51,51,.03)'};
-            border:1px solid rgba(255,51,51,${entry._hidden?.3:.15});
-            color:rgba(255,51,51,${entry._hidden?.7:.4});font-family:monospace;font-size:8px;letter-spacing:1px;cursor:pointer;transition:all .2s"
-            onmouseenter="this.style.background='rgba(255,51,51,.12)'" onmouseleave="this.style.background='${entry._hidden?'rgba(255,51,51,.06)':'rgba(255,51,51,.03)'}'">
-            ${entry._hidden?'▲ RÉVÉLER AUX AGENTS':'▼ RECLASSIFIER SECRET'}
-          </button>`;
+            style="width:100%;padding:7px;background:${entry._hidden?'rgba(255,34,68,.05)':'rgba(255,34,68,.02)'};border:1px solid rgba(255,34,68,${entry._hidden?.25:.1});color:rgba(255,34,68,${entry._hidden?.6:.35});font-family:monospace;font-size:8px;letter-spacing:1px;cursor:pointer"
+            onmouseenter="this.style.background='rgba(255,34,68,.1)'" onmouseleave="this.style.background='${entry._hidden?'rgba(255,34,68,.05)':'rgba(255,34,68,.02)'}'">
+            ${entry._hidden?'▲ RÉVÉLER':'▼ RECLASSIFIER'}</button>`;
       } else {
-        actionHTML=`
-          <button onclick="window._solarLinkEntry('${bodyId}','${n.id}')"
-            style="width:100%;padding:9px;background:rgba(0,255,136,.03);border:1px dashed rgba(0,255,136,.2);
-            color:rgba(0,255,136,.5);font-family:monospace;font-size:8px;letter-spacing:2px;cursor:pointer;transition:all .2s"
-            onmouseenter="this.style.background='rgba(0,255,136,.08)'" onmouseleave="this.style.background='rgba(0,255,136,.03)'">
-            + ENREGISTRER DOSSIER
-          </button>`;
+        actions=`<button onclick="window._solarLinkEntry('${bodyId}','${n.id}')"
+          style="width:100%;padding:8px;background:transparent;border:1px dashed rgba(0,229,255,.15);color:rgba(0,229,255,.4);font-family:monospace;font-size:8px;letter-spacing:2px;cursor:pointer"
+          onmouseenter="this.style.background='rgba(0,229,255,.06)'" onmouseleave="this.style.background='transparent'">+ ENREGISTRER DOSSIER</button>`;
       }
-    } else if(visible&&entry){
-      actionHTML=`
-        <button onclick="selectNode('${entry.id}');document.getElementById('_sol-dossier').style.transform='translateX(100%)'"
-          style="width:100%;padding:9px;background:rgba(0,255,136,.06);border:1px solid rgba(0,255,136,.3);
-          color:${ACCENT};font-family:monospace;font-size:9px;letter-spacing:2px;cursor:pointer;transition:all .2s"
-          onmouseenter="this.style.background='rgba(0,255,136,.14)'" onmouseleave="this.style.background='rgba(0,255,136,.06)'">
-          ► ACCÉDER AU DOSSIER
-        </button>`;
+    } else if(vis&&entry){
+      actions=`<button onclick="selectNode('${entry.id}');document.getElementById('_sn-panel').style.transform='translateX(100%)'"
+        style="width:100%;padding:8px;background:rgba(0,229,255,.05);border:1px solid rgba(0,229,255,.25);color:${C.accent};font-family:monospace;font-size:9px;letter-spacing:2px;cursor:pointer"
+        onmouseenter="this.style.background='rgba(0,229,255,.12)'" onmouseleave="this.style.background='rgba(0,229,255,.05)'">► ACCÉDER AU DOSSIER</button>`;
     }
 
-    dossier.innerHTML=`
-      <div style="position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,${headerColor},transparent)"></div>
-      <div style="padding:16px;border-bottom:1px solid rgba(0,255,136,.08);background:${headerBg}">
-        <div style="display:flex;justify-content:space-between;align-items:flex-start">
-          <div style="font-size:7px;color:rgba(0,255,136,.3);letter-spacing:2px">DOSSIER #${String(BODIES.indexOf(b)).padStart(3,'0')}</div>
-          <button onclick="document.getElementById('_sol-dossier').style.transform='translateX(100%)'"
-            style="background:none;border:none;color:rgba(0,255,136,.4);cursor:pointer;font-size:12px;padding:0">✕</button>
+    panel.innerHTML=`
+      <div style="position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,${hcol},transparent)"></div>
+      <div style="padding:14px 16px;border-bottom:1px solid rgba(0,229,255,.07)">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+          <div style="font-size:7px;color:rgba(0,229,255,.25);letter-spacing:2px">NŒUD #${String(NODES.findIndex(x=>x.id===bodyId)).padStart(3,'0')}</div>
+          <button onclick="document.getElementById('_sn-panel').style.transform='translateX(100%)';selected=null" style="background:none;border:none;color:rgba(0,229,255,.3);cursor:pointer;font-size:11px">✕</button>
         </div>
-        ${nameDisplay}
-        <div style="font-size:8px;color:rgba(0,255,136,.4);letter-spacing:1px">${b.role}</div>
-        <div style="margin-top:8px;display:flex;gap:6px">
-          <span style="font-size:6px;padding:2px 6px;border:1px solid rgba(0,255,136,.2);color:rgba(0,255,136,.5);letter-spacing:1px">
-            ${b.rank===0?'OMEGA':b.rank===1?'ALPHA':'BETA'}
-          </span>
-          ${entry?`<span style="font-size:6px;padding:2px 6px;border:1px solid ${entry._hidden?'rgba(255,51,51,.3)':'rgba(0,255,136,.2)'};color:${entry._hidden?'rgba(255,51,51,.6)':'rgba(0,255,136,.5)'};letter-spacing:1px">${entry._hidden?'CLASSIFIÉ':'RÉVÉLÉ'}</span>`:'<span style="font-size:6px;padding:2px 6px;border:1px solid rgba(255,200,50,.15);color:rgba(255,200,50,.4);letter-spacing:1px">NON ENREGISTRÉ</span>'}
+        <div style="font-size:12px;color:${hcol};letter-spacing:3px;margin-bottom:3px">${vis||_isAdmin()?nd.name:'████████'}</div>
+        <div style="font-size:8px;color:rgba(0,229,255,.35);letter-spacing:1px;margin-bottom:8px">${nd.role}</div>
+        <div style="display:flex;gap:5px">
+          <span style="font-size:6px;padding:2px 7px;border:1px solid rgba(0,229,255,.15);color:rgba(0,229,255,.4);letter-spacing:1px">${nd.rank===0?'OMEGA':nd.rank===1?'ALPHA':'BETA'}</span>
+          ${entry?`<span style="font-size:6px;padding:2px 7px;border:1px solid ${entry._hidden?'rgba(255,34,68,.25)':'rgba(0,229,255,.12)'};color:${entry._hidden?'rgba(255,34,68,.55)':'rgba(0,229,255,.35)'};letter-spacing:1px">${entry._hidden?'SECRET':'ACTIF'}</span>`:''}
         </div>
       </div>
-      <div style="flex:1;overflow-y:auto;padding:16px;scrollbar-width:thin;scrollbar-color:rgba(0,255,136,.2) transparent">
+      <div style="flex:1;overflow-y:auto;padding:14px 16px;scrollbar-width:thin;scrollbar-color:rgba(0,229,255,.15) transparent">
         ${portraitHTML}
-        ${entry&&entry.charBio&&visible?`<div style="font-size:11px;color:rgba(0,255,136,.55);line-height:1.7;margin-bottom:14px;font-family:monospace">${esc(entry.charBio.slice(0,200))}${entry.charBio.length>200?'…':''}</div>`:''}
+        ${entry&&entry.charBio&&vis?`<div style="font-size:10px;color:rgba(0,210,255,.45);line-height:1.7;margin-bottom:12px">${esc(entry.charBio.slice(0,180))}${entry.charBio.length>180?'…':''}</div>`:''}
         ${statsHTML}
-        <div style="margin-top:14px">${actionHTML}</div>
+        <div style="margin-top:12px">${actions}</div>
       </div>
     `;
+    panel.style.transform='translateX(0)';
 
-    dossier.style.transform='translateX(0)';
-
-    // Déplacer la caméra vers l'astre
-    const wp=bodyWorldPos(b);
-    const targetX=W/2-wp.x*zoom;
-    const targetY=H/2-wp.y*zoom;
-    const startX=cameraX, startY=cameraY;
-    let p=0;
-    const flyTo=()=>{
-      p+=.06; cameraX=startX+(targetX-startX)*Math.min(1,p); cameraY=startY+(targetY-startY)*Math.min(1,p);
-      if(p<1) requestAnimationFrame(flyTo);
-    };
-    flyTo();
+    // Zoom léger vers le nœud cliqué
+    const wp=nodeWorldPos(nd);
+    const tx=W/2-wp.x*zoom, ty=H/2-wp.y*zoom;
+    let p=0; const sx0=cx,sy0=cy;
+    const fly=()=>{ p+=.07; cx=sx0+(tx-sx0)*Math.min(1,p); cy=sy0+(ty-sy0)*Math.min(1,p); cameraX_=cx; if(p<1) requestAnimationFrame(fly); };
+    fly();
   }
 
-  function closeDossier(){ dossier.style.transform='translateX(100%)'; selectedBody=null; }
   window._solarLinkEntry=function(bodyId,catId){
     const chars=Object.values(db).filter(e=>e.type==='entry'&&e.entryType==='character');
     document.getElementById('_solar-link-modal')?.remove();
     const m=document.createElement('div');
     m.id='_solar-link-modal';
-    m.style.cssText='position:fixed;inset:0;z-index:10000;background:rgba(0,0,0,.9);display:flex;align-items:center;justify-content:center;padding:20px;font-family:monospace';
-    m.innerHTML=`<div style="background:#000d06;border:1px solid rgba(0,255,136,.3);padding:22px;width:min(440px,96vw);max-height:80vh;display:flex;flex-direction:column;gap:10px">
-      <div style="font-size:10px;color:${ACCENT};letter-spacing:3px">ENREGISTRER DOSSIER — ${BODIES.find(b=>b.id===bodyId)?.name||bodyId}</div>
-      <input placeholder="RECHERCHER AGENT..." oninput="
+    m.style.cssText='position:fixed;inset:0;z-index:10000;background:rgba(0,0,0,.92);display:flex;align-items:center;justify-content:center;padding:20px;font-family:monospace';
+    m.innerHTML=`<div style="background:#00020a;border:1px solid rgba(0,229,255,.25);padding:20px;width:min(420px,96vw);max-height:80vh;display:flex;flex-direction:column;gap:10px">
+      <div style="font-size:10px;color:${C.accent};letter-spacing:3px">ENREGISTRER NŒUD — ${NODES.find(b=>b.id===bodyId)?.name||bodyId}</div>
+      <input placeholder="RECHERCHER..." oninput="
         const q=this.value.toLowerCase();
         this.nextElementSibling.innerHTML=Object.values(db).filter(e=>e.type==='entry'&&e.entryType==='character'&&(e.name+' '+(e.lastName||'')).toLowerCase().includes(q))
-          .map(e=>'<div style=\"padding:8px;cursor:pointer;color:rgba(0,255,136,.7);font-size:11px;border-bottom:1px solid rgba(0,255,136,.05)\" onmouseenter=\"this.style.background=\\'rgba(0,255,136,.05)\\'\" onmouseleave=\"this.style.background=\\'\\'\" onclick=\"_solarDoLink(\\'${bodyId}\\',\\'${catId}\\',\\''+e.id+'\\')\">'+(e.name+(e.lastName?' '+e.lastName:''))+'</div>').join('')||'<div style=\"color:rgba(0,255,136,.2);padding:8px;font-size:10px\">AUCUN RÉSULTAT</div>'
-      " style="background:rgba(0,255,136,.04);border:1px solid rgba(0,255,136,.2);padding:8px;color:${ACCENT};font-family:monospace;font-size:11px;outline:none;letter-spacing:1px">
-      <div style="overflow-y:auto;max-height:50vh;border:1px solid rgba(0,255,136,.1)">${chars.map(e=>`<div style="padding:8px;cursor:pointer;color:rgba(0,255,136,.7);font-size:11px;border-bottom:1px solid rgba(0,255,136,.05)" onmouseenter="this.style.background='rgba(0,255,136,.05)'" onmouseleave="this.style.background=''" onclick="_solarDoLink('${bodyId}','${catId}','${e.id}')">${e.name+(e.lastName?' '+e.lastName:'')}</div>`).join('')}</div>
-      <button onclick="document.getElementById('_solar-link-modal').remove()" style="padding:8px;background:none;border:1px solid rgba(0,255,136,.15);color:rgba(0,255,136,.4);font-family:monospace;font-size:9px;cursor:pointer;letter-spacing:2px">ANNULER</button>
+          .map(e=>'<div style=\"padding:7px 10px;cursor:pointer;color:rgba(0,229,255,.7);font-size:10px;border-bottom:1px solid rgba(0,229,255,.05)\" onmouseenter=\"this.style.background=\\'rgba(0,229,255,.05)\\'\" onmouseleave=\"this.style.background=\\'\\'\" onclick=\"_solarDoLink(\\'${bodyId}\\',\\'${catId}\\',\\''+e.id+'\\')\">'+(e.name+(e.lastName?' '+e.lastName:''))+'</div>').join('')||'<div style=\"color:rgba(0,229,255,.2);padding:8px;font-size:9px\">AUCUN RÉSULTAT</div>'
+      " style="background:rgba(0,229,255,.04);border:1px solid rgba(0,229,255,.15);padding:7px 10px;color:${C.accent};font-family:monospace;font-size:10px;outline:none;letter-spacing:1px">
+      <div style="overflow-y:auto;max-height:45vh;border:1px solid rgba(0,229,255,.08)">${chars.map(e=>`<div style="padding:7px 10px;cursor:pointer;color:rgba(0,229,255,.7);font-size:10px;border-bottom:1px solid rgba(0,229,255,.05)" onmouseenter="this.style.background='rgba(0,229,255,.05)'" onmouseleave="this.style.background=''" onclick="_solarDoLink('${bodyId}','${catId}','${e.id}')">${e.name+(e.lastName?' '+e.lastName:'')}</div>`).join('')}</div>
+      <button onclick="document.getElementById('_solar-link-modal').remove()" style="padding:7px;background:none;border:1px solid rgba(0,229,255,.1);color:rgba(0,229,255,.35);font-family:monospace;font-size:9px;cursor:pointer;letter-spacing:2px">ANNULER</button>
     </div>`;
     document.body.appendChild(m);
     m.addEventListener('click',e=>{ if(e.target===m) m.remove(); });
@@ -4595,22 +4563,28 @@ function renderSolarisImmersive(v, n){
     if(!cat._solarBodies) cat._solarBodies={};
     cat._solarBodies[bodyId]=entryId;
     const entry=db[entryId]; if(entry) entry._hidden=true;
-    save();
-    openDossier(bodyId);
+    save(); openPanel(bodyId);
   };
   window._solarToggleVisible=function(bodyId,catId){
     const cat=db[catId]; if(!cat||!cat._solarBodies) return;
-    const entryId=cat._solarBodies[bodyId]; if(!entryId) return;
-    const entry=db[entryId]; if(!entry) return;
+    const eid=cat._solarBodies[bodyId]; if(!eid) return;
+    const entry=db[eid]; if(!entry) return;
     entry._hidden=!entry._hidden;
-    save();
-    openDossier(bodyId);
+    save(); openPanel(bodyId);
   };
 
-  // Resize
-  const ro=new ResizeObserver(()=>{ W=wrap.clientWidth; H=wrap.clientHeight; canvas.width=W; canvas.height=H; });
+  const ro=new ResizeObserver(()=>{
+    W=wrap.clientWidth; H=wrap.clientHeight;
+    canvas.width=W; canvas.height=H;
+    cx=W/2; cy=H/2; cameraX_=cx;
+  });
   ro.observe(wrap);
+
+  // Cleanup
+  const origSelectNode=window.selectNode;
+  v._cleanup=()=>{ clearInterval(spawnInterval); cancelAnimationFrame(window._solarisAnim); };
 }
+
 
 
 function renderCategory(v,n){
