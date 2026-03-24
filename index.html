@@ -1283,7 +1283,8 @@ async function _sbInit(){
         });
         window._sbReady = true; // Supabase chargé avec succès
         _arcPrefLoad();
-        _ensureSolaris(); // Créer le nœud Solaris si absent
+        _ensureSolaris();
+        _migrateGardiensToFactions(); // Déplacer Les Gardiens vers Factions
         renderTree();
         renderWelcome();
       }
@@ -3503,6 +3504,41 @@ function _cgCropSave(charId){
 }
 
 // ── Préférences arc visiteur (localStorage) ──
+
+
+function _migrateGardiensToFactions(){
+  // Trouver Les Gardiens
+  const gardiens = Object.values(db).find(n=>n.kind==='gardiens'||n.name==='Les Gardiens');
+  if(!gardiens) return;
+
+  // Trouver Factions
+  const factions = Object.values(db).find(n=>n.type==='category'&&n.name==='Factions');
+  if(!factions) return;
+
+  // Déjà migré ?
+  if(gardiens.parentId === factions.id) return;
+
+  const oldParentId = gardiens.parentId;
+  const oldParent = db[oldParentId];
+
+  // Retirer des enfants de l'ancien parent
+  if(oldParent && oldParent.children){
+    oldParent.children = oldParent.children.filter(id=>id!==gardiens.id);
+  }
+
+  // Ajouter dans Factions
+  gardiens.parentId = factions.id;
+  if(!factions.children) factions.children=[];
+  if(!factions.children.includes(gardiens.id)) factions.children.push(gardiens.id);
+
+  // Les fiches des gardiens gardent leur parentId original (Personnages ou sous-cat)
+  // → on ne touche PAS aux entries enfants, seulement à la catégorie Gardiens elle-même
+  // renderCharacterGridView collecte déjà les personnages par parentId récursif,
+  // donc ils restent visibles dans Personnages via leur parentId qui pointe toujours là
+
+  save();
+  console.log('[GoH] Les Gardiens déplacé vers Factions');
+}
 
 function _ensureSolaris(){
   // Chercher si une catégorie Solaris existe déjà
