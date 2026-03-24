@@ -3225,7 +3225,74 @@ function renderCharacterGridView(v, n){
   const nonCharChildren = (n.children||[]).map(id=>db[id]).filter(e=>e&&!(e.type==='entry'&&e.entryType==='character'));
 
   // Build card HTML
-  function charCardHTML(e){
+  
+function _cgCardCtx(e, entryId, parentId){
+  if(!_isAdmin()) return;
+  document.getElementById('_cgc-ctx')?.remove();
+  const n = db[entryId]; if(!n) return;
+  const isHidden = n._hidden === true;
+  const menu = document.createElement('div');
+  menu.id = '_cgc-ctx';
+  menu.style.cssText = `position:fixed;left:${e.clientX}px;top:${e.clientY}px;z-index:9999;
+    background:rgba(8,6,14,.97);border:1px solid rgba(200,168,76,.3);border-radius:6px;
+    padding:4px 0;min-width:200px;font-family:'Cinzel',serif;font-size:10px;
+    box-shadow:0 8px 28px rgba(0,0,0,.8)`;
+  const title = document.createElement('div');
+  title.style.cssText = 'padding:7px 14px 5px;font-size:8px;letter-spacing:2px;color:rgba(200,168,76,.4);border-bottom:1px solid rgba(200,168,76,.1);margin-bottom:4px';
+  title.textContent = n.name||entryId;
+  menu.appendChild(title);
+  function row(icon, label, fn, danger){
+    const r = document.createElement('div');
+    r.style.cssText = `padding:8px 14px;cursor:pointer;color:${danger?'rgba(220,80,80,.7)':'rgba(210,185,120,.7)'};display:flex;gap:8px;align-items:center`;
+    r.onmouseenter = ()=>r.style.background='rgba(200,168,76,.1)';
+    r.onmouseleave = ()=>r.style.background='';
+    r.innerHTML = `${icon} ${label}`;
+    r.onclick = ()=>{ menu.remove(); fn(); };
+    menu.appendChild(r);
+  }
+  // Masquer/démasquer le personnage
+  row(isHidden?'👁':'🚫', isHidden?'Rendre visible aux visiteurs':'Masquer aux visiteurs', ()=>{
+    _toggleNodeHidden(entryId);
+  });
+  // Masquer une version alternative spécifique
+  if(n._arcs && n._arcs.length > 0){
+    const sep = document.createElement('div');
+    sep.style.cssText = 'height:1px;background:rgba(200,168,76,.1);margin:4px 0';
+    menu.appendChild(sep);
+    const arcTitle = document.createElement('div');
+    arcTitle.style.cssText = 'padding:5px 14px;font-size:7.5px;letter-spacing:1.5px;color:rgba(200,168,76,.3)';
+    arcTitle.textContent = 'VERSIONS ALTERNATIVES';
+    menu.appendChild(arcTitle);
+    n._arcs.forEach((arc, i)=>{
+      const isArcHidden = (n._hiddenArcs||[]).includes(i);
+      row(isArcHidden?'👁':'🚫',
+        `${isArcHidden?'Afficher':'Masquer'} : ${arc.name||'Arc '+(i+1)}`,
+        ()=>{ _toggleArcHidden(entryId, i); }
+      );
+    });
+  }
+  document.body.appendChild(menu);
+  requestAnimationFrame(()=>{
+    const r=menu.getBoundingClientRect();
+    if(r.right>window.innerWidth) menu.style.left=(e.clientX-r.width)+'px';
+    if(r.bottom>window.innerHeight) menu.style.top=(e.clientY-r.height)+'px';
+  });
+  setTimeout(()=>document.addEventListener('click',function _c(ev){
+    if(!menu.contains(ev.target)){ menu.remove(); document.removeEventListener('click',_c); }
+  },10));
+}
+
+function _toggleArcHidden(charId, arcIdx){
+  const n = db[charId]; if(!n) return;
+  if(!n._hiddenArcs) n._hiddenArcs = [];
+  const i = n._hiddenArcs.indexOf(arcIdx);
+  if(i >= 0) n._hiddenArcs.splice(i, 1);
+  else n._hiddenArcs.push(arcIdx);
+  save();
+  renderContent(n.parentId||charId);
+}
+
+function charCardHTML(e){
     const img=e.images&&e.images[0]
       ? `<div class="cg-portrait"><img src="${e.images[0]}" alt=""></div>`
       : `<div class="cg-portrait cg-portrait-ph">${e.icon||'🧙'}</div>`;
@@ -3249,13 +3316,15 @@ function renderCharacterGridView(v, n){
       : e.charStatus==='Disparu'
       ? '<span style="position:absolute;top:6px;right:6px;font-size:10px">🌀</span>'
       : '';
+    const ctxHandler = _isAdmin() ? `oncontextmenu="event.preventDefault();event.stopPropagation();_cgCardCtx(event,'${e.id}','${n.id}')"` : '';
     return `<div class="cg-card${e._hidden?' cg-card-admin-hidden':''}" id="cgc-${e.id}" draggable="true"
       style="${statusStyle}"
       ondragstart="cgDragStart(event,'${e.id}','${n.id}')"
       ondragover="cgDragOver(event,'${e.id}','${n.id}')"
       ondrop="cgDrop(event,'${e.id}','${n.id}')"
       ondragend="cgDragEnd(event)"
-      onclick="selectNode('${e.id}')">
+      onclick="selectNode('${e.id}')"
+      ${ctxHandler}>
       ${img}
       ${statusDot}
       ${sourceBadge}
@@ -3264,6 +3333,15 @@ function renderCharacterGridView(v, n){
         ${e.subtitle?`<div class="cg-sub">${esc(e.subtitle)}</div>`:''}
         ${age}
       </div>
+      ${e._arcs&&e._arcs.length?`<div style="position:absolute;bottom:3px;left:3px;display:flex;gap:2px;flex-wrap:wrap;max-width:90%">
+        ${e._arcs.map((arc,ai)=>{
+          if(!_isAdmin()&&(e._hiddenArcs||[]).includes(ai)) return '';
+          const arcHidden = (e._hiddenArcs||[]).includes(ai);
+          return `<div style="font-size:6.5px;padding:1px 4px;border-radius:3px;background:rgba(140,80,255,${arcHidden?'.15':'.35'});color:rgba(220,200,255,${arcHidden?'.4':'.85'});font-family:'Cinzel',serif;cursor:pointer;white-space:nowrap;overflow:hidden;max-width:60px;text-overflow:ellipsis"
+            onclick="event.stopPropagation();window._arcView=window._arcView||{};window._arcView['${e.id}']='+ai+';selectNode('${e.id}')"
+            title="${esc(arc.name||'Arc '+(ai+1))}">${esc((arc.name||'Arc '+(ai+1)).slice(0,8))}</div>`;
+        }).join('')}
+      </div>`:''}
     </div>`;
   }
 
