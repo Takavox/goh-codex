@@ -3269,6 +3269,7 @@ function renderCharacterGridView(v, n){
       const _gridArc = (_gridArcIdx>=0 && e._arcs && e._arcs[_gridArcIdx]) ? e._arcs[_gridArcIdx] : null;
       const _gridImg = (_gridArc && _gridArc.image) || (e.images&&e.images[0]) || null;
       const _gridAge = (_gridArc && _gridArc.age) || e.charAge || '';
+      const _gridSub = (_gridArc && _gridArc.subtitle) || e.subtitle || '';
       const img=_gridImg
         ? `<div class="cg-portrait"><img src="${_gridImg}" alt=""></div>`
         : `<div class="cg-portrait cg-portrait-ph">${e.icon||'🧙'}</div>`;
