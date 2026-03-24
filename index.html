@@ -4093,7 +4093,6 @@ function renderSolarisImmersive(v, n){
   var camX=W/2, camY=H/2, zoom=1, targetZoom=1;
   var dragging=false, dragStart={x:0,y:0}, camStart={x:0,y:0};
   var hovered=null, selected=null, time=0;
-  var packets=[];
   var vibs={};
 
   function nodePos(nd){
@@ -4105,17 +4104,61 @@ function renderSolarisImmersive(v, n){
   function toScr(wx,wy){ return {x:camX+wx*zoom, y:camY+wy*zoom}; }
   function toWld(sx,sy){ return {x:(sx-camX)/zoom, y:(sy-camY)/zoom}; }
 
-  var spInt=setInterval(function(){
-    var th=THREADS[Math.floor(Math.random()*THREADS.length)];
-    var rev=Math.random()>.5;
-    packets.push({from:rev?th.b:th.a, to:rev?th.a:th.b, t:0, speed:.003+Math.random()*.007, alpha:.5+Math.random()*.5});
-  },500);
+
 
   function draw(){
     ctx.clearRect(0,0,W,H);
     var bg=ctx.createRadialGradient(camX,camY,0,camX,camY,Math.max(W,H));
     bg.addColorStop(0,"#000c18"); bg.addColorStop(.5,"#000408"); bg.addColorStop(1,"#000002");
     ctx.fillStyle=bg; ctx.fillRect(0,0,W,H);
+
+    // Astre géant en arrière-plan
+    var starX=W*.72, starY=H*.22;
+    var starR=Math.min(W,H)*.38;
+    // Couronne externe (rayons)
+    var rayCount=16;
+    for(var ri=0;ri<rayCount;ri++){
+      var ra=ri*(Math.PI*2/rayCount)+time*.02;
+      var rayLen=starR*(1.4+Math.sin(time*.8+ri*.7)*.12);
+      var rayW=.025+Math.sin(time*.6+ri)*.008;
+      var rg=ctx.createLinearGradient(
+        starX+Math.cos(ra)*starR*.9, starY+Math.sin(ra)*starR*.9,
+        starX+Math.cos(ra)*rayLen,   starY+Math.sin(ra)*rayLen
+      );
+      rg.addColorStop(0,"rgba(0,180,255,"+(.04+Math.sin(time+ri)*.015)+")");
+      rg.addColorStop(1,"transparent");
+      ctx.save(); ctx.translate(starX,starY);
+      ctx.fillStyle=rg;
+      ctx.beginPath();
+      ctx.moveTo(Math.cos(ra-rayW)*starR*.9, Math.sin(ra-rayW)*starR*.9);
+      ctx.lineTo(Math.cos(ra)*rayLen, Math.sin(ra)*rayLen);
+      ctx.lineTo(Math.cos(ra+rayW)*starR*.9, Math.sin(ra+rayW)*starR*.9);
+      ctx.closePath(); ctx.fill(); ctx.restore();
+    }
+    // Halo externe diffus
+    var halo3=ctx.createRadialGradient(starX,starY,starR*.5,starX,starY,starR*2.5);
+    halo3.addColorStop(0,"rgba(0,140,220,"+(.025+Math.sin(time*.3)*.008)+")");
+    halo3.addColorStop(.5,"rgba(0,80,160,.012)");
+    halo3.addColorStop(1,"transparent");
+    ctx.fillStyle=halo3; ctx.fillRect(0,0,W,H);
+    // Halo intermédiaire
+    var halo2=ctx.createRadialGradient(starX,starY,starR*.3,starX,starY,starR*1.4);
+    halo2.addColorStop(0,"rgba(20,160,255,"+(.06+Math.sin(time*.5)*.02)+")");
+    halo2.addColorStop(1,"transparent");
+    ctx.fillStyle=halo2; ctx.beginPath(); ctx.arc(starX,starY,starR*1.4,0,Math.PI*2); ctx.fill();
+    // Corps de l'astre
+    var starGrad=ctx.createRadialGradient(starX-starR*.15,starY-starR*.1,starR*.05,starX,starY,starR);
+    starGrad.addColorStop(0,"rgba(200,235,255,"+(.08+Math.sin(time*.4)*.02)+")");
+    starGrad.addColorStop(.3,"rgba(60,160,230,"+(.06+Math.sin(time*.35)*.015)+")");
+    starGrad.addColorStop(.7,"rgba(10,80,160,.04)");
+    starGrad.addColorStop(1,"transparent");
+    ctx.fillStyle=starGrad; ctx.beginPath(); ctx.arc(starX,starY,starR,0,Math.PI*2); ctx.fill();
+    // Noyau lumineux
+    var core=ctx.createRadialGradient(starX,starY,0,starX,starY,starR*.35);
+    core.addColorStop(0,"rgba(220,245,255,"+(.12+Math.sin(time*.6)*.04)+")");
+    core.addColorStop(.5,"rgba(80,180,255,"+(.06+Math.sin(time*.5)*.02)+")");
+    core.addColorStop(1,"transparent");
+    ctx.fillStyle=core; ctx.beginPath(); ctx.arc(starX,starY,starR*.35,0,Math.PI*2); ctx.fill();
 
     // Cercles de rang
     var ctr=toScr(0,0);
@@ -4158,30 +4201,7 @@ function renderSolarisImmersive(v, n){
       ctx.restore();
     });
 
-    // Paquets
-    for(var i=packets.length-1;i>=0;i--){
-      var pk=packets[i];
-      pk.t+=pk.speed;
-      if(pk.t>1){ packets.splice(i,1); continue; }
-      var na2=NODES.find(function(x){return x.id===pk.from;}), nb2=NODES.find(function(x){return x.id===pk.to;});
-      if(!na2||!nb2){ packets.splice(i,1); continue; }
-      var pA2=toScr(nodePos(na2).x,nodePos(na2).y), pB2=toScr(nodePos(nb2).x,nodePos(nb2).y);
-      var mid2={x:(pA2.x+pB2.x)/2,y:(pA2.y+pB2.y)/2};
-      var t2=pk.t;
-      var bx=(1-t2)*(1-t2)*pA2.x+2*(1-t2)*t2*mid2.x+t2*t2*pB2.x;
-      var by=(1-t2)*(1-t2)*pA2.y+2*(1-t2)*t2*mid2.y+t2*t2*pB2.y;
-      for(var j=1;j<=5;j++){
-        var jt=Math.max(0,t2-j*.018);
-        var jx=(1-jt)*(1-jt)*pA2.x+2*(1-jt)*jt*mid2.x+jt*jt*pB2.x;
-        var jy=(1-jt)*(1-jt)*pA2.y+2*(1-jt)*jt*mid2.y+jt*jt*pB2.y;
-        ctx.fillStyle="rgba(0,220,255,"+pk.alpha*(1-j/5)*.35+")";
-        ctx.beginPath(); ctx.arc(jx,jy,1,0,Math.PI*2); ctx.fill();
-      }
-      ctx.shadowColor="rgba(0,229,255,.8)"; ctx.shadowBlur=4;
-      ctx.fillStyle="rgba(180,240,255,"+pk.alpha+")";
-      ctx.beginPath(); ctx.arc(bx,by,1.8,0,Math.PI*2); ctx.fill();
-      ctx.shadowBlur=0;
-    }
+
 
     // Noeuds
     NODES.forEach(function(nd){
@@ -4449,7 +4469,7 @@ function renderSolarisImmersive(v, n){
     camX=W/2; camY=H/2;
   }).observe(wrap);
 
-  window.addEventListener("beforeunload",function(){ clearInterval(spInt); });
+
 }
 
 
