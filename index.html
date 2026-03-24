@@ -3290,6 +3290,26 @@ function _cgCardCtx(e, entryId, parentId){
     r.onclick = ()=>{ menu.remove(); fn(); };
     menu.appendChild(r);
   }
+  // Version affichée dans la grille
+  if(n._arcs && n._arcs.length > 0){
+    const currentGridArc = (n._cgGridArc !== undefined) ? n._cgGridArc : -1;
+    const sep0 = document.createElement('div');
+    sep0.style.cssText = 'padding:4px 14px 4px;font-size:7.5px;letter-spacing:1.5px;color:rgba(200,168,76,.3)';
+    sep0.textContent = 'VERSION DANS LA GRILLE';
+    menu.appendChild(sep0);
+    // Version principale
+    row(currentGridArc===-1?'✓':'', 'Fiche principale', ()=>{
+      n._cgGridArc = -1; save(); renderContent(parentId);
+    });
+    n._arcs.forEach((arc,i)=>{
+      row(currentGridArc===i?'✓':'◈', arc.name||'Arc '+(i+1), ()=>{
+        n._cgGridArc = i; save(); renderContent(parentId);
+      });
+    });
+    const sep1 = document.createElement('div');
+    sep1.style.cssText = 'height:1px;background:rgba(200,168,76,.1);margin:4px 0';
+    menu.appendChild(sep1);
+  }
   // Masquer/démasquer le personnage
   row(isHidden?'👁':'🚫', isHidden?'Rendre visible aux visiteurs':'Masquer aux visiteurs', ()=>{
     _toggleNodeHidden(entryId);
@@ -3333,10 +3353,14 @@ function _toggleArcHidden(charId, arcIdx){
 }
 
 function charCardHTML(e){
-    const img=e.images&&e.images[0]
-      ? `<div class="cg-portrait"><img src="${e.images[0]}" alt=""></div>`
+    const _gridArcIdx = e._cgGridArc !== undefined ? e._cgGridArc : -1;
+    const _gridArc = (_gridArcIdx>=0 && e._arcs && e._arcs[_gridArcIdx]) ? e._arcs[_gridArcIdx] : null;
+    const _gridImg = (_gridArc && _gridArc.image) || (e.images&&e.images[0]) || null;
+    const _gridAge = (_gridArc && _gridArc.age) || e.charAge || '';
+    const img=_gridImg
+      ? `<div class="cg-portrait"><img src="${_gridImg}" alt=""></div>`
       : `<div class="cg-portrait cg-portrait-ph">${e.icon||'🧙'}</div>`;
-    const age=e.charAge?`<span class="cg-age">${esc(e.charAge)}</span>`:'';
+    const age=_gridAge?`<span class="cg-age">${esc(_gridAge)}</span>`:'';
     const sourceName=charSourceMap[e.id];
     const sourceBadge=sourceName?`<div class="cg-source-badge">${esc(sourceName)}</div>`:'';
     if(!_isAdmin() && e._hidden) return `<div class="cg-card card-hidden-visitor"><div class="chv-mark">?</div></div>`;
@@ -3370,7 +3394,7 @@ function charCardHTML(e){
       ${sourceBadge}
       <div class="cg-info">
         <div class="cg-name">${esc(fullName(e))}</div>
-        ${e.subtitle?`<div class="cg-sub">${esc(e.subtitle)}</div>`:''}
+        ${_gridSub?`<div class="cg-sub">${esc(_gridSub)}</div>`:''}
         ${age}
       </div>
       ${e._arcs&&e._arcs.length?`<div style="position:absolute;bottom:3px;left:3px;display:flex;gap:2px;flex-wrap:wrap;max-width:90%">
@@ -3455,14 +3479,15 @@ function charCardHTML(e){
   </div>`;
   _injectCatBg('cg-wrap', n.id);
   const cgw=document.getElementById('cg-wrap');if(cgw)cgw.oncontextmenu=e=>{
-    e.preventDefault();
-    const card = e.target.closest('.cg-card[id^="cgc-"]');
+    e.preventDefault(); e.stopPropagation();
+    const card = e.target.closest('[id^="cgc-"]');
     if(card && _isAdmin()){
       const eid = card.id.replace('cgc-','');
       _cgCardCtx(e, eid, n.id); return;
     }
-    if(e.target.closest('.cg-card')||e.target.closest('.card')) return;
-    _showCatBgMenu(n.id,e.clientX,e.clientY);
+    if(!e.target.closest('.cg-card')&&!e.target.closest('.card')){
+      _showCatBgMenu(n.id,e.clientX,e.clientY);
+    }
   };
 }
 
@@ -4254,15 +4279,21 @@ function renderEntry(v,n){
 
   const displayName=isChar&&n.lastName?`${esc(n.name)} <span style="color:var(--gold)">${esc(n.lastName)}</span>`:esc(n.name);
   h+=`<div class="ev-name">${displayName}</div>`;
-  if(n.subtitle) h+=`<div class="ev-sub">${esc(n.subtitle)}</div>`;
+  // Utiliser le subtitle/âge de l'arc actif si disponible
+  const _effSubtitle = (_pArc&&_pArc.subtitle) ? _pArc.subtitle : (n.subtitle||'');
+  const _effAge      = (_pArc&&_pArc.age)      ? _pArc.age      : (n.charAge||'');
+  const _effGender   = n.charGender||'';
+  const _effStatus   = n.charStatus||'';
+  const _effArtefacts= (_pArc&&_pArc.artefacts) ? _pArc.artefacts : (n.charGoals||''); // fallback
+  if(_effSubtitle) h+=`<div class="ev-sub">${esc(_effSubtitle)}</div>`;
 
   if(isChar){
     const infos=[];
-    if(n.charAge) infos.push({icon:'⏳',v:n.charAge});
-    if(n.charGender) infos.push({icon:'👤',v:n.charGender});
-    if(n.charStatus){
-      const sc={Vivant:'#6acd8d',Décédé:'#e05050',Disparu:'#e8c97a',Inconnu:'#a89cc0',Autre:'#a89cc0'}[n.charStatus]||'#a89cc0';
-      infos.push({icon:'💠',v:n.charStatus,color:sc});
+    if(_effAge)    infos.push({icon:'⏳',v:_effAge});
+    if(_effGender) infos.push({icon:'👤',v:_effGender});
+    if(_effStatus){
+      const sc={Vivant:'#6acd8d',Décédé:'#e05050',Disparu:'#e8c97a',Inconnu:'#a89cc0',Autre:'#a89cc0'}[_effStatus]||'#a89cc0';
+      infos.push({icon:'💠',v:_effStatus,color:sc});
     }
     if(infos.length) h+=`<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px">${infos.map(i=>`<span style="font-size:12px;background:var(--bg3);border:1px solid var(--border2);padding:3px 9px;border-radius:20px;color:${i.color||'var(--text2)'}">${i.icon} ${esc(i.v)}</span>`).join('')}</div>`;
   }
