@@ -3270,8 +3270,12 @@ function renderCharacterGridView(v, n){
       const _gridImg = (_gridArc && _gridArc.image) || (e.images&&e.images[0]) || null;
       const _gridAge = (_gridArc && _gridArc.age) || e.charAge || '';
       const _gridSub = (_gridArc && _gridArc.subtitle) || e.subtitle || '';
+      // Position recadrage : cherche d'abord l'arc actif, puis la fiche
+      const _imgPosKey = _gridArcIdx >= 0 ? `_cgImgPos_${_gridArcIdx}` : '_cgImgPos';
+      const _imgPx = e[_imgPosKey+'X'] !== undefined ? e[_imgPosKey+'X'] : 50;
+      const _imgPy = e[_imgPosKey+'Y'] !== undefined ? e[_imgPosKey+'Y'] : 50;
       const img=_gridImg
-        ? `<div class="cg-portrait"><img src="${_gridImg}" alt=""></div>`
+        ? `<div class="cg-portrait"><img src="${_gridImg}" alt="" style="object-position:${_imgPx}% ${_imgPy}%"></div>`
         : `<div class="cg-portrait cg-portrait-ph">${e.icon||'🧙'}</div>`;
       const age=_gridAge?`<span class="cg-age">${esc(_gridAge)}</span>`:'';
       const sourceName=charSourceMap[e.id];
@@ -3310,15 +3314,18 @@ function renderCharacterGridView(v, n){
           ${_gridSub?`<div class="cg-sub">${esc(_gridSub)}</div>`:''}
           ${age}
         </div>
-        ${e._arcs&&e._arcs.length?`<div style="position:absolute;bottom:3px;left:3px;display:flex;gap:2px;flex-wrap:wrap;max-width:90%">
-          ${e._arcs.map((arc,ai)=>{
-            if(!_isAdmin()&&(e._hiddenArcs||[]).includes(ai)) return '';
-            const arcHidden = (e._hiddenArcs||[]).includes(ai);
-            return `<div style="font-size:6.5px;padding:1px 4px;border-radius:3px;background:rgba(140,80,255,${arcHidden?'.15':'.35'});color:rgba(220,200,255,${arcHidden?'.4':'.85'});font-family:'Cinzel',serif;cursor:pointer;white-space:nowrap;overflow:hidden;max-width:60px;text-overflow:ellipsis"
-              onclick="event.stopPropagation();window._arcView=window._arcView||{};window._arcView['${e.id}']=${ai};selectNode('${e.id}')"
-              title="${esc(arc.name||'Arc '+(ai+1))}">${esc((arc.name||'Arc '+(ai+1)).slice(0,8))}</div>`;
-          }).join('')}
-        </div>`:''}
+        ${(()=>{
+          const visibleArcs = e._arcs ? e._arcs.filter((_,ai)=>_isAdmin()||(!(e._hiddenArcs||[]).includes(ai))) : [];
+          if(!visibleArcs.length) return '';
+          const currentArc = e._cgGridArc !== undefined ? e._cgGridArc : -1;
+          const arcName = currentArc>=0 && e._arcs[currentArc] ? e._arcs[currentArc].name : 'Fiche principale';
+          return `<div style="position:absolute;bottom:0;left:0;right:0;padding:2px 4px;background:rgba(20,10,40,.75);display:flex;align-items:center;justify-content:space-between;gap:3px"
+            onclick="event.stopPropagation();_cgArcPicker(event,'${e.id}',event.currentTarget)"
+            title="Changer la version affichée">
+            <span style="font-size:6px;font-family:'Cinzel',serif;color:rgba(200,175,255,.6);letter-spacing:.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1">${esc(arcName.slice(0,12))}</span>
+            <span style="font-size:8px;color:rgba(160,120,255,.5)">◈</span>
+          </div>`;
+        })()}
       </div>`;
     }
   const nonCharChildren = (n.children||[]).map(id=>db[id]).filter(e=>e&&!(e.type==='entry'&&e.entryType==='character'));
@@ -3421,6 +3428,121 @@ function _toggleArcHidden(charId, arcIdx){
 }
 
 
+
+
+function _cgCropModal(charId){
+  if(!_isAdmin()) return;
+  document.getElementById('_cgcrop')?.remove();
+  const n = db[charId]; if(!n) return;
+  const arcIdx = n._cgGridArc !== undefined ? n._cgGridArc : -1;
+  const imgSrc = (arcIdx >= 0 && n._arcs && n._arcs[arcIdx]?.image)
+    ? n._arcs[arcIdx].image : (n.images && n.images[0]);
+  if(!imgSrc) return;
+  const posKey = arcIdx >= 0 ? `_cgImgPos_${arcIdx}` : '_cgImgPos';
+  const curX = n[posKey+'X'] !== undefined ? n[posKey+'X'] : 50;
+  const curY = n[posKey+'Y'] !== undefined ? n[posKey+'Y'] : 50;
+
+  const m = document.createElement('div');
+  m.id = '_cgcrop';
+  m.style.cssText = 'position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.88);display:flex;align-items:center;justify-content:center;padding:20px';
+  m.innerHTML = `
+    <div style="background:#0e0a1a;border:1px solid rgba(140,80,255,.4);border-radius:10px;padding:24px;width:min(420px,96vw);display:flex;flex-direction:column;gap:16px">
+      <div style="font-family:'Cinzel',serif;font-size:11px;color:#c09aef;letter-spacing:2px">✂ RECADRER L'IMAGE</div>
+      <div style="position:relative;width:100%;height:180px;border-radius:6px;overflow:hidden;border:1px solid rgba(140,80,255,.2);cursor:crosshair" id="_cgcrop-preview">
+        <img id="_cgcrop-img" src="${imgSrc}" style="width:100%;height:100%;object-fit:cover;object-position:${curX}% ${curY}%;pointer-events:none;transition:object-position .1s">
+        <div style="position:absolute;inset:0;display:grid;grid-template-columns:1fr 1fr 1fr;grid-template-rows:1fr 1fr 1fr;pointer-events:none">
+          ${Array(9).fill('<div style="border:1px solid rgba(255,255,255,.1)"></div>').join('')}
+        </div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:8px">
+        <div style="display:flex;align-items:center;gap:10px">
+          <label style="font-family:'Cinzel',serif;font-size:8px;letter-spacing:1px;color:rgba(180,150,255,.5);min-width:60px">HORIZONTAL</label>
+          <input type="range" id="_cgcrop-x" min="0" max="100" value="${curX}" style="flex:1;accent-color:#a070e0"
+            oninput="document.getElementById('_cgcrop-img').style.objectPosition=this.value+'% '+document.getElementById('_cgcrop-y').value+'%'">
+          <span id="_cgcrop-xv" style="font-family:'Cinzel',serif;font-size:9px;color:rgba(180,150,255,.6);min-width:30px">${curX}%</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:10px">
+          <label style="font-family:'Cinzel',serif;font-size:8px;letter-spacing:1px;color:rgba(180,150,255,.5);min-width:60px">VERTICAL</label>
+          <input type="range" id="_cgcrop-y" min="0" max="100" value="${curY}" style="flex:1;accent-color:#a070e0"
+            oninput="document.getElementById('_cgcrop-img').style.objectPosition=document.getElementById('_cgcrop-x').value+'% '+this.value+'%'">
+          <span id="_cgcrop-yv" style="font-family:'Cinzel',serif;font-size:9px;color:rgba(180,150,255,.6);min-width:30px">${curY}%</span>
+        </div>
+      </div>
+      <div style="display:flex;gap:8px">
+        <button onclick="_cgCropSave('${charId}')" style="flex:1;padding:10px;background:rgba(140,80,255,.2);border:1px solid rgba(140,80,255,.5);border-radius:5px;font-family:'Cinzel',serif;font-size:9px;letter-spacing:1.5px;cursor:pointer;color:#c09aef">✓ Appliquer</button>
+        <button onclick="document.getElementById('_cgcrop').remove()" style="padding:10px 16px;background:rgba(80,40,10,.1);border:1px solid rgba(120,80,20,.2);border-radius:5px;font-family:'Cinzel',serif;font-size:9px;cursor:pointer;color:rgba(180,140,80,.5)">Annuler</button>
+      </div>
+    </div>`;
+  document.body.appendChild(m);
+  m.addEventListener('click', e=>{ if(e.target===m) m.remove(); });
+  // Sync value labels
+  const xi = m.querySelector('#_cgcrop-x'), yi = m.querySelector('#_cgcrop-y');
+  const xv = m.querySelector('#_cgcrop-xv'), yv = m.querySelector('#_cgcrop-yv');
+  xi.oninput = ()=>{ document.getElementById('_cgcrop-img').style.objectPosition=xi.value+'% '+yi.value+'%'; xv.textContent=xi.value+'%'; };
+  yi.oninput = ()=>{ document.getElementById('_cgcrop-img').style.objectPosition=xi.value+'% '+yi.value+'%'; yv.textContent=yi.value+'%'; };
+  // Store charId for save
+  window._cgCropCharId = charId;
+}
+
+function _cgCropSave(charId){
+  const n = db[charId]; if(!n) return;
+  const arcIdx = n._cgGridArc !== undefined ? n._cgGridArc : -1;
+  const posKey = arcIdx >= 0 ? `_cgImgPos_${arcIdx}` : '_cgImgPos';
+  n[posKey+'X'] = parseInt(document.getElementById('_cgcrop-x')?.value||50);
+  n[posKey+'Y'] = parseInt(document.getElementById('_cgcrop-y')?.value||50);
+  save();
+  document.getElementById('_cgcrop')?.remove();
+  renderContent(n.parentId||charId);
+}
+
+function _cgArcPicker(e, charId, anchor){
+  e.stopPropagation();
+  document.getElementById('_cgap')?.remove();
+  const n = db[charId]; if(!n) return;
+  const currentArc = n._cgGridArc !== undefined ? n._cgGridArc : -1;
+  const menu = document.createElement('div');
+  menu.id = '_cgap';
+  const r = anchor.getBoundingClientRect();
+  menu.style.cssText = `position:fixed;left:${r.left}px;top:${r.top-4}px;transform:translateY(-100%);z-index:9999;
+    background:rgba(12,8,24,.97);border:1px solid rgba(140,80,255,.4);border-radius:6px;
+    padding:4px 0;min-width:150px;font-family:'Cinzel',serif;font-size:9px;
+    box-shadow:0 -4px 20px rgba(0,0,0,.8)`;
+  function row(label, idx, active){
+    const r2 = document.createElement('div');
+    r2.style.cssText = `padding:7px 14px;cursor:pointer;color:${active?'rgba(220,195,255,.9)':'rgba(180,155,240,.55)'};
+      background:${active?'rgba(140,80,255,.15)':''};display:flex;align-items:center;gap:6px`;
+    r2.onmouseenter = ()=>r2.style.background='rgba(140,80,255,.15)';
+    r2.onmouseleave = ()=>r2.style.background=active?'rgba(140,80,255,.15)':'';
+    r2.innerHTML = `${active?'✓':'◈'} ${label}`;
+    r2.onclick = (ev)=>{
+      ev.stopPropagation();
+      menu.remove();
+      n._cgGridArc = idx;
+      if(_isAdmin()) save();
+      // Re-render just the card
+      const card = document.getElementById('cgc-'+charId);
+      if(card) { renderContent(n.parentId||charId); }
+    };
+    menu.appendChild(r2);
+  }
+  row('Fiche principale', -1, currentArc === -1);
+  (n._arcs||[]).forEach((arc, i)=>{
+    if(!_isAdmin() && (n._hiddenArcs||[]).includes(i)) return;
+    row(arc.name||'Arc '+(i+1), i, currentArc === i);
+  });
+  document.body.appendChild(menu);
+  // Ajuster si déborde
+  requestAnimationFrame(()=>{
+    const br = menu.getBoundingClientRect();
+    if(br.left < 4) menu.style.left = '4px';
+    if(br.right > window.innerWidth) menu.style.left = (window.innerWidth - br.width - 4)+'px';
+    if(br.top < 4) { menu.style.top = r.bottom+'px'; menu.style.transform = ''; }
+  });
+  setTimeout(()=>document.addEventListener('click', function _c(ev){
+    if(!menu.contains(ev.target)){ menu.remove(); document.removeEventListener('click',_c); }
+  }), 10);
+}
+
 function _cgCardCtx(e, entryId, parentId){
   if(!_isAdmin()) return;
   document.getElementById('_cgc-ctx')?.remove();
@@ -3445,6 +3567,16 @@ function _cgCardCtx(e, entryId, parentId){
     r.onclick = ()=>{ menu.remove(); fn(); };
     menu.appendChild(r);
   }
+  // Recadrer l'image (admin seulement)
+  const _gridImgForCrop = (n._cgGridArc !== undefined && n._cgGridArc >= 0 && n._arcs && n._arcs[n._cgGridArc]?.image)
+    ? n._arcs[n._cgGridArc].image
+    : (n.images && n.images[0]);
+  if(_gridImgForCrop){
+    row("✂", "Recadrer l'image dans la grille", ()=>_cgCropModal(entryId));
+  }
+  const sep_crop = document.createElement('div');
+  sep_crop.style.cssText = 'height:1px;background:rgba(200,168,76,.1);margin:4px 0';
+  menu.appendChild(sep_crop);
   // Version affichée dans la grille
   if(n._arcs && n._arcs.length > 0){
     const currentGridArc = (n._cgGridArc !== undefined) ? n._cgGridArc : -1;
@@ -4324,7 +4456,10 @@ function renderEntry(v,n){
     const arcIdx=window._arcView&&window._arcView[n.id]!==undefined?window._arcView[n.id]:-1;
     h+=`<span class="arc-pill${arcIdx===-1?' arc-pill-active':''}" onclick="_arcSelect('${n.id}',-1)">Fiche principale</span>`;
     n._arcs.forEach((arc,i)=>{
-      h+=`<span class="arc-pill${arcIdx===i?' arc-pill-active':''}" onclick="_arcSelect('${n.id}',${i})">${esc(arc.name)}${_isAdmin()?`<span class="arc-pill-edit" onclick="event.stopPropagation();openArcModal('${n.id}',${i})">✎</span>`:''}</span>`;
+      // Masquer les arcs cachés aux visiteurs
+      if(!_isAdmin() && (n._hiddenArcs||[]).includes(i)) return;
+      const arcDimmed = _isAdmin() && (n._hiddenArcs||[]).includes(i);
+      h+=`<span class="arc-pill${arcIdx===i?' arc-pill-active':''}" style="${arcDimmed?'opacity:.4;text-decoration:line-through;':''}" onclick="_arcSelect('${n.id}',${i})">${esc(arc.name)}${_isAdmin()?`<span class="arc-pill-edit" onclick="event.stopPropagation();openArcModal('${n.id}',${i})">✎</span>`:''}</span>`;
     });
     h+=`</div>`;
   }
