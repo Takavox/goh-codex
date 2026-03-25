@@ -222,12 +222,13 @@ body.is-dragging .root-drop-zone{height:18px}
 #wlc-canvas{position:absolute;inset:0;pointer-events:none;z-index:1}
 #wlc-ui{position:relative;z-index:2;display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;padding:40px 20px;gap:0}
 .wlc-eyebrow{font-family:'Cinzel',serif;font-size:9px;letter-spacing:6px;color:rgba(200,80,40,.6);text-transform:uppercase;margin-bottom:18px}
-.wlc-title{font-family:'Cinzel Decorative',serif;font-size:clamp(28px,5vw,64px);color:#f8f2e0;text-shadow:0 0 60px rgba(255,220,100,.35),0 0 20px rgba(180,160,60,.25),0 2px 16px rgba(0,0,0,.9);letter-spacing:8px;text-align:center;line-height:1.1;margin-bottom:10px}
+.wlc-title{font-family:'Cinzel Decorative',serif;font-size:clamp(28px,5vw,64px);color:#f8f2e0;text-shadow:0 0 60px rgba(255,220,100,.35),0 0 20px rgba(180,160,60,.25),0 2px 16px rgba(0,0,0,.9);letter-spacing:8px;text-align:center;line-height:1.1;margin-bottom:10px;animation:wlcTitleIn 1.2s ease both}
+@keyframes wlcTitleIn{from{opacity:0;transform:translateY(-15px);letter-spacing:16px;text-shadow:0 0 120px rgba(255,220,100,.6)}to{opacity:1;transform:none;letter-spacing:8px}}
 .wlc-rule{width:280px;height:1px;background:linear-gradient(90deg,transparent,rgba(220,50,10,.5),transparent);margin:0 auto 14px}
 .wlc-sub{font-family:'EB Garamond',serif;font-size:15px;color:rgba(240,230,200,.55);font-style:italic;letter-spacing:3px;text-align:center;margin-bottom:48px}
 .wlc-grid{display:flex;flex-wrap:wrap;gap:18px;justify-content:center;max-width:860px;margin-bottom:40px}
-.wlc-card{background:rgba(8,4,4,.82);border:1px solid rgba(200,50,20,.2);border-radius:8px;padding:22px 18px 18px;min-width:160px;width:160px;cursor:pointer;transition:transform .2s,border-color .2s,box-shadow .2s;text-align:center;backdrop-filter:blur(3px);display:flex;flex-direction:column;align-items:center;gap:12px;position:relative;overflow:hidden}
-.wlc-card:hover{transform:translateY(-5px);border-color:rgba(220,70,30,.5);box-shadow:0 10px 32px rgba(0,0,0,.65),0 0 20px rgba(200,40,10,.15)}
+.wlc-card{background:rgba(8,4,4,.82);border:1px solid rgba(200,50,20,.2);border-radius:8px;padding:22px 18px 18px;min-width:160px;width:160px;cursor:pointer;transition:transform .35s cubic-bezier(0.4,0,0.2,1),border-color .3s,box-shadow .4s;text-align:center;backdrop-filter:blur(3px);display:flex;flex-direction:column;align-items:center;gap:12px;position:relative;overflow:hidden}
+.wlc-card:hover{transform:translateY(-6px) scale(1.02);border-color:rgba(220,70,30,.5);box-shadow:0 14px 40px rgba(0,0,0,.7),0 0 30px rgba(200,40,10,.18),0 0 60px rgba(200,40,10,.06)}
 .wlc-card-icon{font-size:38px;display:flex;align-items:center;justify-content:center;width:52px;height:52px;line-height:1;position:relative;z-index:1}
 .wlc-card-name{font-family:'Cinzel',serif;font-size:10px;letter-spacing:2px;color:#d8c8c0;text-transform:uppercase;line-height:1.4;position:relative;z-index:1}
 .wlc-card-cover{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:50% 50%;z-index:0;border-radius:8px;pointer-events:none}
@@ -286,7 +287,9 @@ body.is-dragging .root-drop-zone{height:18px}
   display:flex;align-items:flex-start;gap:24px;
   padding-bottom:22px;margin-bottom:22px;
   border-bottom:1px solid var(--border);position:relative;
+  animation:evHeaderIn .45s ease both;
 }
+@keyframes evHeaderIn{from{opacity:0}to{opacity:1}}
 .ev-header::after{content:'';position:absolute;bottom:-1px;left:0;right:0;height:1px;background:linear-gradient(90deg,var(--gold-dim),transparent);opacity:.4}
 
 .ev-portrait{flex-shrink:0;width:200px}
@@ -382,7 +385,10 @@ body.is-dragging .root-drop-zone{height:18px}
   border:1px solid var(--crimson);
   border-radius:6px;padding:20px 24px;margin-bottom:22px;
   position:relative;overflow:hidden;
+  animation:gateHeaderIn .5s ease both;
+  box-shadow:0 4px 24px rgba(139,26,26,.15),0 0 60px rgba(139,26,26,.05);
 }
+@keyframes gateHeaderIn{from{opacity:0;transform:translateX(-10px)}to{opacity:1;transform:none}}
 .gate-header::before{
   content:'';position:absolute;top:-30px;right:-30px;
   width:120px;height:120px;
@@ -736,6 +742,621 @@ body.visitor-mode .il-btn-row{ display:none !important; }
   outline:1px dashed rgba(220,100,60,.4) !important;
   outline-offset:-2px;
 }
+
+/* ══ ENHANCED ANIMATIONS & DESIGN — v2.0 ══════════════════════ */
+
+/* --- Global Timing Functions --- */
+:root {
+  --ease-out-expo: cubic-bezier(.16, 1, .3, 1);
+  --ease-out-quart: cubic-bezier(.25, 1, .5, 1);
+  --ease-in-out: cubic-bezier(.4, 0, .2, 1);
+  --spring: cubic-bezier(.34, 1.56, .64, 1);
+}
+
+/* --- Refined Scrollbar --- */
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: rgba(0,0,0,.1); }
+::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, var(--border2), var(--border));
+  border-radius: 3px;
+  transition: background .2s;
+}
+::-webkit-scrollbar-thumb:hover { background: var(--gold-dim); }
+
+/* --- Topbar Glow Line --- */
+#topbar::after {
+  height: 1px;
+  background: linear-gradient(90deg, transparent 5%, var(--gold-dim) 30%, var(--crimson) 50%, var(--gold-dim) 70%, transparent 95%);
+  opacity: .6;
+  animation: topbarShimmer 8s ease-in-out infinite alternate;
+}
+@keyframes topbarShimmer {
+  0% { opacity: .4; }
+  50% { opacity: .7; }
+  100% { opacity: .4; }
+}
+
+/* --- Logo Hover Enhancement --- */
+#logo {
+  transition: text-shadow .35s var(--ease-out-expo), transform .25s var(--ease-out-quart);
+}
+#logo:hover {
+  transform: translateY(-1px);
+}
+
+/* --- Search Focus Enhancement --- */
+#search {
+  transition: border-color .25s ease, box-shadow .25s ease, background .25s ease;
+}
+#search:focus {
+  border-color: var(--gold-dim);
+  box-shadow: 0 0 0 3px rgba(201,168,76,.08), 0 2px 12px rgba(0,0,0,.2);
+  background: var(--bg4);
+}
+
+/* --- Sidebar Node Transitions --- */
+.tr {
+  transition: background .18s ease, transform .12s ease, border-color .15s ease;
+}
+.tr:hover {
+  transform: translateX(2px);
+}
+.tr.active {
+  background: var(--bg4);
+  box-shadow: inset 0 0 20px rgba(0,0,0,.15);
+}
+.tr.active::before {
+  box-shadow: 0 0 8px rgba(201,168,76,.3);
+}
+
+/* --- Card Hover Depth --- */
+.card {
+  transition: all .28s var(--ease-out-quart);
+}
+.card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 12px 36px rgba(0,0,0,.35), 0 0 0 1px rgba(201,168,76,.06);
+}
+.card:active {
+  transform: translateY(-1px);
+  transition-duration: .1s;
+}
+
+/* --- Character Grid Cards --- */
+.cg-card {
+  transition: all .28s var(--ease-out-quart);
+}
+.cg-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 16px 44px rgba(0,0,0,.4), 0 0 0 1px rgba(201,168,76,.08);
+}
+.cg-card:hover .cg-portrait img {
+  transform: scale(1.06);
+  transition: transform .6s var(--ease-out-expo);
+}
+
+/* --- Modal Animation --- */
+@keyframes modalEnter {
+  from { opacity: 0; transform: translateY(16px) scale(.96); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes overlayFadeIn {
+  from { opacity: 0; backdrop-filter: blur(0); }
+  to { opacity: 1; backdrop-filter: blur(3px); }
+}
+#overlay.open {
+  animation: overlayFadeIn .25s ease forwards;
+}
+#overlay.open #modal {
+  animation: modalEnter .35s var(--ease-out-expo) forwards;
+}
+
+/* --- Confirm Dialog --- */
+#confirm-overlay[style*="flex"] > div {
+  animation: modalEnter .3s var(--ease-out-expo);
+}
+
+/* --- View Transition --- */
+@keyframes viewSlideIn {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: none; }
+}
+.ev-wrap {
+  animation: viewSlideIn .4s var(--ease-out-expo);
+}
+.cv-head {
+  animation: viewSlideIn .35s var(--ease-out-expo);
+}
+
+/* --- Welcome Cards Enhanced --- */
+.wlc-card {
+  transition: transform .32s var(--ease-out-quart), border-color .25s ease, box-shadow .32s var(--ease-out-quart);
+}
+.wlc-card:hover {
+  transform: translateY(-7px) scale(1.02);
+  box-shadow: 0 16px 48px rgba(0,0,0,.7), 0 0 30px rgba(200,40,10,.12);
+}
+.wlc-card:active {
+  transform: translateY(-2px) scale(.99);
+  transition-duration: .1s;
+}
+
+/* --- Staggered Card Entrance --- */
+@keyframes cardFadeUp {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: none; }
+}
+.wlc-grid .wlc-card {
+  opacity: 0;
+  animation: cardFadeUp .5s var(--ease-out-expo) forwards;
+}
+.wlc-grid .wlc-card:nth-child(1) { animation-delay: .05s; }
+.wlc-grid .wlc-card:nth-child(2) { animation-delay: .1s; }
+.wlc-grid .wlc-card:nth-child(3) { animation-delay: .15s; }
+.wlc-grid .wlc-card:nth-child(4) { animation-delay: .2s; }
+.wlc-grid .wlc-card:nth-child(5) { animation-delay: .25s; }
+.wlc-grid .wlc-card:nth-child(6) { animation-delay: .3s; }
+.wlc-grid .wlc-card:nth-child(7) { animation-delay: .35s; }
+.wlc-grid .wlc-card:nth-child(8) { animation-delay: .4s; }
+.wlc-grid .wlc-card:nth-child(9) { animation-delay: .45s; }
+.wlc-grid .wlc-card:nth-child(10) { animation-delay: .5s; }
+
+/* --- Division Member Cards Enhanced --- */
+.div-member-card {
+  transition: transform .3s var(--ease-out-quart), border-color .25s ease, box-shadow .3s var(--ease-out-quart), background .2s ease;
+}
+.div-member-card:hover {
+  transform: translateY(-5px) scale(1.03);
+  box-shadow: 0 12px 36px rgba(0,0,0,.5), 0 0 18px rgba(140,100,255,.1);
+  background: rgba(30,20,55,.9);
+}
+.div-member-card.linked:hover {
+  border-color: rgba(200,170,255,.55);
+}
+
+/* --- Division Connector Animation --- */
+.div-connector {
+  position: relative;
+  overflow: visible;
+}
+.div-connector::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 50%;
+  width: 3px;
+  height: 100%;
+  transform: translateX(-50%);
+  background: linear-gradient(180deg, rgba(160,120,255,.25), rgba(160,120,255,.05));
+  border-radius: 2px;
+  animation: connectorPulse 3s ease-in-out infinite;
+}
+@keyframes connectorPulse {
+  0%, 100% { opacity: .5; }
+  50% { opacity: 1; }
+}
+
+/* --- Division Rank Label --- */
+.div-rank-label {
+  position: relative;
+  padding: 4px 16px;
+  background: rgba(20,12,40,.6);
+  border: 1px solid rgba(160,120,255,.12);
+  border-radius: 20px;
+  transition: all .2s ease;
+}
+
+/* --- Section Labels Enhanced --- */
+.sec-label {
+  position: relative;
+  padding-bottom: 2px;
+}
+.sec-label::after {
+  transition: background .3s ease;
+}
+
+/* --- Buttons Enhanced --- */
+.btn, .topbtn {
+  transition: all .22s var(--ease-out-quart);
+  position: relative;
+  overflow: hidden;
+}
+.btn:active, .topbtn:active {
+  transform: scale(.97);
+  transition-duration: .08s;
+}
+.btn.p:hover {
+  box-shadow: 0 0 16px rgba(201,168,76,.15), 0 4px 12px rgba(0,0,0,.3);
+}
+
+/* --- Tag Pills Enhanced --- */
+.arc-pill {
+  transition: all .2s var(--ease-out-quart);
+}
+.arc-pill:hover {
+  transform: translateY(-1px);
+}
+.arc-pill-active {
+  box-shadow: 0 0 12px rgba(140,80,255,.2);
+}
+
+/* --- Lightbox Enhanced --- */
+#lb {
+  transition: opacity .2s ease;
+}
+#lb.open {
+  animation: overlayFadeIn .2s ease;
+}
+#lb img {
+  animation: lbZoomIn .3s var(--ease-out-expo);
+  box-shadow: 0 20px 80px rgba(0,0,0,.8);
+}
+@keyframes lbZoomIn {
+  from { opacity: 0; transform: scale(.92); }
+  to { opacity: 1; transform: none; }
+}
+
+/* --- Entry View Portrait Hover --- */
+.ev-portrait img {
+  transition: transform .4s var(--ease-out-quart), box-shadow .3s ease;
+}
+.ev-portrait img:hover {
+  transform: scale(1.03);
+  box-shadow: 0 12px 40px rgba(0,0,0,.6), 0 0 0 1px rgba(201,168,76,.1);
+}
+
+/* --- Stat Slider Custom Styling --- */
+.sr-inp {
+  -webkit-appearance: none;
+  appearance: none;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--bg4);
+  outline: none;
+  transition: opacity .2s;
+}
+.sr-inp::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--gold);
+  border: 2px solid var(--bg2);
+  box-shadow: 0 0 8px rgba(201,168,76,.25);
+  cursor: pointer;
+  transition: transform .15s var(--spring), box-shadow .2s ease;
+}
+.sr-inp::-webkit-slider-thumb:hover {
+  transform: scale(1.2);
+  box-shadow: 0 0 14px rgba(201,168,76,.4);
+}
+.sr-inp::-moz-range-thumb {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--gold);
+  border: 2px solid var(--bg2);
+  cursor: pointer;
+}
+
+/* --- Form Input Focus --- */
+.fi, .fsel, .fta {
+  transition: border-color .25s ease, box-shadow .25s ease, background .2s ease;
+}
+.fi:focus, .fsel:focus, .fta:focus {
+  border-color: var(--gold-dim);
+  box-shadow: 0 0 0 3px rgba(201,168,76,.06);
+  background: rgba(20,16,30,.8);
+}
+
+/* --- Gate Entry Header Glow --- */
+.gate-header {
+  transition: box-shadow .3s ease;
+}
+.gate-header:hover {
+  box-shadow: 0 0 30px rgba(139,26,26,.15);
+}
+
+/* --- Search Result Items --- */
+.sr-item {
+  transition: all .22s var(--ease-out-quart);
+}
+.sr-item:hover {
+  transform: translateX(4px);
+  box-shadow: -3px 0 0 var(--gold-dim);
+}
+
+/* --- Breadcrumb Enhanced --- */
+.crumb {
+  transition: color .2s ease, transform .15s ease;
+}
+.crumb:hover {
+  transform: translateY(-1px);
+}
+
+/* --- Volume Control Enhanced --- */
+#_vol-ctrl {
+  transition: opacity .3s ease, transform .3s var(--ease-out-quart);
+}
+#_vol-ctrl:hover {
+  box-shadow: 0 6px 24px rgba(0,0,0,.7), 0 0 0 1px rgba(100,120,200,.15);
+}
+
+/* --- Family Tree Cards --- */
+.fam-card {
+  transition: transform .25s var(--ease-out-quart), box-shadow .2s ease;
+}
+.fam-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 20px rgba(0,0,0,.4);
+}
+
+/* --- Empty State --- */
+.empty {
+  animation: viewSlideIn .4s var(--ease-out-expo);
+}
+
+/* --- Gate Status Dot Refined --- */
+@keyframes pulseDot {
+  0%, 100% { opacity: 1; box-shadow: 0 0 4px rgba(192,57,43,.4); }
+  50% { opacity: .3; box-shadow: 0 0 12px rgba(192,57,43,.2); }
+}
+.gate-status-dot {
+  animation: pulseDot 2.5s ease-in-out infinite;
+}
+
+/* --- Online Badge Pulse --- */
+@keyframes onlinePulse {
+  0%, 100% { opacity: .7; transform: scale(1); box-shadow: 0 0 5px rgba(80,200,80,.5); }
+  50% { opacity: 1; transform: scale(1.35); box-shadow: 0 0 10px rgba(80,200,80,.7); }
+}
+#_online-badge span[style*="border-radius:50%"] {
+  animation: onlinePulse 2.2s ease-in-out infinite;
+}
+
+/* --- Icon Picker Enhancement --- */
+.io {
+  transition: all .15s var(--ease-out-quart);
+}
+.io:hover {
+  transform: scale(1.15);
+  background: var(--bg4);
+}
+.io.sel {
+  transform: scale(1.1);
+  box-shadow: 0 0 8px rgba(201,168,76,.2);
+}
+
+/* --- Image Upload Area --- */
+.iua {
+  transition: all .25s var(--ease-out-quart);
+}
+.iua:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 18px rgba(0,0,0,.3);
+}
+
+/* --- Sort Buttons --- */
+.cg-sort-btn, .div-sort-btn {
+  transition: all .2s var(--ease-out-quart);
+}
+.cg-sort-btn:hover, .div-sort-btn:hover {
+  transform: translateY(-1px);
+}
+.cg-sort-btn.active, .div-sort-btn.active {
+  box-shadow: 0 0 10px rgba(201,168,76,.12);
+}
+
+/* --- Link Pills Enhanced --- */
+.ev-link {
+  transition: all .2s var(--ease-out-quart);
+}
+.ev-link:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 3px 10px rgba(0,0,0,.25);
+}
+
+/* --- Site Lock Enhanced --- */
+#_site-lock {
+  animation: lockFadeIn .6s ease;
+}
+@keyframes lockFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+#_site-lock-box {
+  animation: lockBoxIn .5s var(--ease-out-expo) .2s backwards;
+}
+@keyframes lockBoxIn {
+  from { opacity: 0; transform: translateY(20px) scale(.95); }
+  to { opacity: 1; transform: none; }
+}
+#_site-lock-btn {
+  transition: all .25s var(--ease-out-quart);
+}
+#_site-lock-btn:active {
+  transform: scale(.96);
+}
+
+/* --- Division Header Ring Pulse --- */
+@keyframes ringBreath {
+  0%, 100% { box-shadow: 0 0 40px rgba(100,60,220,.15), 0 0 80px rgba(60,30,150,.08); }
+  50% { box-shadow: 0 0 50px rgba(120,80,255,.22), 0 0 100px rgba(80,40,180,.12); }
+}
+.div-icon-ring {
+  animation: ringBreath 4s ease-in-out infinite;
+}
+
+/* --- Notification Toast --- */
+#_cld-toast {
+  animation: toastIn .3s var(--ease-out-expo);
+}
+@keyframes toastIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: none; }
+}
+
+/* --- Context Menu Enhanced --- */
+#_hidden-ctx, #wlc-img-ctx {
+  animation: ctxIn .18s var(--ease-out-expo);
+}
+@keyframes ctxIn {
+  from { opacity: 0; transform: scale(.95) translateY(-4px); }
+  to { opacity: 1; transform: none; }
+}
+
+/* --- Card Grid Stagger on Category View --- */
+.cards .card {
+  animation: cardFadeUp .4s var(--ease-out-expo) backwards;
+}
+.cards .card:nth-child(1) { animation-delay: .02s; }
+.cards .card:nth-child(2) { animation-delay: .05s; }
+.cards .card:nth-child(3) { animation-delay: .08s; }
+.cards .card:nth-child(4) { animation-delay: .11s; }
+.cards .card:nth-child(5) { animation-delay: .14s; }
+.cards .card:nth-child(6) { animation-delay: .17s; }
+.cards .card:nth-child(7) { animation-delay: .2s; }
+.cards .card:nth-child(8) { animation-delay: .23s; }
+
+/* --- Character Grid Stagger --- */
+.cg-grid .cg-card {
+  animation: cardFadeUp .4s var(--ease-out-expo) backwards;
+}
+.cg-grid .cg-card:nth-child(n) {
+  animation-delay: calc(var(--card-i, 0) * .03s);
+}
+
+/* --- Division Member Stagger --- */
+.div-rank-cards .div-member-card {
+  animation: cardFadeUp .4s var(--ease-out-expo) backwards;
+}
+.div-rank-cards .div-member-card:nth-child(1) { animation-delay: .03s; }
+.div-rank-cards .div-member-card:nth-child(2) { animation-delay: .07s; }
+.div-rank-cards .div-member-card:nth-child(3) { animation-delay: .11s; }
+.div-rank-cards .div-member-card:nth-child(4) { animation-delay: .15s; }
+.div-rank-cards .div-member-card:nth-child(5) { animation-delay: .19s; }
+.div-rank-cards .div-member-card:nth-child(6) { animation-delay: .23s; }
+.div-rank-cards .div-member-card:nth-child(7) { animation-delay: .27s; }
+.div-rank-cards .div-member-card:nth-child(8) { animation-delay: .31s; }
+.div-rank-cards .div-member-card:nth-child(9) { animation-delay: .35s; }
+.div-rank-cards .div-member-card:nth-child(10) { animation-delay: .39s; }
+
+/* --- Hover glow for important sections --- */
+.gate-header::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 6px;
+  opacity: 0;
+  transition: opacity .3s ease;
+  box-shadow: inset 0 0 30px rgba(139,26,26,.08);
+  pointer-events: none;
+}
+.gate-header:hover::after {
+  opacity: 1;
+}
+
+/* --- Improved tree toggle animation --- */
+.tt {
+  transition: transform .2s var(--ease-out-quart), color .15s ease;
+}
+.tr:hover .tt {
+  color: var(--text2);
+}
+
+/* --- Category view icon breathing --- */
+.cv-icon-big {
+  animation: iconBreath 4s ease-in-out infinite;
+}
+@keyframes iconBreath {
+  0%, 100% { opacity: .5; }
+  50% { opacity: .7; }
+}
+
+/* ── FIN ENHANCED CSS ────────────────────────────────── */
+
+
+/* ══ ENHANCED ANIMATIONS & PROFESSIONAL POLISH ══════ */
+*,*::before,*::after{transition-timing-function:cubic-bezier(0.4,0,0.2,1)}
+::-webkit-scrollbar{width:5px;height:5px}
+::-webkit-scrollbar-track{background:rgba(10,8,14,.5)}
+::-webkit-scrollbar-thumb{background:linear-gradient(180deg,var(--border2),var(--border));border-radius:4px}
+::-webkit-scrollbar-thumb:hover{background:linear-gradient(180deg,var(--gold-dim),var(--border2))}
+#topbar{background:linear-gradient(180deg,var(--bg2) 0%,rgba(14,12,18,.98) 100%);box-shadow:0 1px 0 rgba(201,168,76,.04),0 4px 20px rgba(0,0,0,.3)}
+#topbar::after{animation:topbarShimmer 8s ease-in-out infinite}
+@keyframes topbarShimmer{0%,100%{opacity:.25}50%{opacity:.5}}
+#logo{transition:text-shadow .4s ease,transform .3s ease}
+#logo:hover{text-shadow:0 0 30px rgba(220,100,30,.4),0 0 60px rgba(201,168,76,.2);transform:scale(1.01)}
+#search{transition:border-color .3s,box-shadow .3s,background .3s}
+#search:focus{box-shadow:0 0 0 2px rgba(201,168,76,.08),0 2px 12px rgba(0,0,0,.2);background:rgba(20,17,24,.9)}
+#sidebar{background:linear-gradient(180deg,var(--bg2) 0%,rgba(10,8,14,.98) 100%);box-shadow:1px 0 0 rgba(201,168,76,.03)}
+.tr{transition:background .2s,transform .15s,box-shadow .2s}
+.tr:hover{background:rgba(20,17,24,.8);box-shadow:inset 0 0 20px rgba(201,168,76,.02)}
+.tr.active{background:linear-gradient(90deg,rgba(28,24,36,.9),rgba(20,17,24,.6));box-shadow:inset 0 0 30px rgba(201,168,76,.03)}
+.tr.active::before{box-shadow:0 0 8px rgba(201,168,76,.4)}
+.card{transition:all .25s cubic-bezier(0.4,0,0.2,1);will-change:transform}
+.card:hover{transform:translateY(-3px);box-shadow:0 8px 24px rgba(0,0,0,.3),0 0 0 1px rgba(201,168,76,.08)}
+.card:active{transform:translateY(-1px)}
+.cg-card{transition:all .28s cubic-bezier(0.4,0,0.2,1);will-change:transform,box-shadow}
+.cg-card:hover{transform:translateY(-4px) scale(1.01);box-shadow:0 12px 32px rgba(0,0,0,.4),0 0 0 1px rgba(201,168,76,.1)}
+.cg-card:active{transform:translateY(-1px) scale(0.99)}
+.btn,.topbtn{transition:all .25s ease;position:relative;overflow:hidden}
+.btn:active,.topbtn:active{transform:scale(0.97)}
+.btn.p:hover{box-shadow:0 0 16px rgba(201,168,76,.15),0 4px 12px rgba(0,0,0,.2)}
+#modal{animation:modalIn .35s cubic-bezier(0.34,1.56,0.64,1);box-shadow:0 24px 70px rgba(0,0,0,.7),0 0 0 1px rgba(201,168,76,.06),0 0 120px rgba(0,0,0,.3)}
+@keyframes modalIn{from{opacity:0;transform:scale(0.92) translateY(20px)}to{opacity:1;transform:none}}
+.ev-wrap{animation:entryFadeIn .4s cubic-bezier(0.4,0,0.2,1)}
+@keyframes entryFadeIn{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:none}}
+.stat-group{animation:statSlide .4s ease both}
+.stat-group:nth-child(1){animation-delay:.05s}
+.stat-group:nth-child(2){animation-delay:.12s}
+.stat-group:nth-child(3){animation-delay:.19s}
+@keyframes statSlide{from{opacity:0;transform:translateX(-8px)}to{opacity:1;transform:none}}
+.sec-label{animation:secReveal .35s ease both}
+@keyframes secReveal{from{opacity:0;transform:translateX(-10px)}to{opacity:1;transform:none}}
+.sr-item{animation:srSlide .3s ease both;transition:all .2s ease}
+.sr-item:nth-child(1){animation-delay:.03s}
+.sr-item:nth-child(2){animation-delay:.06s}
+.sr-item:nth-child(3){animation-delay:.09s}
+.sr-item:nth-child(4){animation-delay:.12s}
+.sr-item:nth-child(5){animation-delay:.15s}
+@keyframes srSlide{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+#breadcrumb{background:linear-gradient(180deg,var(--bg2),rgba(14,12,18,.95));box-shadow:0 1px 8px rgba(0,0,0,.15)}
+.crumb{transition:color .2s,text-shadow .2s}
+.crumb:hover{text-shadow:0 0 8px rgba(201,168,76,.2)}
+#lb{transition:opacity .3s ease;backdrop-filter:blur(6px)}
+#lb img{animation:lbZoom .35s cubic-bezier(0.34,1.2,0.64,1)}
+@keyframes lbZoom{from{opacity:0;transform:scale(0.85)}to{opacity:1;transform:none}}
+#confirm-overlay{backdrop-filter:blur(4px)}
+#confirm-overlay>div{animation:modalIn .3s cubic-bezier(0.34,1.56,0.64,1)}
+.ev-link{transition:all .2s ease}
+.ev-link:hover{transform:translateY(-1px);box-shadow:0 3px 10px rgba(0,0,0,.2)}
+#view{background:radial-gradient(ellipse at 30% 20%,rgba(20,17,24,.3) 0%,transparent 60%),radial-gradient(ellipse at 80% 70%,rgba(139,26,26,.02) 0%,transparent 50%)}
+.div-member-card{transition:transform .25s cubic-bezier(0.4,0,0.2,1),border-color .3s,box-shadow .3s,background .3s !important}
+.div-member-card:hover{background:rgba(25,18,45,.95) !important}
+.div-member-card.linked:hover{box-shadow:0 8px 28px rgba(0,0,0,.5),0 0 20px rgba(140,100,255,.1) !important}
+.fi:focus,.fsel:focus,.fta:focus{box-shadow:0 0 0 2px rgba(201,168,76,.06),inset 0 1px 3px rgba(0,0,0,.15)}
+.io{transition:all .15s ease}
+.io:hover{transform:scale(1.15);background:rgba(28,24,36,.8)}
+.io.sel{transform:scale(1.1);box-shadow:0 0 8px rgba(201,168,76,.15)}
+.cg-sort-btn:active,.div-sort-btn:active{transform:scale(0.95)}
+#_vol-ctrl{transition:opacity .3s,transform .3s}
+#_vol-ctrl:hover{box-shadow:0 6px 28px rgba(0,0,0,.7),0 0 0 1px rgba(100,120,200,.15)}
+.empty{animation:emptyFade .5s ease}
+@keyframes emptyFade{from{opacity:0}to{opacity:1}}
+.sidebar-section{transition:color .2s}
+.sidebar-section:hover{color:var(--text2)}
+.gate-status-dot{animation:gatePulse 2.5s ease-in-out infinite}
+@keyframes gatePulse{0%,100%{opacity:1;box-shadow:0 0 0 0 rgba(192,57,43,.5)}50%{opacity:.4;box-shadow:0 0 0 6px rgba(192,57,43,0)}}
+.sg-title{position:relative}
+.sg-title::after{content:'';position:absolute;bottom:-1px;left:0;width:40px;height:1px;border-radius:1px}
+.sg-title.phys::after{background:#6a9fd4}
+.sg-title.magic::after{background:#9b6fd4}
+.sg-title.intel::after{background:#6acd8d}
+.cg-portrait{position:relative}
+.cg-portrait::after{content:'';position:absolute;bottom:0;left:0;right:0;height:30px;background:linear-gradient(transparent,rgba(14,12,18,.4));pointer-events:none}
+#family-overlay{backdrop-filter:blur(6px)}
+
 </style>
 
 
@@ -749,14 +1370,19 @@ body.visitor-mode .il-btn-row{ display:none !important; }
     #_site-lock-box{
       text-align:center;padding:48px 40px;
       border:1px solid rgba(180,100,255,.25);border-radius:12px;
-      background:rgba(20,10,30,.8);backdrop-filter:blur(8px);
-      box-shadow:0 0 60px rgba(120,40,200,.15),0 20px 60px rgba(0,0,0,.6);
-      width:340px;max-width:90vw;
+      background:rgba(20,10,30,.8);backdrop-filter:blur(12px);
+      box-shadow:0 0 80px rgba(120,40,200,.2),0 24px 70px rgba(0,0,0,.7),0 0 0 1px rgba(180,100,255,.08);
+      width:360px;max-width:90vw;
+      animation:lockBoxIn .6s cubic-bezier(0.34,1.56,0.64,1) both;
     }
+    @keyframes lockBoxIn{from{opacity:0;transform:scale(0.9) translateY(20px)}to{opacity:1;transform:none}}
     #_site-lock-title{
       font-size:clamp(16px,4vw,22px);letter-spacing:6px;
       color:#e8d8ff;margin-bottom:6px;
+      animation:lockTitleIn 1s ease both;
+      text-shadow:0 0 40px rgba(180,100,255,.3);
     }
+    @keyframes lockTitleIn{from{opacity:0;letter-spacing:14px;transform:translateY(-8px)}to{opacity:1;letter-spacing:6px;transform:none}}
     #_site-lock-sub{
       font-family:'EB Garamond','Garamond',serif;font-size:13px;
       color:rgba(180,150,255,.5);letter-spacing:2px;margin-bottom:32px;font-style:italic;
@@ -843,7 +1469,7 @@ body.visitor-mode .il-btn-row{ display:none !important; }
     <input id="search" type="text" placeholder="Rechercher dans le codex… (Ctrl+K)" oninput="doSearch(this.value)">
   </div>
   <div id="topbar-r">
-    <span id="visitor-badge">👁 VISITEUR</span>
+    <span id="visitor-badge" style="opacity:.7">👁 VISITEUR</span>
     <span id="_online-badge" title="Personnes en ligne" style="font-family:'Cinzel',serif;font-size:8.5px;letter-spacing:1px;color:rgba(140,200,140,.55);display:flex;align-items:center;gap:4px;padding:3px 8px;border:1px solid rgba(80,160,80,.2);border-radius:10px;background:rgba(40,100,40,.08)">
       <span style="width:6px;height:6px;border-radius:50%;background:rgba(100,220,100,.7);display:inline-block;box-shadow:0 0 5px rgba(80,200,80,.5);animation:pulse-online 2s ease-in-out infinite"></span>
       <span id="_online-count">1</span> en ligne
@@ -1273,9 +1899,10 @@ async function _sbInit(){
         const remoteGS = parsed.globalStatNames || {};
         globalStatNames = Object.assign({phys:{},magic:{},intel:{}}, remoteGS);
         _migrateData();
+        _migrateDivisionCharacters();
         ensureGardiens();
-  ensureMusicLib();
         ensureMusicLib();
+        ensureDivisionMembers();
         Object.values(db).forEach(n=>{
           if(n.type==='category' && n.parentId===null && n.kind==='generic'){
             delete expanded[n.id];
@@ -1303,7 +1930,9 @@ function load(){
   _migrateData();
   // Fusionner avec localStorage si données plus récentes existent
   try{const r=localStorage.getItem('goh_v2');if(r){const _ls=JSON.parse(r);if(Object.keys(_ls.db||{}).length>Object.keys(db).length){db=_ls.db;rootIds=_ls.rootIds||rootIds;if(_ls.globalStatNames&&(_ls.globalStatNames._wlcBg||!globalStatNames._wlcBg)){globalStatNames=_ls.globalStatNames;}}_migrateData();}}catch(e){}
+  _migrateDivisionCharacters();
   ensureGardiens();
+  ensureDivisionMembers();
 }
 
 function generateAllDivisions(parentId){
@@ -1334,10 +1963,7 @@ function generateAllDivisions(parentId){
       name:d.name, icon:d.icon, subtitle:d.sub,
       parentId:parentId, children:[], _isDivision:true,
       divMembers:[
-        {name:'— À définir',rank:'Rang 1',entryId:null},
-        {name:'— À définir',rank:'Rang 2',entryId:null},
-        {name:'— À définir',rank:'Rang 3',entryId:null},
-        {name:'— À définir',rank:'Rang 4',entryId:null},
+        {name:'— Commandant',rank:'Commandant',entryId:null},{name:'— Capitaine 1',rank:'Capitaine',entryId:null},{name:'— Capitaine 2',rank:'Capitaine',entryId:null},{name:'— Capitaine 3',rank:'Capitaine',entryId:null},{name:'— Membre 1',rank:'Membre',entryId:null},{name:'— Membre 2',rank:'Membre',entryId:null},{name:'— Membre 3',rank:'Membre',entryId:null},{name:'— Membre 4',rank:'Membre',entryId:null},{name:'— Membre 5',rank:'Membre',entryId:null},{name:'— Membre 6',rank:'Membre',entryId:null},{name:'— Membre 7',rank:'Membre',entryId:null},{name:'— Membre 8',rank:'Membre',entryId:null},{name:'— Membre 9',rank:'Membre',entryId:null},
       ]
     };
     divNode.children.push(id);
@@ -1380,10 +2006,7 @@ function ensureDivisions(){
     if(DIV_NAMES.includes(nd.name)&&nd.type==='category'&&!nd._isDivision){
       nd._isDivision=true;
       if(!nd.divMembers) nd.divMembers=[
-        {name:'— À définir',rank:'Rang 1',entryId:null},
-        {name:'— À définir',rank:'Rang 2',entryId:null},
-        {name:'— À définir',rank:'Rang 3',entryId:null},
-        {name:'— À définir',rank:'Rang 4',entryId:null},
+        {name:'— Commandant',rank:'Commandant',entryId:null},{name:'— Capitaine 1',rank:'Capitaine',entryId:null},{name:'— Capitaine 2',rank:'Capitaine',entryId:null},{name:'— Capitaine 3',rank:'Capitaine',entryId:null},{name:'— Membre 1',rank:'Membre',entryId:null},{name:'— Membre 2',rank:'Membre',entryId:null},{name:'— Membre 3',rank:'Membre',entryId:null},{name:'— Membre 4',rank:'Membre',entryId:null},{name:'— Membre 5',rank:'Membre',entryId:null},{name:'— Membre 6',rank:'Membre',entryId:null},{name:'— Membre 7',rank:'Membre',entryId:null},{name:'— Membre 8',rank:'Membre',entryId:null},{name:'— Membre 9',rank:'Membre',entryId:null},
       ];
       migrated=true;
     }
@@ -1409,16 +2032,134 @@ function ensureDivisions(){
   ];
   DIVS.forEach(d=>{
     const id=gid();
-    const members=[
-      {name:'— À définir',rank:'Rang 1',entryId:null},
-      {name:'— À définir',rank:'Rang 2',entryId:null},
-      {name:'— À définir',rank:'Rang 3',entryId:null},
-      {name:'— À définir',rank:'Rang 4',entryId:null},
-    ];
+    const members=[{name:'— Commandant',rank:'Commandant',entryId:null},{name:'— Capitaine 1',rank:'Capitaine',entryId:null},{name:'— Capitaine 2',rank:'Capitaine',entryId:null},{name:'— Capitaine 3',rank:'Capitaine',entryId:null},{name:'— Membre 1',rank:'Membre',entryId:null},{name:'— Membre 2',rank:'Membre',entryId:null},{name:'— Membre 3',rank:'Membre',entryId:null},{name:'— Membre 4',rank:'Membre',entryId:null},{name:'— Membre 5',rank:'Membre',entryId:null},{name:'— Membre 6',rank:'Membre',entryId:null},{name:'— Membre 7',rank:'Membre',entryId:null},{name:'— Membre 8',rank:'Membre',entryId:null},{name:'— Membre 9',rank:'Membre',entryId:null}];
     db[id]={id,type:'category',kind:'generic',name:d.name,icon:d.icon,subtitle:d.sub,parentId:divId,children:[],_isDivision:true,divMembers:members};
     if(!divNode.children.includes(id))divNode.children.push(id);
   });
   // save() moved to _sbInit
+}
+
+
+
+// ════════════════════════════════════════════════════════
+//  DIVISION MEMBERS — Auto-generation (Div 1-12)
+// ════════════════════════════════════════════════════════
+const _DIV_MEMBER_DATA = {"1": [{"f": "Yseult", "l": "Briseval", "g": "Féminin", "r": "Commandant", "s": {"phys": {"For": 62, "End": 69, "Agi": 69, "Vit": 67, "Rés": 63, "Vol": 67, "Cha": 66}, "magic": {"Contrôle": 63, "Réserve": 61, "Maîtrise": 61, "Précision": 70, "Puissance": 66, "Létalité": 65}, "intel": {"Intelligence": 66, "Combat IQ": 66, "Créativité": 67, "Stratégie": 60, "Sagesse": 70}}}, {"f": "Perceval", "l": "Frostmere", "g": "Masculin", "r": "Capitaine", "s": {"phys": {"For": 51, "End": 50, "Agi": 56, "Vit": 55, "Rés": 51, "Vol": 53, "Cha": 53}, "magic": {"Contrôle": 53, "Réserve": 58, "Maîtrise": 57, "Précision": 52, "Puissance": 56, "Létalité": 52}, "intel": {"Intelligence": 54, "Combat IQ": 57, "Créativité": 53, "Stratégie": 51, "Sagesse": 57}}}, {"f": "Mordred", "l": "Jormund", "g": "Masculin", "r": "Capitaine", "s": {"phys": {"For": 58, "End": 51, "Agi": 50, "Vit": 58, "Rés": 50, "Vol": 51, "Cha": 53}, "magic": {"Contrôle": 52, "Réserve": 56, "Maîtrise": 57, "Précision": 57, "Puissance": 53, "Létalité": 56}, "intel": {"Intelligence": 50, "Combat IQ": 52, "Créativité": 56, "Stratégie": 50, "Sagesse": 56}}}, {"f": "Valéria", "l": "Vauclaire", "g": "Féminin", "r": "Capitaine", "s": {"phys": {"For": 57, "End": 54, "Agi": 56, "Vit": 58, "Rés": 57, "Vol": 52, "Cha": 53}, "magic": {"Contrôle": 54, "Réserve": 53, "Maîtrise": 50, "Précision": 59, "Puissance": 58, "Létalité": 50}, "intel": {"Intelligence": 55, "Combat IQ": 50, "Créativité": 50, "Stratégie": 59, "Sagesse": 57}}}, {"f": "Kael", "l": "Nordhaven", "g": "Masculin", "r": "Membre", "s": {"phys": {"For": 48, "End": 43, "Agi": 37, "Vit": 35, "Rés": 43, "Vol": 36, "Cha": 48}, "magic": {"Contrôle": 37, "Réserve": 36, "Maîtrise": 44, "Précision": 36, "Puissance": 45, "Létalité": 48}, "intel": {"Intelligence": 55, "Combat IQ": 60, "Créativité": 51, "Stratégie": 55, "Sagesse": 49}}}, {"f": "Rael", "l": "Alarmont", "g": "Masculin", "r": "Membre", "s": {"phys": {"For": 41, "End": 45, "Agi": 44, "Vit": 44, "Rés": 43, "Vol": 40, "Cha": 49}, "magic": {"Contrôle": 39, "Réserve": 38, "Maîtrise": 45, "Précision": 46, "Puissance": 40, "Létalité": 38}, "intel": {"Intelligence": 56, "Combat IQ": 60, "Créativité": 52, "Stratégie": 57, "Sagesse": 62}}}, {"f": "Orlaith", "l": "Grismont", "g": "Féminin", "r": "Membre", "s": {"phys": {"For": 47, "End": 49, "Agi": 36, "Vit": 35, "Rés": 42, "Vol": 44, "Cha": 44}, "magic": {"Contrôle": 36, "Réserve": 36, "Maîtrise": 43, "Précision": 38, "Puissance": 43, "Létalité": 39}, "intel": {"Intelligence": 52, "Combat IQ": 59, "Créativité": 50, "Stratégie": 55, "Sagesse": 59}}}, {"f": "Nyssa", "l": "Ombrecourt", "g": "Féminin", "r": "Membre", "s": {"phys": {"For": 42, "End": 48, "Agi": 43, "Vit": 46, "Rés": 39, "Vol": 44, "Cha": 47}, "magic": {"Contrôle": 45, "Réserve": 43, "Maîtrise": 35, "Précision": 45, "Puissance": 48, "Létalité": 43}, "intel": {"Intelligence": 57, "Combat IQ": 51, "Créativité": 52, "Stratégie": 56, "Sagesse": 51}}}, {"f": "Bastien", "l": "Sternhold", "g": "Masculin", "r": "Membre", "s": {"phys": {"For": 46, "End": 43, "Agi": 37, "Vit": 39, "Rés": 39, "Vol": 44, "Cha": 38}, "magic": {"Contrôle": 46, "Réserve": 40, "Maîtrise": 38, "Précision": 45, "Puissance": 45, "Létalité": 48}, "intel": {"Intelligence": 56, "Combat IQ": 64, "Créativité": 63, "Stratégie": 56, "Sagesse": 49}}}, {"f": "Elara", "l": "Brûleciel", "g": "Féminin", "r": "Membre", "s": {"phys": {"For": 41, "End": 48, "Agi": 39, "Vit": 35, "Rés": 35, "Vol": 40, "Cha": 47}, "magic": {"Contrôle": 37, "Réserve": 45, "Maîtrise": 39, "Précision": 37, "Puissance": 46, "Létalité": 42}, "intel": {"Intelligence": 65, "Combat IQ": 61, "Créativité": 65, "Stratégie": 48, "Sagesse": 51}}}, {"f": "Lune", "l": "Duvalmont", "g": "Féminin", "r": "Membre", "s": {"phys": {"For": 49, "End": 46, "Agi": 49, "Vit": 37, "Rés": 43, "Vol": 35, "Cha": 48}, "magic": {"Contrôle": 40, "Réserve": 44, "Maîtrise": 43, "Précision": 37, "Puissance": 41, "Létalité": 37}, "intel": {"Intelligence": 49, "Combat IQ": 57, "Créativité": 59, "Stratégie": 49, "Sagesse": 59}}}, {"f": "Gaëlle", "l": "Grisbane", "g": "Féminin", "r": "Membre", "s": {"phys": {"For": 38, "End": 45, "Agi": 36, "Vit": 40, "Rés": 47, "Vol": 43, "Cha": 49}, "magic": {"Contrôle": 48, "Réserve": 41, "Maîtrise": 44, "Précision": 46, "Puissance": 37, "Létalité": 49}, "intel": {"Intelligence": 55, "Combat IQ": 53, "Créativité": 53, "Stratégie": 61, "Sagesse": 48}}}, {"f": "Brielle", "l": "Falquier", "g": "Féminin", "r": "Membre", "s": {"phys": {"For": 49, "End": 40, "Agi": 47, "Vit": 49, "Rés": 41, "Vol": 47, "Cha": 45}, "magic": {"Contrôle": 48, "Réserve": 46, "Maîtrise": 47, "Précision": 38, "Puissance": 39, "Létalité": 37}, "intel": {"Intelligence": 51, "Combat IQ": 60, "Créativité": 49, "Stratégie": 63, "Sagesse": 55}}}], "2": [{"f": "Célestine", "l": "Varennes", "g": "Féminin", "r": "Commandant", "s": {"phys": {"For": 67, "End": 65, "Agi": 64, "Vit": 63, "Rés": 63, "Vol": 60, "Cha": 70}, "magic": {"Contrôle": 63, "Réserve": 66, "Maîtrise": 65, "Précision": 64, "Puissance": 61, "Létalité": 64}, "intel": {"Intelligence": 65, "Combat IQ": 70, "Créativité": 68, "Stratégie": 66, "Sagesse": 70}}}, {"f": "Jorah", "l": "Jaskier", "g": "Masculin", "r": "Capitaine", "s": {"phys": {"For": 58, "End": 55, "Agi": 50, "Vit": 51, "Rés": 54, "Vol": 52, "Cha": 59}, "magic": {"Contrôle": 54, "Réserve": 50, "Maîtrise": 51, "Précision": 59, "Puissance": 56, "Létalité": 55}, "intel": {"Intelligence": 55, "Combat IQ": 56, "Créativité": 59, "Stratégie": 58, "Sagesse": 51}}}, {"f": "Gideon", "l": "Drakemor", "g": "Masculin", "r": "Capitaine", "s": {"phys": {"For": 59, "End": 53, "Agi": 54, "Vit": 50, "Rés": 56, "Vol": 50, "Cha": 58}, "magic": {"Contrôle": 58, "Réserve": 53, "Maîtrise": 55, "Précision": 56, "Puissance": 51, "Létalité": 55}, "intel": {"Intelligence": 59, "Combat IQ": 55, "Créativité": 60, "Stratégie": 51, "Sagesse": 54}}}, {"f": "Cormac", "l": "Wyndemere", "g": "Masculin", "r": "Capitaine", "s": {"phys": {"For": 56, "End": 55, "Agi": 56, "Vit": 54, "Rés": 58, "Vol": 52, "Cha": 53}, "magic": {"Contrôle": 56, "Réserve": 56, "Maîtrise": 52, "Précision": 59, "Puissance": 59, "Létalité": 54}, "intel": {"Intelligence": 56, "Combat IQ": 58, "Créativité": 50, "Stratégie": 54, "Sagesse": 54}}}, {"f": "Aria", "l": "Raventhorn", "g": "Féminin", "r": "Membre", "s": {"phys": {"For": 47, "End": 44, "Agi": 44, "Vit": 45, "Rés": 40, "Vol": 42, "Cha": 42}, "magic": {"Contrôle": 42, "Réserve": 45, "Maîtrise": 38, "Précision": 43, "Puissance": 42, "Létalité": 47}, "intel": {"Intelligence": 53, "Combat IQ": 50, "Créativité": 57, "Stratégie": 64, "Sagesse": 58}}}, {"f": "Fia", "l": "Sablerive", "g": "Féminin", "r": "Membre", "s": {"phys": {"For": 47, "End": 38, "Agi": 45, "Vit": 39, "Rés": 38, "Vol": 47, "Cha": 38}, "magic": {"Contrôle": 37, "Réserve": 35, "Maîtrise": 35, "Précision": 38, "Puissance": 42, "Létalité": 44}, "intel": {"Intelligence": 50, "Combat IQ": 62, "Créativité": 61, "Stratégie": 54, "Sagesse": 60}}}, {"f": "Tarquin", "l": "Beausoleil", "g": "Masculin", "r": "Membre", "s": {"phys": {"For": 38, "End": 37, "Agi": 45, "Vit": 46, "Rés": 35, "Vol": 49, "Cha": 47}, "magic": {"Contrôle": 48, "Réserve": 47, "Maîtrise": 49, "Précision": 36, "Puissance": 47, "Létalité": 41}, "intel": {"Intelligence": 55, "Combat IQ": 53, "Créativité": 64, "Stratégie": 62, "Sagesse": 49}}}, {"f": "Kiran", "l": "Rochevaine", "g": "Masculin", "r": "Membre", "s": {"phys": {"For": 49, "End": 48, "Agi": 36, "Vit": 42, "Rés": 37, "Vol": 47, "Cha": 42}, "magic": {"Contrôle": 45, "Réserve": 43, "Maîtrise": 43, "Précision": 44, "Puissance": 40, "Létalité": 47}, "intel": {"Intelligence": 62, "Combat IQ": 64, "Créativité": 61, "Stratégie": 65, "Sagesse": 62}}}, {"f": "Roland", "l": "Corvain", "g": "Masculin", "r": "Membre", "s": {"phys": {"For": 46, "End": 48, "Agi": 42, "Vit": 42, "Rés": 39, "Vol": 47, "Cha": 38}, "magic": {"Contrôle": 48, "Réserve": 45, "Maîtrise": 39, "Précision": 47, "Puissance": 47, "Létalité": 43}, "intel": {"Intelligence": 63, "Combat IQ": 55, "Créativité": 56, "Stratégie": 62, "Sagesse": 50}}}, {"f": "Evander", "l": "Ravencroft", "g": "Masculin", "r": "Membre", "s": {"phys": {"For": 38, "End": 39, "Agi": 40, "Vit": 40, "Rés": 49, "Vol": 43, "Cha": 36}, "magic": {"Contrôle": 37, "Réserve": 37, "Maîtrise": 38, "Précision": 41, "Puissance": 46, "Létalité": 37}, "intel": {"Intelligence": 54, "Combat IQ": 50, "Créativité": 61, "Stratégie": 61, "Sagesse": 58}}}, {"f": "Navarro", "l": "Torqueval", "g": "Masculin", "r": "Membre", "s": {"phys": {"For": 41, "End": 35, "Agi": 38, "Vit": 48, "Rés": 41, "Vol": 41, "Cha": 49}, "magic": {"Contrôle": 47, "Réserve": 44, "Maîtrise": 46, "Précision": 35, "Puissance": 48, "Létalité": 49}, "intel": {"Intelligence": 60, "Combat IQ": 63, "Créativité": 48, "Stratégie": 59, "Sagesse": 57}}}, {"f": "Orias", "l": "Karsten", "g": "Masculin", "r": "Membre", "s": {"phys": {"For": 48, "End": 49, "Agi": 48, "Vit": 41, "Rés": 43, "Vol": 46, "Cha": 46}, "magic": {"Contrôle": 43, "Réserve": 47, "Maîtrise": 44, "Précision": 49, "Puissance": 38, "Létalité": 42}, "intel": {"Intelligence": 55, "Combat IQ": 56, "Créativité": 61, "Stratégie": 63, "Sagesse": 48}}}, {"f": "Magnus", "l": "Hartcrest", "g": "Masculin", "r": "Membre", "s": {"phys": {"For": 45, "End": 45, "Agi": 47, "Vit": 41, "Rés": 46, "Vol": 37, "Cha": 48}, "magic": {"Contrôle": 42, "Réserve": 49, "Maîtrise": 37, "Précision": 44, "Puissance": 43, "Létalité": 35}, "intel": {"Intelligence": 60, "Combat IQ": 48, "Créativité": 50, "Stratégie": 61, "Sagesse": 52}}}], "3": [{"f": "Beric", "l": "Pyreford", "g": "Masculin", "r": "Commandant", "s": {"phys": {"For": 62, "End": 60, "Agi": 64, "Vit": 66, "Rés": 65, "Vol": 63, "Cha": 67}, "magic": {"Contrôle": 65, "Réserve": 65, "Maîtrise": 66, "Précision": 64, "Puissance": 66, "Létalité": 64}, "intel": {"Intelligence": 61, "Combat IQ": 67, "Créativité": 60, "Stratégie": 68, "Sagesse": 60}}}, {"f": "Ivar", "l": "Orthenac", "g": "Masculin", "r": "Capitaine", "s": {"phys": {"For": 55, "End": 53, "Agi": 51, "Vit": 50, "Rés": 50, "Vol": 53, "Cha": 53}, "magic": {"Contrôle": 50, "Réserve": 59, "Maîtrise": 52, "Précision": 53, "Puissance": 52, "Létalité": 57}, "intel": {"Intelligence": 60, "Combat IQ": 51, "Créativité": 59, "Stratégie": 53, "Sagesse": 57}}}, {"f": "Isard", "l": "Lornais", "g": "Masculin", "r": "Capitaine", "s": {"phys": {"For": 55, "End": 52, "Agi": 59, "Vit": 59, "Rés": 51, "Vol": 52, "Cha": 54}, "magic": {"Contrôle": 51, "Réserve": 59, "Maîtrise": 50, "Précision": 54, "Puissance": 59, "Létalité": 56}, "intel": {"Intelligence": 56, "Combat IQ": 53, "Créativité": 51, "Stratégie": 59, "Sagesse": 60}}}, {"f": "Nayeli", "l": "Caldurin", "g": "Féminin", "r": "Capitaine", "s": {"phys": {"For": 54, "End": 59, "Agi": 51, "Vit": 59, "Rés": 50, "Vol": 55, "Cha": 58}, "magic": {"Contrôle": 56, "Réserve": 55, "Maîtrise": 51, "Précision": 58, "Puissance": 55, "Létalité": 50}, "intel": {"Intelligence": 56, "Combat IQ": 57, "Créativité": 51, "Stratégie": 56, "Sagesse": 55}}}, {"f": "Orin", "l": "Valdris", "g": "Masculin", "r": "Membre", "s": {"phys": {"For": 48, "End": 42, "Agi": 46, "Vit": 37, "Rés": 41, "Vol": 37, "Cha": 46}, "magic": {"Contrôle": 43, "Réserve": 45, "Maîtrise": 39, "Précision": 44, "Puissance": 47, "Létalité": 49}, "intel": {"Intelligence": 65, "Combat IQ": 63, "Créativité": 62, "Stratégie": 61, "Sagesse": 56}}}, {"f": "Maëlys", "l": "Cervanès", "g": "Féminin", "r": "Membre", "s": {"phys": {"For": 38, "End": 48, "Agi": 49, "Vit": 36, "Rés": 39, "Vol": 49, "Cha": 42}, "magic": {"Contrôle": 38, "Réserve": 47, "Maîtrise": 42, "Précision": 44, "Puissance": 44, "Létalité": 45}, "intel": {"Intelligence": 60, "Combat IQ": 58, "Créativité": 48, "Stratégie": 63, "Sagesse": 58}}}, {"f": "Kira", "l": "Merovane", "g": "Féminin", "r": "Membre", "s": {"phys": {"For": 38, "End": 40, "Agi": 47, "Vit": 39, "Rés": 40, "Vol": 39, "Cha": 49}, "magic": {"Contrôle": 44, "Réserve": 46, "Maîtrise": 49, "Précision": 39, "Puissance": 43, "Létalité": 35}, "intel": {"Intelligence": 64, "Combat IQ": 54, "Créativité": 50, "Stratégie": 55, "Sagesse": 61}}}, {"f": "Fenris", "l": "Montclair", "g": "Masculin", "r": "Membre", "s": {"phys": {"For": 47, "End": 38, "Agi": 46, "Vit": 42, "Rés": 45, "Vol": 46, "Cha": 42}, "magic": {"Contrôle": 42, "Réserve": 47, "Maîtrise": 35, "Précision": 36, "Puissance": 39, "Létalité": 38}, "intel": {"Intelligence": 60, "Combat IQ": 55, "Créativité": 57, "Stratégie": 59, "Sagesse": 63}}}, {"f": "Finn", "l": "Abélard", "g": "Masculin", "r": "Membre", "s": {"phys": {"For": 40, "End": 41, "Agi": 46, "Vit": 43, "Rés": 40, "Vol": 40, "Cha": 46}, "magic": {"Contrôle": 42, "Réserve": 39, "Maîtrise": 39, "Précision": 39, "Puissance": 38, "Létalité": 36}, "intel": {"Intelligence": 54, "Combat IQ": 58, "Créativité": 51, "Stratégie": 65, "Sagesse": 53}}}, {"f": "Faye", "l": "Noirval", "g": "Féminin", "r": "Membre", "s": {"phys": {"For": 46, "End": 42, "Agi": 39, "Vit": 46, "Rés": 44, "Vol": 47, "Cha": 43}, "magic": {"Contrôle": 44, "Réserve": 39, "Maîtrise": 36, "Précision": 48, "Puissance": 38, "Létalité": 39}, "intel": {"Intelligence": 55, "Combat IQ": 59, "Créativité": 53, "Stratégie": 57, "Sagesse": 48}}}, {"f": "Erwan", "l": "Embrase", "g": "Masculin", "r": "Membre", "s": {"phys": {"For": 37, "End": 39, "Agi": 35, "Vit": 35, "Rés": 43, "Vol": 39, "Cha": 46}, "magic": {"Contrôle": 37, "Réserve": 45, "Maîtrise": 48, "Précision": 47, "Puissance": 42, "Létalité": 36}, "intel": {"Intelligence": 48, "Combat IQ": 57, "Créativité": 63, "Stratégie": 63, "Sagesse": 62}}}, {"f": "Voss", "l": "Kelvorne", "g": "Masculin", "r": "Membre", "s": {"phys": {"For": 35, "End": 39, "Agi": 48, "Vit": 42, "Rés": 36, "Vol": 48, "Cha": 36}, "magic": {"Contrôle": 41, "Réserve": 42, "Maîtrise": 36, "Précision": 44, "Puissance": 45, "Létalité": 45}, "intel": {"Intelligence": 49, "Combat IQ": 52, "Créativité": 52, "Stratégie": 57, "Sagesse": 50}}}, {"f": "Nero", "l": "Quintvale", "g": "Masculin", "r": "Membre", "s": {"phys": {"For": 36, "End": 43, "Agi": 47, "Vit": 41, "Rés": 44, "Vol": 44, "Cha": 47}, "magic": {"Contrôle": 44, "Réserve": 38, "Maîtrise": 47, "Précision": 43, "Puissance": 41, "Létalité": 42}, "intel": {"Intelligence": 62, "Combat IQ": 57, "Créativité": 61, "Stratégie": 57, "Sagesse": 49}}}], "4": [{"f": "Solan", "l": "Kastelheim", "g": "Masculin", "r": "Commandant", "s": {"phys": {"For": 61, "End": 63, "Agi": 70, "Vit": 63, "Rés": 64, "Vol": 70, "Cha": 61}, "magic": {"Contrôle": 62, "Réserve": 63, "Maîtrise": 62, "Précision": 68, "Puissance": 61, "Létalité": 62}, "intel": {"Intelligence": 60, "Combat IQ": 66, "Créativité": 67, "Stratégie": 69, "Sagesse": 67}}}, {"f": "Ilyana", "l": "Morteflamme", "g": "Féminin", "r": "Capitaine", "s": {"phys": {"For": 53, "End": 54, "Agi": 54, "Vit": 57, "Rés": 51, "Vol": 53, "Cha": 54}, "magic": {"Contrôle": 59, "Réserve": 53, "Maîtrise": 56, "Précision": 51, "Puissance": 58, "Létalité": 53}, "intel": {"Intelligence": 60, "Combat IQ": 52, "Créativité": 54, "Stratégie": 52, "Sagesse": 51}}}, {"f": "Ophélia", "l": "Hauterive", "g": "Féminin", "r": "Capitaine", "s": {"phys": {"For": 54, "End": 59, "Agi": 59, "Vit": 54, "Rés": 57, "Vol": 51, "Cha": 57}, "magic": {"Contrôle": 54, "Réserve": 56, "Maîtrise": 54, "Précision": 58, "Puissance": 58, "Létalité": 57}, "intel": {"Intelligence": 57, "Combat IQ": 51, "Créativité": 59, "Stratégie": 50, "Sagesse": 56}}}, {"f": "Tristan", "l": "Wyrmwood", "g": "Masculin", "r": "Capitaine", "s": {"phys": {"For": 59, "End": 54, "Agi": 50, "Vit": 51, "Rés": 53, "Vol": 59, "Cha": 59}, "magic": {"Contrôle": 50, "Réserve": 54, "Maîtrise": 59, "Précision": 50, "Puissance": 52, "Létalité": 57}, "intel": {"Intelligence": 58, "Combat IQ": 60, "Créativité": 57, "Stratégie": 54, "Sagesse": 52}}}, {"f": "Halvar", "l": "Ivalice", "g": "Masculin", "r": "Membre", "s": {"phys": {"For": 41, "End": 45, "Agi": 48, "Vit": 42, "Rés": 36, "Vol": 42, "Cha": 40}, "magic": {"Contrôle": 41, "Réserve": 40, "Maîtrise": 40, "Précision": 45, "Puissance": 36, "Létalité": 48}, "intel": {"Intelligence": 53, "Combat IQ": 58, "Créativité": 61, "Stratégie": 63, "Sagesse": 57}}}, {"f": "Severan", "l": "Lumbrion", "g": "Masculin", "r": "Membre", "s": {"phys": {"For": 41, "End": 48, "Agi": 47, "Vit": 43, "Rés": 35, "Vol": 42, "Cha": 36}, "magic": {"Contrôle": 40, "Réserve": 39, "Maîtrise": 40, "Précision": 36, "Puissance": 47, "Létalité": 41}, "intel": {"Intelligence": 64, "Combat IQ": 48, "Créativité": 65, "Stratégie": 62, "Sagesse": 61}}}, {"f": "Xénia", "l": "Estremont", "g": "Féminin", "r": "Membre", "s": {"phys": {"For": 43, "End": 40, "Agi": 44, "Vit": 47, "Rés": 42, "Vol": 45, "Cha": 42}, "magic": {"Contrôle": 47, "Réserve": 35, "Maîtrise": 38, "Précision": 39, "Puissance": 43, "Létalité": 37}, "intel": {"Intelligence": 57, "Combat IQ": 62, "Créativité": 63, "Stratégie": 51, "Sagesse": 48}}}, {"f": "Wulfric", "l": "Westerlan", "g": "Masculin", "r": "Membre", "s": {"phys": {"For": 44, "End": 47, "Agi": 38, "Vit": 46, "Rés": 37, "Vol": 39, "Cha": 43}, "magic": {"Contrôle": 35, "Réserve": 43, "Maîtrise": 41, "Précision": 36, "Puissance": 38, "Létalité": 48}, "intel": {"Intelligence": 51, "Combat IQ": 62, "Créativité": 51, "Stratégie": 52, "Sagesse": 63}}}, {"f": "Silas", "l": "Cendrelune", "g": "Masculin", "r": "Membre", "s": {"phys": {"For": 39, "End": 43, "Agi": 46, "Vit": 39, "Rés": 41, "Vol": 48, "Cha": 42}, "magic": {"Contrôle": 42, "Réserve": 38, "Maîtrise": 42, "Précision": 43, "Puissance": 37, "Létalité": 41}, "intel": {"Intelligence": 54, "Combat IQ": 64, "Créativité": 52, "Stratégie": 50, "Sagesse": 56}}}, {"f": "Talion", "l": "Galewin", "g": "Masculin", "r": "Membre", "s": {"phys": {"For": 48, "End": 41, "Agi": 40, "Vit": 49, "Rés": 47, "Vol": 43, "Cha": 39}, "magic": {"Contrôle": 48, "Réserve": 35, "Maîtrise": 39, "Précision": 46, "Puissance": 39, "Létalité": 48}, "intel": {"Intelligence": 63, "Combat IQ": 52, "Créativité": 62, "Stratégie": 65, "Sagesse": 63}}}, {"f": "Theron", "l": "Faustverre", "g": "Masculin", "r": "Membre", "s": {"phys": {"For": 43, "End": 47, "Agi": 43, "Vit": 41, "Rés": 42, "Vol": 49, "Cha": 40}, "magic": {"Contrôle": 48, "Réserve": 38, "Maîtrise": 46, "Précision": 38, "Puissance": 44, "Létalité": 41}, "intel": {"Intelligence": 55, "Combat IQ": 61, "Créativité": 49, "Stratégie": 58, "Sagesse": 63}}}, {"f": "Priam", "l": "Noctaire", "g": "Masculin", "r": "Membre", "s": {"phys": {"For": 47, "End": 41, "Agi": 41, "Vit": 45, "Rés": 47, "Vol": 48, "Cha": 45}, "magic": {"Contrôle": 37, "Réserve": 42, "Maîtrise": 35, "Précision": 37, "Puissance": 43, "Létalité": 44}, "intel": {"Intelligence": 58, "Combat IQ": 51, "Créativité": 62, "Stratégie": 51, "Sagesse": 64}}}, {"f": "Xander", "l": "Pernelle", "g": "Masculin", "r": "Membre", "s": {"phys": {"For": 35, "End": 46, "Agi": 37, "Vit": 41, "Rés": 48, "Vol": 45, "Cha": 37}, "magic": {"Contrôle": 36, "Réserve": 42, "Maîtrise": 47, "Précision": 39, "Puissance": 40, "Létalité": 44}, "intel": {"Intelligence": 60, "Combat IQ": 50, "Créativité": 58, "Stratégie": 65, "Sagesse": 60}}}], "5": [{"f": "Ragnar", "l": "Delvaux", "g": "Masculin", "r": "Commandant", "s": {"phys": {"For": 70, "End": 67, "Agi": 68, "Vit": 60, "Rés": 69, "Vol": 61, "Cha": 63}, "magic": {"Contrôle": 70, "Réserve": 70, "Maîtrise": 64, "Précision": 63, "Puissance": 61, "Létalité": 66}, "intel": {"Intelligence": 61, "Combat IQ": 70, "Créativité": 61, "Stratégie": 67, "Sagesse": 62}}}, {"f": "Kaelen", "l": "Prévost", "g": "Masculin", "r": "Capitaine", "s": {"phys": {"For": 50, "End": 50, "Agi": 55, "Vit": 50, "Rés": 54, "Vol": 55, "Cha": 55}, "magic": {"Contrôle": 56, "Réserve": 52, "Maîtrise": 53, "Précision": 58, "Puissance": 56, "Létalité": 59}, "intel": {"Intelligence": 60, "Combat IQ": 52, "Créativité": 52, "Stratégie": 52, "Sagesse": 51}}}, {"f": "Stellan", "l": "Terreval", "g": "Masculin", "r": "Capitaine", "s": {"phys": {"For": 56, "End": 59, "Agi": 53, "Vit": 57, "Rés": 59, "Vol": 52, "Cha": 53}, "magic": {"Contrôle": 57, "Réserve": 54, "Maîtrise": 57, "Précision": 54, "Puissance": 50, "Létalité": 57}, "intel": {"Intelligence": 54, "Combat IQ": 60, "Créativité": 58, "Stratégie": 52, "Sagesse": 51}}}, {"f": "Galen", "l": "Isengart", "g": "Masculin", "r": "Capitaine", "s": {"phys": {"For": 55, "End": 59, "Agi": 54, "Vit": 56, "Rés": 54, "Vol": 57, "Cha": 54}, "magic": {"Contrôle": 53, "Réserve": 56, "Maîtrise": 57, "Précision": 51, "Puissance": 53, "Létalité": 56}, "intel": {"Intelligence": 59, "Combat IQ": 55, "Créativité": 59, "Stratégie": 54, "Sagesse": 54}}}, {"f": "Kalista", "l": "Lancastre", "g": "Féminin", "r": "Membre", "s": {"phys": {"For": 48, "End": 45, "Agi": 41, "Vit": 39, "Rés": 35, "Vol": 44, "Cha": 48}, "magic": {"Contrôle": 45, "Réserve": 47, "Maîtrise": 46, "Précision": 35, "Puissance": 49, "Létalité": 44}, "intel": {"Intelligence": 63, "Combat IQ": 57, "Créativité": 55, "Stratégie": 59, "Sagesse": 55}}}, {"f": "Saxon", "l": "Oakshield", "g": "Masculin", "r": "Membre", "s": {"phys": {"For": 44, "End": 39, "Agi": 45, "Vit": 47, "Rés": 46, "Vol": 47, "Cha": 45}, "magic": {"Contrôle": 45, "Réserve": 48, "Maîtrise": 37, "Précision": 45, "Puissance": 36, "Létalité": 49}, "intel": {"Intelligence": 49, "Combat IQ": 57, "Créativité": 62, "Stratégie": 49, "Sagesse": 59}}}, {"f": "Drake", "l": "Argenti", "g": "Masculin", "r": "Membre", "s": {"phys": {"For": 36, "End": 49, "Agi": 39, "Vit": 40, "Rés": 46, "Vol": 41, "Cha": 37}, "magic": {"Contrôle": 38, "Réserve": 37, "Maîtrise": 47, "Précision": 43, "Puissance": 49, "Létalité": 40}, "intel": {"Intelligence": 64, "Combat IQ": 64, "Créativité": 56, "Stratégie": 53, "Sagesse": 56}}}, {"f": "Gareth", "l": "Silvain", "g": "Masculin", "r": "Membre", "s": {"phys": {"For": 42, "End": 47, "Agi": 39, "Vit": 46, "Rés": 48, "Vol": 40, "Cha": 47}, "magic": {"Contrôle": 36, "Réserve": 42, "Maîtrise": 36, "Précision": 37, "Puissance": 47, "Létalité": 38}, "intel": {"Intelligence": 60, "Combat IQ": 65, "Créativité": 59, "Stratégie": 50, "Sagesse": 60}}}, {"f": "Daphné", "l": "Haldric", "g": "Féminin", "r": "Membre", "s": {"phys": {"For": 43, "End": 36, "Agi": 42, "Vit": 40, "Rés": 45, "Vol": 46, "Cha": 45}, "magic": {"Contrôle": 39, "Réserve": 44, "Maîtrise": 41, "Précision": 48, "Puissance": 45, "Létalité": 40}, "intel": {"Intelligence": 51, "Combat IQ": 55, "Créativité": 63, "Stratégie": 48, "Sagesse": 65}}}, {"f": "Sylvaine", "l": "Bellecour", "g": "Féminin", "r": "Membre", "s": {"phys": {"For": 44, "End": 38, "Agi": 45, "Vit": 36, "Rés": 45, "Vol": 48, "Cha": 42}, "magic": {"Contrôle": 49, "Réserve": 46, "Maîtrise": 39, "Précision": 45, "Puissance": 41, "Létalité": 36}, "intel": {"Intelligence": 52, "Combat IQ": 49, "Créativité": 49, "Stratégie": 57, "Sagesse": 63}}}, {"f": "Morrigan", "l": "Ironweald", "g": "Féminin", "r": "Membre", "s": {"phys": {"For": 38, "End": 49, "Agi": 43, "Vit": 37, "Rés": 41, "Vol": 42, "Cha": 40}, "magic": {"Contrôle": 45, "Réserve": 46, "Maîtrise": 46, "Précision": 43, "Puissance": 41, "Létalité": 44}, "intel": {"Intelligence": 52, "Combat IQ": 61, "Créativité": 51, "Stratégie": 63, "Sagesse": 61}}}, {"f": "Kyran", "l": "Thundrake", "g": "Masculin", "r": "Membre", "s": {"phys": {"For": 39, "End": 35, "Agi": 46, "Vit": 40, "Rés": 38, "Vol": 42, "Cha": 42}, "magic": {"Contrôle": 38, "Réserve": 48, "Maîtrise": 40, "Précision": 36, "Puissance": 45, "Létalité": 40}, "intel": {"Intelligence": 65, "Combat IQ": 59, "Créativité": 49, "Stratégie": 60, "Sagesse": 56}}}, {"f": "Tessa", "l": "Ashford", "g": "Féminin", "r": "Membre", "s": {"phys": {"For": 36, "End": 48, "Agi": 48, "Vit": 42, "Rés": 36, "Vol": 45, "Cha": 38}, "magic": {"Contrôle": 45, "Réserve": 45, "Maîtrise": 44, "Précision": 35, "Puissance": 35, "Létalité": 47}, "intel": {"Intelligence": 58, "Combat IQ": 55, "Créativité": 52, "Stratégie": 54, "Sagesse": 50}}}], "6": [{"f": "Eros", "l": "Ulvaine", "g": "Masculin", "r": "Commandant", "s": {"phys": {"For": 68, "End": 63, "Agi": 69, "Vit": 63, "Rés": 63, "Vol": 65, "Cha": 62}, "magic": {"Contrôle": 69, "Réserve": 60, "Maîtrise": 64, "Précision": 62, "Puissance": 62, "Létalité": 68}, "intel": {"Intelligence": 64, "Combat IQ": 62, "Créativité": 61, "Stratégie": 70, "Sagesse": 60}}}, {"f": "Gwyneth", "l": "Briseval", "g": "Féminin", "r": "Capitaine", "s": {"phys": {"For": 55, "End": 53, "Agi": 59, "Vit": 55, "Rés": 50, "Vol": 52, "Cha": 54}, "magic": {"Contrôle": 50, "Réserve": 52, "Maîtrise": 56, "Précision": 58, "Puissance": 51, "Létalité": 51}, "intel": {"Intelligence": 57, "Combat IQ": 57, "Créativité": 55, "Stratégie": 58, "Sagesse": 59}}}, {"f": "Selene", "l": "Frostmere", "g": "Féminin", "r": "Capitaine", "s": {"phys": {"For": 58, "End": 53, "Agi": 59, "Vit": 50, "Rés": 58, "Vol": 54, "Cha": 57}, "magic": {"Contrôle": 50, "Réserve": 50, "Maîtrise": 57, "Précision": 56, "Puissance": 56, "Létalité": 51}, "intel": {"Intelligence": 57, "Combat IQ": 57, "Créativité": 51, "Stratégie": 51, "Sagesse": 55}}}, {"f": "Alaric", "l": "Jormund", "g": "Masculin", "r": "Capitaine", "s": {"phys": {"For": 51, "End": 52, "Agi": 54, "Vit": 59, "Rés": 59, "Vol": 58, "Cha": 55}, "magic": {"Contrôle": 56, "Réserve": 59, "Maîtrise": 58, "Précision": 54, "Puissance": 57, "Létalité": 58}, "intel": {"Intelligence": 59, "Combat IQ": 56, "Créativité": 51, "Stratégie": 51, "Sagesse": 60}}}, {"f": "Dante", "l": "Vauclaire", "g": "Masculin", "r": "Membre", "s": {"phys": {"For": 47, "End": 43, "Agi": 46, "Vit": 48, "Rés": 38, "Vol": 41, "Cha": 42}, "magic": {"Contrôle": 49, "Réserve": 38, "Maîtrise": 41, "Précision": 40, "Puissance": 48, "Létalité": 42}, "intel": {"Intelligence": 60, "Combat IQ": 61, "Créativité": 51, "Stratégie": 58, "Sagesse": 61}}}, {"f": "Cassandra", "l": "Nordhaven", "g": "Féminin", "r": "Membre", "s": {"phys": {"For": 39, "End": 40, "Agi": 37, "Vit": 45, "Rés": 49, "Vol": 42, "Cha": 36}, "magic": {"Contrôle": 36, "Réserve": 48, "Maîtrise": 36, "Précision": 36, "Puissance": 41, "Létalité": 36}, "intel": {"Intelligence": 59, "Combat IQ": 52, "Créativité": 65, "Stratégie": 49, "Sagesse": 65}}}, {"f": "Gael", "l": "Alarmont", "g": "Masculin", "r": "Membre", "s": {"phys": {"For": 45, "End": 36, "Agi": 41, "Vit": 40, "Rés": 48, "Vol": 45, "Cha": 47}, "magic": {"Contrôle": 41, "Réserve": 48, "Maîtrise": 49, "Précision": 46, "Puissance": 35, "Létalité": 39}, "intel": {"Intelligence": 57, "Combat IQ": 59, "Créativité": 51, "Stratégie": 64, "Sagesse": 54}}}, {"f": "Aelith", "l": "Grismont", "g": "Féminin", "r": "Membre", "s": {"phys": {"For": 42, "End": 38, "Agi": 48, "Vit": 36, "Rés": 40, "Vol": 48, "Cha": 43}, "magic": {"Contrôle": 40, "Réserve": 36, "Maîtrise": 47, "Précision": 39, "Puissance": 44, "Létalité": 38}, "intel": {"Intelligence": 61, "Combat IQ": 65, "Créativité": 65, "Stratégie": 48, "Sagesse": 56}}}, {"f": "Hestia", "l": "Ombrecourt", "g": "Féminin", "r": "Membre", "s": {"phys": {"For": 39, "End": 46, "Agi": 47, "Vit": 39, "Rés": 49, "Vol": 40, "Cha": 40}, "magic": {"Contrôle": 35, "Réserve": 37, "Maîtrise": 48, "Précision": 37, "Puissance": 44, "Létalité": 45}, "intel": {"Intelligence": 60, "Combat IQ": 50, "Créativité": 52, "Stratégie": 48, "Sagesse": 50}}}, {"f": "Cédric", "l": "Sternhold", "g": "Masculin", "r": "Membre", "s": {"phys": {"For": 38, "End": 41, "Agi": 41, "Vit": 42, "Rés": 40, "Vol": 37, "Cha": 40}, "magic": {"Contrôle": 39, "Réserve": 46, "Maîtrise": 40, "Précision": 47, "Puissance": 44, "Létalité": 44}, "intel": {"Intelligence": 50, "Combat IQ": 49, "Créativité": 52, "Stratégie": 53, "Sagesse": 49}}}, {"f": "Edric", "l": "Brûleciel", "g": "Masculin", "r": "Membre", "s": {"phys": {"For": 39, "End": 42, "Agi": 45, "Vit": 41, "Rés": 42, "Vol": 44, "Cha": 42}, "magic": {"Contrôle": 41, "Réserve": 39, "Maîtrise": 38, "Précision": 47, "Puissance": 43, "Létalité": 36}, "intel": {"Intelligence": 59, "Combat IQ": 61, "Créativité": 51, "Stratégie": 57, "Sagesse": 63}}}, {"f": "Lucan", "l": "Duvalmont", "g": "Masculin", "r": "Membre", "s": {"phys": {"For": 39, "End": 35, "Agi": 38, "Vit": 41, "Rés": 44, "Vol": 35, "Cha": 35}, "magic": {"Contrôle": 38, "Réserve": 39, "Maîtrise": 38, "Précision": 47, "Puissance": 37, "Létalité": 47}, "intel": {"Intelligence": 56, "Combat IQ": 57, "Créativité": 58, "Stratégie": 51, "Sagesse": 48}}}, {"f": "Maxim", "l": "Grisbane", "g": "Masculin", "r": "Membre", "s": {"phys": {"For": 41, "End": 37, "Agi": 37, "Vit": 41, "Rés": 43, "Vol": 46, "Cha": 38}, "magic": {"Contrôle": 43, "Réserve": 43, "Maîtrise": 48, "Précision": 45, "Puissance": 47, "Létalité": 40}, "intel": {"Intelligence": 50, "Combat IQ": 60, "Créativité": 49, "Stratégie": 61, "Sagesse": 48}}}], "7": [{"f": "Rhys", "l": "Falquier", "g": "Masculin", "r": "Commandant", "s": {"phys": {"For": 61, "End": 65, "Agi": 69, "Vit": 66, "Rés": 69, "Vol": 66, "Cha": 70}, "magic": {"Contrôle": 66, "Réserve": 64, "Maîtrise": 61, "Précision": 66, "Puissance": 60, "Létalité": 65}, "intel": {"Intelligence": 62, "Combat IQ": 69, "Créativité": 67, "Stratégie": 65, "Sagesse": 61}}}, {"f": "Brennan", "l": "Varennes", "g": "Masculin", "r": "Capitaine", "s": {"phys": {"For": 51, "End": 53, "Agi": 56, "Vit": 59, "Rés": 56, "Vol": 58, "Cha": 51}, "magic": {"Contrôle": 56, "Réserve": 54, "Maîtrise": 55, "Précision": 53, "Puissance": 55, "Létalité": 52}, "intel": {"Intelligence": 51, "Combat IQ": 58, "Créativité": 60, "Stratégie": 51, "Sagesse": 58}}}, {"f": "Caspian", "l": "Jaskier", "g": "Masculin", "r": "Capitaine", "s": {"phys": {"For": 55, "End": 55, "Agi": 52, "Vit": 53, "Rés": 51, "Vol": 52, "Cha": 54}, "magic": {"Contrôle": 53, "Réserve": 52, "Maîtrise": 59, "Précision": 52, "Puissance": 51, "Létalité": 52}, "intel": {"Intelligence": 60, "Combat IQ": 57, "Créativité": 57, "Stratégie": 59, "Sagesse": 59}}}, {"f": "Darius", "l": "Drakemor", "g": "Masculin", "r": "Capitaine", "s": {"phys": {"For": 59, "End": 59, "Agi": 55, "Vit": 55, "Rés": 52, "Vol": 57, "Cha": 51}, "magic": {"Contrôle": 57, "Réserve": 57, "Maîtrise": 54, "Précision": 54, "Puissance": 59, "Létalité": 50}, "intel": {"Intelligence": 55, "Combat IQ": 58, "Créativité": 51, "Stratégie": 54, "Sagesse": 57}}}, {"f": "Lothar", "l": "Wyndemere", "g": "Masculin", "r": "Membre", "s": {"phys": {"For": 35, "End": 40, "Agi": 48, "Vit": 39, "Rés": 36, "Vol": 45, "Cha": 48}, "magic": {"Contrôle": 48, "Réserve": 36, "Maîtrise": 44, "Précision": 44, "Puissance": 43, "Létalité": 41}, "intel": {"Intelligence": 62, "Combat IQ": 65, "Créativité": 49, "Stratégie": 62, "Sagesse": 54}}}, {"f": "Thalia", "l": "Raventhorn", "g": "Féminin", "r": "Membre", "s": {"phys": {"For": 42, "End": 43, "Agi": 37, "Vit": 35, "Rés": 42, "Vol": 36, "Cha": 47}, "magic": {"Contrôle": 49, "Réserve": 48, "Maîtrise": 40, "Précision": 46, "Puissance": 36, "Létalité": 43}, "intel": {"Intelligence": 53, "Combat IQ": 49, "Créativité": 55, "Stratégie": 62, "Sagesse": 62}}}, {"f": "Thibault", "l": "Sablerive", "g": "Masculin", "r": "Membre", "s": {"phys": {"For": 44, "End": 37, "Agi": 40, "Vit": 40, "Rés": 49, "Vol": 39, "Cha": 41}, "magic": {"Contrôle": 41, "Réserve": 47, "Maîtrise": 40, "Précision": 45, "Puissance": 44, "Létalité": 35}, "intel": {"Intelligence": 58, "Combat IQ": 50, "Créativité": 58, "Stratégie": 51, "Sagesse": 65}}}, {"f": "Varek", "l": "Beausoleil", "g": "Masculin", "r": "Membre", "s": {"phys": {"For": 39, "End": 39, "Agi": 46, "Vit": 48, "Rés": 45, "Vol": 49, "Cha": 44}, "magic": {"Contrôle": 48, "Réserve": 37, "Maîtrise": 40, "Précision": 36, "Puissance": 44, "Létalité": 45}, "intel": {"Intelligence": 52, "Combat IQ": 59, "Créativité": 57, "Stratégie": 60, "Sagesse": 52}}}, {"f": "Ilian", "l": "Rochevaine", "g": "Masculin", "r": "Membre", "s": {"phys": {"For": 36, "End": 39, "Agi": 43, "Vit": 41, "Rés": 45, "Vol": 47, "Cha": 40}, "magic": {"Contrôle": 48, "Réserve": 37, "Maîtrise": 45, "Précision": 46, "Puissance": 48, "Létalité": 46}, "intel": {"Intelligence": 64, "Combat IQ": 50, "Créativité": 61, "Stratégie": 64, "Sagesse": 59}}}, {"f": "Morgane", "l": "Corvain", "g": "Féminin", "r": "Membre", "s": {"phys": {"For": 39, "End": 37, "Agi": 38, "Vit": 40, "Rés": 47, "Vol": 42, "Cha": 38}, "magic": {"Contrôle": 38, "Réserve": 37, "Maîtrise": 37, "Précision": 36, "Puissance": 39, "Létalité": 48}, "intel": {"Intelligence": 51, "Combat IQ": 64, "Créativité": 65, "Stratégie": 64, "Sagesse": 49}}}, {"f": "Dorian", "l": "Ravencroft", "g": "Masculin", "r": "Membre", "s": {"phys": {"For": 49, "End": 47, "Agi": 44, "Vit": 37, "Rés": 44, "Vol": 41, "Cha": 37}, "magic": {"Contrôle": 37, "Réserve": 37, "Maîtrise": 48, "Précision": 46, "Puissance": 47, "Létalité": 44}, "intel": {"Intelligence": 53, "Combat IQ": 62, "Créativité": 49, "Stratégie": 61, "Sagesse": 59}}}, {"f": "Hadrien", "l": "Torqueval", "g": "Masculin", "r": "Membre", "s": {"phys": {"For": 38, "End": 42, "Agi": 44, "Vit": 39, "Rés": 47, "Vol": 46, "Cha": 47}, "magic": {"Contrôle": 42, "Réserve": 38, "Maîtrise": 43, "Précision": 38, "Puissance": 39, "Létalité": 47}, "intel": {"Intelligence": 63, "Combat IQ": 54, "Créativité": 59, "Stratégie": 62, "Sagesse": 62}}}, {"f": "Oberon", "l": "Karsten", "g": "Masculin", "r": "Membre", "s": {"phys": {"For": 47, "End": 41, "Agi": 43, "Vit": 43, "Rés": 41, "Vol": 37, "Cha": 48}, "magic": {"Contrôle": 38, "Réserve": 47, "Maîtrise": 44, "Précision": 37, "Puissance": 48, "Létalité": 39}, "intel": {"Intelligence": 49, "Combat IQ": 63, "Créativité": 59, "Stratégie": 65, "Sagesse": 51}}}], "8": [{"f": "Uriel", "l": "Hartcrest", "g": "Masculin", "r": "Commandant", "s": {"phys": {"For": 68, "End": 61, "Agi": 64, "Vit": 61, "Rés": 62, "Vol": 64, "Cha": 67}, "magic": {"Contrôle": 68, "Réserve": 62, "Maîtrise": 66, "Précision": 61, "Puissance": 63, "Létalité": 67}, "intel": {"Intelligence": 65, "Combat IQ": 60, "Créativité": 66, "Stratégie": 60, "Sagesse": 66}}}, {"f": "Lysander", "l": "Pyreford", "g": "Masculin", "r": "Capitaine", "s": {"phys": {"For": 53, "End": 56, "Agi": 51, "Vit": 55, "Rés": 53, "Vol": 50, "Cha": 55}, "magic": {"Contrôle": 51, "Réserve": 55, "Maîtrise": 52, "Précision": 52, "Puissance": 50, "Létalité": 54}, "intel": {"Intelligence": 57, "Combat IQ": 52, "Créativité": 57, "Stratégie": 57, "Sagesse": 59}}}, {"f": "Elyse", "l": "Orthenac", "g": "Féminin", "r": "Capitaine", "s": {"phys": {"For": 51, "End": 50, "Agi": 54, "Vit": 53, "Rés": 52, "Vol": 58, "Cha": 59}, "magic": {"Contrôle": 58, "Réserve": 56, "Maîtrise": 51, "Précision": 54, "Puissance": 53, "Létalité": 54}, "intel": {"Intelligence": 51, "Combat IQ": 50, "Créativité": 53, "Stratégie": 56, "Sagesse": 60}}}, {"f": "Faron", "l": "Lornais", "g": "Masculin", "r": "Capitaine", "s": {"phys": {"For": 57, "End": 51, "Agi": 51, "Vit": 57, "Rés": 59, "Vol": 58, "Cha": 50}, "magic": {"Contrôle": 58, "Réserve": 59, "Maîtrise": 53, "Précision": 52, "Puissance": 54, "Létalité": 56}, "intel": {"Intelligence": 50, "Combat IQ": 59, "Créativité": 55, "Stratégie": 53, "Sagesse": 59}}}, {"f": "Nolan", "l": "Caldurin", "g": "Masculin", "r": "Membre", "s": {"phys": {"For": 45, "End": 45, "Agi": 36, "Vit": 43, "Rés": 40, "Vol": 36, "Cha": 43}, "magic": {"Contrôle": 43, "Réserve": 43, "Maîtrise": 47, "Précision": 43, "Puissance": 43, "Létalité": 35}, "intel": {"Intelligence": 60, "Combat IQ": 63, "Créativité": 49, "Stratégie": 60, "Sagesse": 59}}}, {"f": "Runa", "l": "Valdris", "g": "Féminin", "r": "Membre", "s": {"phys": {"For": 35, "End": 40, "Agi": 47, "Vit": 36, "Rés": 40, "Vol": 38, "Cha": 46}, "magic": {"Contrôle": 45, "Réserve": 45, "Maîtrise": 36, "Précision": 47, "Puissance": 44, "Létalité": 46}, "intel": {"Intelligence": 58, "Combat IQ": 52, "Créativité": 49, "Stratégie": 59, "Sagesse": 65}}}, {"f": "Viviane", "l": "Cervanès", "g": "Féminin", "r": "Membre", "s": {"phys": {"For": 45, "End": 37, "Agi": 48, "Vit": 47, "Rés": 45, "Vol": 42, "Cha": 46}, "magic": {"Contrôle": 42, "Réserve": 45, "Maîtrise": 37, "Précision": 47, "Puissance": 37, "Létalité": 36}, "intel": {"Intelligence": 62, "Combat IQ": 49, "Créativité": 57, "Stratégie": 54, "Sagesse": 49}}}, {"f": "Jorund", "l": "Merovane", "g": "Masculin", "r": "Membre", "s": {"phys": {"For": 49, "End": 35, "Agi": 40, "Vit": 49, "Rés": 39, "Vol": 43, "Cha": 41}, "magic": {"Contrôle": 48, "Réserve": 43, "Maîtrise": 42, "Précision": 39, "Puissance": 35, "Létalité": 47}, "intel": {"Intelligence": 54, "Combat IQ": 57, "Créativité": 59, "Stratégie": 49, "Sagesse": 58}}}, {"f": "Gwendoline", "l": "Montclair", "g": "Féminin", "r": "Membre", "s": {"phys": {"For": 47, "End": 40, "Agi": 41, "Vit": 49, "Rés": 41, "Vol": 46, "Cha": 42}, "magic": {"Contrôle": 49, "Réserve": 41, "Maîtrise": 40, "Précision": 37, "Puissance": 42, "Létalité": 46}, "intel": {"Intelligence": 63, "Combat IQ": 59, "Créativité": 64, "Stratégie": 56, "Sagesse": 50}}}, {"f": "Kellan", "l": "Abélard", "g": "Masculin", "r": "Membre", "s": {"phys": {"For": 36, "End": 41, "Agi": 44, "Vit": 48, "Rés": 37, "Vol": 43, "Cha": 39}, "magic": {"Contrôle": 40, "Réserve": 36, "Maîtrise": 36, "Précision": 40, "Puissance": 45, "Létalité": 39}, "intel": {"Intelligence": 57, "Combat IQ": 62, "Créativité": 61, "Stratégie": 53, "Sagesse": 62}}}, {"f": "Marius", "l": "Noirval", "g": "Masculin", "r": "Membre", "s": {"phys": {"For": 35, "End": 46, "Agi": 48, "Vit": 49, "Rés": 40, "Vol": 44, "Cha": 41}, "magic": {"Contrôle": 39, "Réserve": 45, "Maîtrise": 47, "Précision": 35, "Puissance": 36, "Létalité": 45}, "intel": {"Intelligence": 60, "Combat IQ": 59, "Créativité": 64, "Stratégie": 53, "Sagesse": 48}}}, {"f": "Elowen", "l": "Embrase", "g": "Féminin", "r": "Membre", "s": {"phys": {"For": 44, "End": 45, "Agi": 47, "Vit": 42, "Rés": 35, "Vol": 37, "Cha": 36}, "magic": {"Contrôle": 38, "Réserve": 47, "Maîtrise": 45, "Précision": 40, "Puissance": 40, "Létalité": 41}, "intel": {"Intelligence": 49, "Combat IQ": 52, "Créativité": 62, "Stratégie": 59, "Sagesse": 59}}}, {"f": "Niall", "l": "Kelvorne", "g": "Masculin", "r": "Membre", "s": {"phys": {"For": 36, "End": 44, "Agi": 37, "Vit": 43, "Rés": 40, "Vol": 41, "Cha": 40}, "magic": {"Contrôle": 45, "Réserve": 39, "Maîtrise": 38, "Précision": 36, "Puissance": 35, "Létalité": 46}, "intel": {"Intelligence": 53, "Combat IQ": 63, "Créativité": 64, "Stratégie": 60, "Sagesse": 65}}}], "9": [{"f": "Astrid", "l": "Quintvale", "g": "Féminin", "r": "Commandant", "s": {"phys": {"For": 64, "End": 67, "Agi": 63, "Vit": 69, "Rés": 64, "Vol": 67, "Cha": 63}, "magic": {"Contrôle": 61, "Réserve": 62, "Maîtrise": 61, "Précision": 67, "Puissance": 62, "Létalité": 67}, "intel": {"Intelligence": 61, "Combat IQ": 70, "Créativité": 65, "Stratégie": 70, "Sagesse": 65}}}, {"f": "Ash", "l": "Kastelheim", "g": "Masculin", "r": "Capitaine", "s": {"phys": {"For": 58, "End": 58, "Agi": 54, "Vit": 54, "Rés": 52, "Vol": 52, "Cha": 55}, "magic": {"Contrôle": 58, "Réserve": 53, "Maîtrise": 51, "Précision": 53, "Puissance": 52, "Létalité": 53}, "intel": {"Intelligence": 57, "Combat IQ": 50, "Créativité": 55, "Stratégie": 58, "Sagesse": 59}}}, {"f": "Pike", "l": "Morteflamme", "g": "Masculin", "r": "Capitaine", "s": {"phys": {"For": 58, "End": 52, "Agi": 59, "Vit": 51, "Rés": 51, "Vol": 54, "Cha": 56}, "magic": {"Contrôle": 57, "Réserve": 58, "Maîtrise": 56, "Précision": 56, "Puissance": 59, "Létalité": 51}, "intel": {"Intelligence": 52, "Combat IQ": 55, "Créativité": 60, "Stratégie": 51, "Sagesse": 57}}}, {"f": "Geraint", "l": "Hauterive", "g": "Masculin", "r": "Capitaine", "s": {"phys": {"For": 58, "End": 55, "Agi": 52, "Vit": 58, "Rés": 59, "Vol": 52, "Cha": 52}, "magic": {"Contrôle": 56, "Réserve": 58, "Maîtrise": 50, "Précision": 51, "Puissance": 58, "Létalité": 52}, "intel": {"Intelligence": 54, "Combat IQ": 52, "Créativité": 52, "Stratégie": 55, "Sagesse": 53}}}, {"f": "Viktor", "l": "Wyrmwood", "g": "Masculin", "r": "Membre", "s": {"phys": {"For": 43, "End": 49, "Agi": 39, "Vit": 48, "Rés": 36, "Vol": 39, "Cha": 38}, "magic": {"Contrôle": 45, "Réserve": 43, "Maîtrise": 39, "Précision": 37, "Puissance": 45, "Létalité": 39}, "intel": {"Intelligence": 65, "Combat IQ": 50, "Créativité": 64, "Stratégie": 53, "Sagesse": 52}}}, {"f": "Liora", "l": "Ivalice", "g": "Féminin", "r": "Membre", "s": {"phys": {"For": 44, "End": 46, "Agi": 49, "Vit": 44, "Rés": 40, "Vol": 48, "Cha": 49}, "magic": {"Contrôle": 44, "Réserve": 35, "Maîtrise": 48, "Précision": 48, "Puissance": 35, "Létalité": 36}, "intel": {"Intelligence": 49, "Combat IQ": 56, "Créativité": 54, "Stratégie": 61, "Sagesse": 48}}}, {"f": "Ulric", "l": "Lumbrion", "g": "Masculin", "r": "Membre", "s": {"phys": {"For": 45, "End": 43, "Agi": 39, "Vit": 45, "Rés": 39, "Vol": 42, "Cha": 38}, "magic": {"Contrôle": 47, "Réserve": 47, "Maîtrise": 45, "Précision": 41, "Puissance": 39, "Létalité": 42}, "intel": {"Intelligence": 50, "Combat IQ": 49, "Créativité": 53, "Stratégie": 62, "Sagesse": 61}}}, {"f": "Falk", "l": "Estremont", "g": "Masculin", "r": "Membre", "s": {"phys": {"For": 38, "End": 40, "Agi": 44, "Vit": 37, "Rés": 40, "Vol": 48, "Cha": 46}, "magic": {"Contrôle": 40, "Réserve": 46, "Maîtrise": 48, "Précision": 40, "Puissance": 41, "Létalité": 37}, "intel": {"Intelligence": 59, "Combat IQ": 64, "Créativité": 65, "Stratégie": 51, "Sagesse": 58}}}, {"f": "Tara", "l": "Westerlan", "g": "Féminin", "r": "Membre", "s": {"phys": {"For": 36, "End": 39, "Agi": 42, "Vit": 38, "Rés": 37, "Vol": 36, "Cha": 35}, "magic": {"Contrôle": 39, "Réserve": 41, "Maîtrise": 48, "Précision": 44, "Puissance": 41, "Létalité": 38}, "intel": {"Intelligence": 53, "Combat IQ": 58, "Créativité": 58, "Stratégie": 54, "Sagesse": 53}}}, {"f": "Ivan", "l": "Cendrelune", "g": "Masculin", "r": "Membre", "s": {"phys": {"For": 43, "End": 42, "Agi": 42, "Vit": 49, "Rés": 39, "Vol": 42, "Cha": 35}, "magic": {"Contrôle": 36, "Réserve": 41, "Maîtrise": 43, "Précision": 42, "Puissance": 38, "Létalité": 38}, "intel": {"Intelligence": 59, "Combat IQ": 49, "Créativité": 49, "Stratégie": 57, "Sagesse": 63}}}, {"f": "Griffon", "l": "Galewin", "g": "Masculin", "r": "Membre", "s": {"phys": {"For": 48, "End": 45, "Agi": 45, "Vit": 42, "Rés": 39, "Vol": 43, "Cha": 35}, "magic": {"Contrôle": 48, "Réserve": 36, "Maîtrise": 41, "Précision": 37, "Puissance": 49, "Létalité": 39}, "intel": {"Intelligence": 59, "Combat IQ": 60, "Créativité": 59, "Stratégie": 49, "Sagesse": 60}}}, {"f": "Helena", "l": "Faustverre", "g": "Féminin", "r": "Membre", "s": {"phys": {"For": 43, "End": 38, "Agi": 40, "Vit": 43, "Rés": 39, "Vol": 36, "Cha": 41}, "magic": {"Contrôle": 43, "Réserve": 42, "Maîtrise": 47, "Précision": 43, "Puissance": 39, "Létalité": 48}, "intel": {"Intelligence": 51, "Combat IQ": 52, "Créativité": 51, "Stratégie": 60, "Sagesse": 59}}}, {"f": "Valen", "l": "Noctaire", "g": "Masculin", "r": "Membre", "s": {"phys": {"For": 40, "End": 43, "Agi": 40, "Vit": 47, "Rés": 37, "Vol": 38, "Cha": 44}, "magic": {"Contrôle": 43, "Réserve": 41, "Maîtrise": 43, "Précision": 35, "Puissance": 35, "Létalité": 35}, "intel": {"Intelligence": 52, "Combat IQ": 58, "Créativité": 63, "Stratégie": 64, "Sagesse": 62}}}], "10": [{"f": "Dahlia", "l": "Pernelle", "g": "Féminin", "r": "Commandant", "s": {"phys": {"For": 68, "End": 62, "Agi": 65, "Vit": 69, "Rés": 65, "Vol": 62, "Cha": 66}, "magic": {"Contrôle": 69, "Réserve": 64, "Maîtrise": 69, "Précision": 65, "Puissance": 68, "Létalité": 68}, "intel": {"Intelligence": 68, "Combat IQ": 67, "Créativité": 69, "Stratégie": 64, "Sagesse": 67}}}, {"f": "Aldric", "l": "Delvaux", "g": "Masculin", "r": "Capitaine", "s": {"phys": {"For": 55, "End": 55, "Agi": 51, "Vit": 56, "Rés": 59, "Vol": 54, "Cha": 50}, "magic": {"Contrôle": 59, "Réserve": 57, "Maîtrise": 54, "Précision": 59, "Puissance": 59, "Létalité": 53}, "intel": {"Intelligence": 50, "Combat IQ": 59, "Créativité": 57, "Stratégie": 52, "Sagesse": 58}}}, {"f": "Wren", "l": "Prévost", "g": "Masculin", "r": "Capitaine", "s": {"phys": {"For": 59, "End": 56, "Agi": 52, "Vit": 53, "Rés": 50, "Vol": 59, "Cha": 51}, "magic": {"Contrôle": 53, "Réserve": 50, "Maîtrise": 57, "Précision": 55, "Puissance": 56, "Létalité": 52}, "intel": {"Intelligence": 56, "Combat IQ": 53, "Créativité": 56, "Stratégie": 58, "Sagesse": 59}}}, {"f": "Helios", "l": "Terreval", "g": "Masculin", "r": "Capitaine", "s": {"phys": {"For": 50, "End": 52, "Agi": 58, "Vit": 53, "Rés": 58, "Vol": 55, "Cha": 57}, "magic": {"Contrôle": 58, "Réserve": 56, "Maîtrise": 55, "Précision": 52, "Puissance": 57, "Létalité": 58}, "intel": {"Intelligence": 55, "Combat IQ": 58, "Créativité": 55, "Stratégie": 60, "Sagesse": 60}}}, {"f": "Corvus", "l": "Isengart", "g": "Masculin", "r": "Membre", "s": {"phys": {"For": 46, "End": 39, "Agi": 44, "Vit": 42, "Rés": 38, "Vol": 38, "Cha": 39}, "magic": {"Contrôle": 43, "Réserve": 39, "Maîtrise": 38, "Précision": 39, "Puissance": 47, "Létalité": 39}, "intel": {"Intelligence": 54, "Combat IQ": 63, "Créativité": 58, "Stratégie": 63, "Sagesse": 59}}}, {"f": "Torin", "l": "Lancastre", "g": "Masculin", "r": "Membre", "s": {"phys": {"For": 49, "End": 47, "Agi": 46, "Vit": 39, "Rés": 39, "Vol": 36, "Cha": 44}, "magic": {"Contrôle": 45, "Réserve": 43, "Maîtrise": 41, "Précision": 49, "Puissance": 41, "Létalité": 48}, "intel": {"Intelligence": 59, "Combat IQ": 52, "Créativité": 57, "Stratégie": 49, "Sagesse": 57}}}, {"f": "Viggo", "l": "Oakshield", "g": "Masculin", "r": "Membre", "s": {"phys": {"For": 36, "End": 40, "Agi": 49, "Vit": 42, "Rés": 45, "Vol": 39, "Cha": 46}, "magic": {"Contrôle": 42, "Réserve": 38, "Maîtrise": 38, "Précision": 48, "Puissance": 43, "Létalité": 39}, "intel": {"Intelligence": 65, "Combat IQ": 56, "Créativité": 52, "Stratégie": 51, "Sagesse": 55}}}, {"f": "Freya", "l": "Argenti", "g": "Féminin", "r": "Membre", "s": {"phys": {"For": 45, "End": 49, "Agi": 43, "Vit": 38, "Rés": 45, "Vol": 38, "Cha": 35}, "magic": {"Contrôle": 36, "Réserve": 41, "Maîtrise": 40, "Précision": 46, "Puissance": 42, "Létalité": 36}, "intel": {"Intelligence": 52, "Combat IQ": 48, "Créativité": 65, "Stratégie": 53, "Sagesse": 61}}}, {"f": "Lenox", "l": "Silvain", "g": "Masculin", "r": "Membre", "s": {"phys": {"For": 49, "End": 49, "Agi": 42, "Vit": 42, "Rés": 45, "Vol": 38, "Cha": 47}, "magic": {"Contrôle": 39, "Réserve": 40, "Maîtrise": 39, "Précision": 45, "Puissance": 35, "Létalité": 49}, "intel": {"Intelligence": 50, "Combat IQ": 55, "Créativité": 65, "Stratégie": 49, "Sagesse": 53}}}, {"f": "Jarek", "l": "Haldric", "g": "Masculin", "r": "Membre", "s": {"phys": {"For": 48, "End": 37, "Agi": 49, "Vit": 49, "Rés": 35, "Vol": 48, "Cha": 41}, "magic": {"Contrôle": 47, "Réserve": 42, "Maîtrise": 37, "Précision": 49, "Puissance": 46, "Létalité": 48}, "intel": {"Intelligence": 57, "Combat IQ": 49, "Créativité": 48, "Stratégie": 57, "Sagesse": 51}}}, {"f": "Eamon", "l": "Bellecour", "g": "Masculin", "r": "Membre", "s": {"phys": {"For": 40, "End": 39, "Agi": 42, "Vit": 45, "Rés": 43, "Vol": 43, "Cha": 42}, "magic": {"Contrôle": 49, "Réserve": 37, "Maîtrise": 48, "Précision": 43, "Puissance": 42, "Létalité": 39}, "intel": {"Intelligence": 54, "Combat IQ": 51, "Créativité": 58, "Stratégie": 53, "Sagesse": 62}}}, {"f": "Ronan", "l": "Ironweald", "g": "Masculin", "r": "Membre", "s": {"phys": {"For": 46, "End": 37, "Agi": 35, "Vit": 46, "Rés": 40, "Vol": 47, "Cha": 39}, "magic": {"Contrôle": 44, "Réserve": 45, "Maîtrise": 47, "Précision": 38, "Puissance": 37, "Létalité": 44}, "intel": {"Intelligence": 60, "Combat IQ": 61, "Créativité": 64, "Stratégie": 58, "Sagesse": 50}}}, {"f": "Malik", "l": "Thundrake", "g": "Masculin", "r": "Membre", "s": {"phys": {"For": 36, "End": 37, "Agi": 37, "Vit": 42, "Rés": 40, "Vol": 49, "Cha": 38}, "magic": {"Contrôle": 35, "Réserve": 39, "Maîtrise": 41, "Précision": 38, "Puissance": 42, "Létalité": 47}, "intel": {"Intelligence": 56, "Combat IQ": 58, "Créativité": 57, "Stratégie": 48, "Sagesse": 56}}}], "11": [{"f": "Draven", "l": "Ashford", "g": "Masculin", "r": "Commandant", "s": {"phys": {"For": 63, "End": 60, "Agi": 70, "Vit": 61, "Rés": 67, "Vol": 64, "Cha": 62}, "magic": {"Contrôle": 66, "Réserve": 70, "Maîtrise": 68, "Précision": 64, "Puissance": 61, "Létalité": 70}, "intel": {"Intelligence": 64, "Combat IQ": 65, "Créativité": 69, "Stratégie": 63, "Sagesse": 63}}}, {"f": "Jorin", "l": "Ulvaine", "g": "Masculin", "r": "Capitaine", "s": {"phys": {"For": 57, "End": 52, "Agi": 57, "Vit": 59, "Rés": 55, "Vol": 56, "Cha": 58}, "magic": {"Contrôle": 57, "Réserve": 58, "Maîtrise": 53, "Précision": 53, "Puissance": 59, "Létalité": 51}, "intel": {"Intelligence": 58, "Combat IQ": 57, "Créativité": 58, "Stratégie": 55, "Sagesse": 51}}}, {"f": "Jasper", "l": "Briseval", "g": "Masculin", "r": "Capitaine", "s": {"phys": {"For": 51, "End": 50, "Agi": 58, "Vit": 58, "Rés": 53, "Vol": 59, "Cha": 58}, "magic": {"Contrôle": 52, "Réserve": 52, "Maîtrise": 55, "Précision": 58, "Puissance": 57, "Létalité": 51}, "intel": {"Intelligence": 60, "Combat IQ": 53, "Créativité": 59, "Stratégie": 57, "Sagesse": 51}}}, {"f": "Hector", "l": "Frostmere", "g": "Masculin", "r": "Capitaine", "s": {"phys": {"For": 57, "End": 50, "Agi": 57, "Vit": 52, "Rés": 58, "Vol": 56, "Cha": 57}, "magic": {"Contrôle": 59, "Réserve": 50, "Maîtrise": 58, "Précision": 57, "Puissance": 54, "Létalité": 50}, "intel": {"Intelligence": 56, "Combat IQ": 54, "Créativité": 50, "Stratégie": 53, "Sagesse": 59}}}, {"f": "Rhiannon", "l": "Jormund", "g": "Féminin", "r": "Membre", "s": {"phys": {"For": 41, "End": 40, "Agi": 46, "Vit": 36, "Rés": 43, "Vol": 35, "Cha": 49}, "magic": {"Contrôle": 49, "Réserve": 36, "Maîtrise": 49, "Précision": 42, "Puissance": 35, "Létalité": 39}, "intel": {"Intelligence": 61, "Combat IQ": 53, "Créativité": 52, "Stratégie": 61, "Sagesse": 59}}}, {"f": "Kato", "l": "Vauclaire", "g": "Masculin", "r": "Membre", "s": {"phys": {"For": 41, "End": 42, "Agi": 48, "Vit": 49, "Rés": 49, "Vol": 41, "Cha": 41}, "magic": {"Contrôle": 36, "Réserve": 45, "Maîtrise": 45, "Précision": 48, "Puissance": 43, "Létalité": 37}, "intel": {"Intelligence": 59, "Combat IQ": 51, "Créativité": 53, "Stratégie": 65, "Sagesse": 60}}}, {"f": "Caelum", "l": "Nordhaven", "g": "Masculin", "r": "Membre", "s": {"phys": {"For": 46, "End": 38, "Agi": 48, "Vit": 35, "Rés": 47, "Vol": 35, "Cha": 39}, "magic": {"Contrôle": 42, "Réserve": 45, "Maîtrise": 46, "Précision": 43, "Puissance": 41, "Létalité": 43}, "intel": {"Intelligence": 60, "Combat IQ": 55, "Créativité": 55, "Stratégie": 62, "Sagesse": 59}}}, {"f": "Sienna", "l": "Alarmont", "g": "Féminin", "r": "Membre", "s": {"phys": {"For": 38, "End": 49, "Agi": 49, "Vit": 46, "Rés": 47, "Vol": 36, "Cha": 35}, "magic": {"Contrôle": 47, "Réserve": 45, "Maîtrise": 41, "Précision": 44, "Puissance": 47, "Létalité": 49}, "intel": {"Intelligence": 48, "Combat IQ": 55, "Créativité": 54, "Stratégie": 50, "Sagesse": 51}}}, {"f": "Émeric", "l": "Grismont", "g": "Masculin", "r": "Membre", "s": {"phys": {"For": 42, "End": 44, "Agi": 45, "Vit": 46, "Rés": 48, "Vol": 35, "Cha": 38}, "magic": {"Contrôle": 46, "Réserve": 35, "Maîtrise": 41, "Précision": 42, "Puissance": 38, "Létalité": 43}, "intel": {"Intelligence": 54, "Combat IQ": 49, "Créativité": 52, "Stratégie": 64, "Sagesse": 57}}}, {"f": "Vesper", "l": "Ombrecourt", "g": "Féminin", "r": "Membre", "s": {"phys": {"For": 49, "End": 46, "Agi": 44, "Vit": 40, "Rés": 44, "Vol": 44, "Cha": 47}, "magic": {"Contrôle": 45, "Réserve": 48, "Maîtrise": 40, "Précision": 38, "Puissance": 39, "Létalité": 49}, "intel": {"Intelligence": 52, "Combat IQ": 64, "Créativité": 55, "Stratégie": 61, "Sagesse": 57}}}, {"f": "Petra", "l": "Sternhold", "g": "Féminin", "r": "Membre", "s": {"phys": {"For": 43, "End": 44, "Agi": 49, "Vit": 46, "Rés": 49, "Vol": 37, "Cha": 45}, "magic": {"Contrôle": 45, "Réserve": 41, "Maîtrise": 43, "Précision": 42, "Puissance": 35, "Létalité": 40}, "intel": {"Intelligence": 60, "Combat IQ": 64, "Créativité": 58, "Stratégie": 61, "Sagesse": 61}}}, {"f": "Fiora", "l": "Brûleciel", "g": "Féminin", "r": "Membre", "s": {"phys": {"For": 41, "End": 37, "Agi": 47, "Vit": 43, "Rés": 42, "Vol": 38, "Cha": 48}, "magic": {"Contrôle": 38, "Réserve": 39, "Maîtrise": 48, "Précision": 46, "Puissance": 37, "Létalité": 47}, "intel": {"Intelligence": 62, "Combat IQ": 49, "Créativité": 65, "Stratégie": 61, "Sagesse": 61}}}, {"f": "Warrick", "l": "Duvalmont", "g": "Masculin", "r": "Membre", "s": {"phys": {"For": 37, "End": 41, "Agi": 38, "Vit": 39, "Rés": 38, "Vol": 40, "Cha": 45}, "magic": {"Contrôle": 36, "Réserve": 49, "Maîtrise": 42, "Précision": 48, "Puissance": 40, "Létalité": 36}, "intel": {"Intelligence": 65, "Combat IQ": 54, "Créativité": 49, "Stratégie": 56, "Sagesse": 60}}}], "12": [{"f": "Balthazar", "l": "Grisbane", "g": "Masculin", "r": "Commandant", "s": {"phys": {"For": 69, "End": 60, "Agi": 61, "Vit": 63, "Rés": 69, "Vol": 70, "Cha": 68}, "magic": {"Contrôle": 63, "Réserve": 67, "Maîtrise": 63, "Précision": 65, "Puissance": 64, "Létalité": 60}, "intel": {"Intelligence": 63, "Combat IQ": 63, "Créativité": 61, "Stratégie": 67, "Sagesse": 63}}}, {"f": "Lorcan", "l": "Falquier", "g": "Masculin", "r": "Capitaine", "s": {"phys": {"For": 53, "End": 56, "Agi": 53, "Vit": 58, "Rés": 55, "Vol": 54, "Cha": 56}, "magic": {"Contrôle": 57, "Réserve": 58, "Maîtrise": 55, "Précision": 54, "Puissance": 54, "Létalité": 55}, "intel": {"Intelligence": 58, "Combat IQ": 57, "Créativité": 57, "Stratégie": 51, "Sagesse": 57}}}, {"f": "Oskar", "l": "Varennes", "g": "Masculin", "r": "Capitaine", "s": {"phys": {"For": 55, "End": 53, "Agi": 55, "Vit": 55, "Rés": 56, "Vol": 50, "Cha": 59}, "magic": {"Contrôle": 53, "Réserve": 52, "Maîtrise": 50, "Précision": 54, "Puissance": 58, "Létalité": 59}, "intel": {"Intelligence": 59, "Combat IQ": 56, "Créativité": 54, "Stratégie": 52, "Sagesse": 53}}}, {"f": "Isolde", "l": "Jaskier", "g": "Féminin", "r": "Capitaine", "s": {"phys": {"For": 56, "End": 59, "Agi": 53, "Vit": 57, "Rés": 58, "Vol": 55, "Cha": 54}, "magic": {"Contrôle": 57, "Réserve": 57, "Maîtrise": 57, "Précision": 52, "Puissance": 55, "Létalité": 52}, "intel": {"Intelligence": 52, "Combat IQ": 58, "Créativité": 57, "Stratégie": 52, "Sagesse": 58}}}, {"f": "Riven", "l": "Drakemor", "g": "Masculin", "r": "Membre", "s": {"phys": {"For": 35, "End": 43, "Agi": 35, "Vit": 48, "Rés": 48, "Vol": 36, "Cha": 48}, "magic": {"Contrôle": 45, "Réserve": 35, "Maîtrise": 47, "Précision": 35, "Puissance": 41, "Létalité": 37}, "intel": {"Intelligence": 55, "Combat IQ": 50, "Créativité": 52, "Stratégie": 48, "Sagesse": 54}}}, {"f": "Merrick", "l": "Wyndemere", "g": "Masculin", "r": "Membre", "s": {"phys": {"For": 40, "End": 35, "Agi": 44, "Vit": 45, "Rés": 45, "Vol": 49, "Cha": 44}, "magic": {"Contrôle": 49, "Réserve": 42, "Maîtrise": 45, "Précision": 42, "Puissance": 35, "Létalité": 35}, "intel": {"Intelligence": 65, "Combat IQ": 65, "Créativité": 61, "Stratégie": 48, "Sagesse": 48}}}, {"f": "Nael", "l": "Raventhorn", "g": "Masculin", "r": "Membre", "s": {"phys": {"For": 39, "End": 43, "Agi": 39, "Vit": 35, "Rés": 43, "Vol": 48, "Cha": 46}, "magic": {"Contrôle": 45, "Réserve": 41, "Maîtrise": 47, "Précision": 49, "Puissance": 37, "Létalité": 36}, "intel": {"Intelligence": 51, "Combat IQ": 64, "Créativité": 52, "Stratégie": 55, "Sagesse": 54}}}, {"f": "Zander", "l": "Sablerive", "g": "Masculin", "r": "Membre", "s": {"phys": {"For": 39, "End": 48, "Agi": 40, "Vit": 39, "Rés": 47, "Vol": 41, "Cha": 36}, "magic": {"Contrôle": 40, "Réserve": 41, "Maîtrise": 42, "Précision": 44, "Puissance": 38, "Létalité": 46}, "intel": {"Intelligence": 55, "Combat IQ": 57, "Créativité": 50, "Stratégie": 49, "Sagesse": 50}}}, {"f": "Soren", "l": "Beausoleil", "g": "Masculin", "r": "Membre", "s": {"phys": {"For": 41, "End": 43, "Agi": 42, "Vit": 35, "Rés": 45, "Vol": 35, "Cha": 46}, "magic": {"Contrôle": 37, "Réserve": 36, "Maîtrise": 42, "Précision": 48, "Puissance": 41, "Létalité": 45}, "intel": {"Intelligence": 58, "Combat IQ": 51, "Créativité": 64, "Stratégie": 49, "Sagesse": 55}}}, {"f": "Briseis", "l": "Rochevaine", "g": "Féminin", "r": "Membre", "s": {"phys": {"For": 48, "End": 46, "Agi": 49, "Vit": 44, "Rés": 42, "Vol": 39, "Cha": 35}, "magic": {"Contrôle": 49, "Réserve": 36, "Maîtrise": 45, "Précision": 49, "Puissance": 39, "Létalité": 49}, "intel": {"Intelligence": 65, "Combat IQ": 49, "Créativité": 53, "Stratégie": 58, "Sagesse": 48}}}, {"f": "Idris", "l": "Corvain", "g": "Masculin", "r": "Membre", "s": {"phys": {"For": 44, "End": 37, "Agi": 47, "Vit": 48, "Rés": 46, "Vol": 48, "Cha": 41}, "magic": {"Contrôle": 49, "Réserve": 36, "Maîtrise": 39, "Précision": 37, "Puissance": 44, "Létalité": 38}, "intel": {"Intelligence": 60, "Combat IQ": 65, "Créativité": 58, "Stratégie": 60, "Sagesse": 52}}}, {"f": "Leander", "l": "Ravencroft", "g": "Masculin", "r": "Membre", "s": {"phys": {"For": 46, "End": 46, "Agi": 36, "Vit": 43, "Rés": 46, "Vol": 40, "Cha": 35}, "magic": {"Contrôle": 36, "Réserve": 41, "Maîtrise": 38, "Précision": 48, "Puissance": 36, "Létalité": 40}, "intel": {"Intelligence": 60, "Combat IQ": 58, "Créativité": 48, "Stratégie": 56, "Sagesse": 62}}}, {"f": "Quillan", "l": "Torqueval", "g": "Masculin", "r": "Membre", "s": {"phys": {"For": 40, "End": 43, "Agi": 41, "Vit": 41, "Rés": 37, "Vol": 45, "Cha": 44}, "magic": {"Contrôle": 45, "Réserve": 41, "Maîtrise": 36, "Précision": 47, "Puissance": 44, "Létalité": 39}, "intel": {"Intelligence": 55, "Combat IQ": 50, "Créativité": 50, "Stratégie": 56, "Sagesse": 52}}}]};
+
+function ensureDivisionMembers(){
+  const DIV_NAMES = {
+    "1ère Division":1,"2ème Division":2,"3ème Division":3,"4ème Division":4,
+    "5ème Division":5,"6ème Division":6,"7ème Division":7,"8ème Division":8,
+    "9ème Division":9,"10ème Division":10,"11ème Division":11,"12ème Division":12
+  };
+  
+  let changed = false;
+  
+  Object.values(db).forEach(n => {
+    if(!n._isDivision) return;
+    const divNum = DIV_NAMES[n.name];
+    if(!divNum) return; // Skip 13ème and unknown
+    
+    // Check if already populated (has entries linked)
+    const existingLinked = (n.divMembers||[]).filter(m => m.entryId && db[m.entryId]);
+    if(existingLinked.length >= 13) return; // Already fully populated
+    
+    // Check migration flag
+    if(n._membersGenerated) return;
+    
+    const data = _DIV_MEMBER_DATA[String(divNum)];
+    if(!data) return;
+    
+    // Build new members array, preserving existing linked entries
+    const newMembers = [];
+    const usedEntryIds = new Set();
+    
+    // First, collect existing linked members by rank
+    const existingByRank = {};
+    (n.divMembers||[]).forEach(m => {
+      if(m.entryId && db[m.entryId]) {
+        // Map old ranks to new
+        let newRank = m.rank;
+        if(m.rank === 'Rang 1' || m.rank === 'Commandant') newRank = 'Commandant';
+        else if(m.rank === 'Rang 2' || m.rank === 'Officier' || m.rank === 'Capitaine') newRank = 'Capitaine';
+        else newRank = 'Membre';
+        
+        if(!existingByRank[newRank]) existingByRank[newRank] = [];
+        existingByRank[newRank].push(m);
+        usedEntryIds.add(m.entryId);
+      }
+    });
+    
+    // Target: 1 Commandant, 3 Capitaines, 9 Membres
+    const targets = [
+      {rank: 'Commandant', count: 1},
+      {rank: 'Capitaine', count: 3},
+      {rank: 'Membre', count: 9},
+    ];
+    
+    let dataIdx = 0;
+    targets.forEach(t => {
+      const existing = existingByRank[t.rank] || [];
+      // Add existing members first
+      existing.slice(0, t.count).forEach(m => {
+        newMembers.push({name: m.name, rank: t.rank, entryId: m.entryId});
+      });
+      
+      // Fill remaining with new entries
+      const remaining = t.count - Math.min(existing.length, t.count);
+      for(let i = 0; i < remaining; i++) {
+        // Find next unused data entry for this rank
+        while(dataIdx < data.length && data[dataIdx].r !== t.rank) dataIdx++;
+        if(dataIdx >= data.length) break;
+        
+        const d = data[dataIdx]; dataIdx++;
+        const entryId = gid();
+        
+        // Create character entry
+        db[entryId] = {
+          id: entryId,
+          type: 'entry',
+          entryType: 'character',
+          parentId: n.id,
+          name: d.f,
+          lastName: d.l,
+          icon: n.icon || '⚔',
+          subtitle: d.r + ' — ' + n.name,
+          tags: [d.r, n.name],
+          fields: [],
+          body: '',
+          images: [],
+          links: {kingdoms:[], factions:[], gates:[], characters:[]},
+          stats: d.s,
+          charAge: '',
+          charGender: d.g,
+          charStatus: 'Vivant',
+          charBio: '',
+          charPowers: '',
+          charGoals: '',
+        };
+        
+        // Add as child of division
+        if(!n.children) n.children = [];
+        if(!n.children.includes(entryId)) n.children.push(entryId);
+        
+        newMembers.push({
+          name: d.f + ' ' + d.l,
+          rank: t.rank,
+          entryId: entryId,
+        });
+        
+        changed = true;
+      }
+    });
+    
+    n.divMembers = newMembers;
+    n.divRankOrder = ['Commandant', 'Capitaine', 'Membre'];
+    n._membersGenerated = true;
+    changed = true;
+  });
+  
+  return changed;
 }
 
 
@@ -1502,19 +2243,19 @@ function seed(){
 
   // Seed les 13 divisions subcategories
   if(!Object.values(db).find(nd=>nd._isDivision)){
-    (()=>{const dId=gid();db[dId]={id:dId,type:'category',kind:'generic',name:'1ère Division',icon:'⚔',subtitle:'Avant-garde des élites',parentId:divId,children:[],_isDivision:true,divMembers:[{name:'Commandant — À définir',rank:'Commandant',entryId:null},{name:'Officier — À définir',rank:'Officier',entryId:null},{name:'Soldat — À définir',rank:'Soldat',entryId:null},{name:'Recrue — À définir',rank:'Recrue',entryId:null}]};db[divId].children.push(dId);})();
-    (()=>{const dId=gid();db[dId]={id:dId,type:'category',kind:'generic',name:'2ème Division',icon:'🛡',subtitle:'Défenseurs des remparts',parentId:divId,children:[],_isDivision:true,divMembers:[{name:'Commandant — À définir',rank:'Commandant',entryId:null},{name:'Officier — À définir',rank:'Officier',entryId:null},{name:'Soldat — À définir',rank:'Soldat',entryId:null},{name:'Recrue — À définir',rank:'Recrue',entryId:null}]};db[divId].children.push(dId);})();
-    (()=>{const dId=gid();db[dId]={id:dId,type:'category',kind:'generic',name:'3ème Division',icon:'🔥',subtitle:"Unité d'assaut incendiaire",parentId:divId,children:[],_isDivision:true,divMembers:[{name:'Commandant — À définir',rank:'Commandant',entryId:null},{name:'Officier — À définir',rank:'Officier',entryId:null},{name:'Soldat — À définir',rank:'Soldat',entryId:null},{name:'Recrue — À définir',rank:'Recrue',entryId:null}]};db[divId].children.push(dId);})();
-    (()=>{const dId=gid();db[dId]={id:dId,type:'category',kind:'generic',name:'4ème Division',icon:'💀',subtitle:'Corps des ombres',parentId:divId,children:[],_isDivision:true,divMembers:[{name:'Commandant — À définir',rank:'Commandant',entryId:null},{name:'Officier — À définir',rank:'Officier',entryId:null},{name:'Soldat — À définir',rank:'Soldat',entryId:null},{name:'Recrue — À définir',rank:'Recrue',entryId:null}]};db[divId].children.push(dId);})();
-    (()=>{const dId=gid();db[dId]={id:dId,type:'category',kind:'generic',name:'5ème Division',icon:'⚡',subtitle:'Foudre et tonnerre',parentId:divId,children:[],_isDivision:true,divMembers:[{name:'Commandant — À définir',rank:'Commandant',entryId:null},{name:'Officier — À définir',rank:'Officier',entryId:null},{name:'Soldat — À définir',rank:'Soldat',entryId:null},{name:'Recrue — À définir',rank:'Recrue',entryId:null}]};db[divId].children.push(dId);})();
-    (()=>{const dId=gid();db[dId]={id:dId,type:'category',kind:'generic',name:'6ème Division',icon:'🌙',subtitle:'Sentinelles de la nuit',parentId:divId,children:[],_isDivision:true,divMembers:[{name:'Commandant — À définir',rank:'Commandant',entryId:null},{name:'Officier — À définir',rank:'Officier',entryId:null},{name:'Soldat — À définir',rank:'Soldat',entryId:null},{name:'Recrue — À définir',rank:'Recrue',entryId:null}]};db[divId].children.push(dId);})();
-    (()=>{const dId=gid();db[dId]={id:dId,type:'category',kind:'generic',name:'7ème Division',icon:'🌊',subtitle:'Maîtres des flots',parentId:divId,children:[],_isDivision:true,divMembers:[{name:'Commandant — À définir',rank:'Commandant',entryId:null},{name:'Officier — À définir',rank:'Officier',entryId:null},{name:'Soldat — À définir',rank:'Soldat',entryId:null},{name:'Recrue — À définir',rank:'Recrue',entryId:null}]};db[divId].children.push(dId);})();
-    (()=>{const dId=gid();db[dId]={id:dId,type:'category',kind:'generic',name:'8ème Division',icon:'🌿',subtitle:'Chasseurs des forêts',parentId:divId,children:[],_isDivision:true,divMembers:[{name:'Commandant — À définir',rank:'Commandant',entryId:null},{name:'Officier — À définir',rank:'Officier',entryId:null},{name:'Soldat — À définir',rank:'Soldat',entryId:null},{name:'Recrue — À définir',rank:'Recrue',entryId:null}]};db[divId].children.push(dId);})();
-    (()=>{const dId=gid();db[dId]={id:dId,type:'category',kind:'generic',name:'9ème Division',icon:'🔮',subtitle:'Arcanes et magie de guerre',parentId:divId,children:[],_isDivision:true,divMembers:[{name:'Commandant — À définir',rank:'Commandant',entryId:null},{name:'Officier — À définir',rank:'Officier',entryId:null},{name:'Soldat — À définir',rank:'Soldat',entryId:null},{name:'Recrue — À définir',rank:'Recrue',entryId:null}]};db[divId].children.push(dId);})();
-    (()=>{const dId=gid();db[dId]={id:dId,type:'category',kind:'generic',name:'10ème Division',icon:'🏹',subtitle:"Archers d'élite",parentId:divId,children:[],_isDivision:true,divMembers:[{name:'Commandant — À définir',rank:'Commandant',entryId:null},{name:'Officier — À définir',rank:'Officier',entryId:null},{name:'Soldat — À définir',rank:'Soldat',entryId:null},{name:'Recrue — À définir',rank:'Recrue',entryId:null}]};db[divId].children.push(dId);})();
-    (()=>{const dId=gid();db[dId]={id:dId,type:'category',kind:'generic',name:'11ème Division',icon:'🗡',subtitle:'Duellistes impitoyables',parentId:divId,children:[],_isDivision:true,divMembers:[{name:'Commandant — À définir',rank:'Commandant',entryId:null},{name:'Officier — À définir',rank:'Officier',entryId:null},{name:'Soldat — À définir',rank:'Soldat',entryId:null},{name:'Recrue — À définir',rank:'Recrue',entryId:null}]};db[divId].children.push(dId);})();
-    (()=>{const dId=gid();db[dId]={id:dId,type:'category',kind:'generic',name:'12ème Division',icon:'📜',subtitle:'Stratèges et érudits',parentId:divId,children:[],_isDivision:true,divMembers:[{name:'Commandant — À définir',rank:'Commandant',entryId:null},{name:'Officier — À définir',rank:'Officier',entryId:null},{name:'Soldat — À définir',rank:'Soldat',entryId:null},{name:'Recrue — À définir',rank:'Recrue',entryId:null}]};db[divId].children.push(dId);})();
-    (()=>{const dId=gid();db[dId]={id:dId,type:'category',kind:'generic',name:'13ème Division',icon:'👁',subtitle:'Les Indomptables',parentId:divId,children:[],_isDivision:true,divMembers:[{name:'Commandant — À définir',rank:'Commandant',entryId:null},{name:'Officier — À définir',rank:'Officier',entryId:null},{name:'Soldat — À définir',rank:'Soldat',entryId:null},{name:'Recrue — À définir',rank:'Recrue',entryId:null}]};db[divId].children.push(dId);})();
+    (()=>{const dId=gid();db[dId]={id:dId,type:'category',kind:'generic',name:'1ère Division',icon:'⚔',subtitle:'Avant-garde des élites',parentId:divId,children:[],_isDivision:true,divMembers:[{name:'— Commandant',rank:'Commandant',entryId:null},{name:'— Capitaine 1',rank:'Capitaine',entryId:null},{name:'— Capitaine 2',rank:'Capitaine',entryId:null},{name:'— Capitaine 3',rank:'Capitaine',entryId:null},{name:'— Membre 1',rank:'Membre',entryId:null},{name:'— Membre 2',rank:'Membre',entryId:null},{name:'— Membre 3',rank:'Membre',entryId:null},{name:'— Membre 4',rank:'Membre',entryId:null},{name:'— Membre 5',rank:'Membre',entryId:null},{name:'— Membre 6',rank:'Membre',entryId:null},{name:'— Membre 7',rank:'Membre',entryId:null},{name:'— Membre 8',rank:'Membre',entryId:null},{name:'— Membre 9',rank:'Membre',entryId:null}]};db[divId].children.push(dId);})();
+    (()=>{const dId=gid();db[dId]={id:dId,type:'category',kind:'generic',name:'2ème Division',icon:'🛡',subtitle:'Défenseurs des remparts',parentId:divId,children:[],_isDivision:true,divMembers:[{name:'— Commandant',rank:'Commandant',entryId:null},{name:'— Capitaine 1',rank:'Capitaine',entryId:null},{name:'— Capitaine 2',rank:'Capitaine',entryId:null},{name:'— Capitaine 3',rank:'Capitaine',entryId:null},{name:'— Membre 1',rank:'Membre',entryId:null},{name:'— Membre 2',rank:'Membre',entryId:null},{name:'— Membre 3',rank:'Membre',entryId:null},{name:'— Membre 4',rank:'Membre',entryId:null},{name:'— Membre 5',rank:'Membre',entryId:null},{name:'— Membre 6',rank:'Membre',entryId:null},{name:'— Membre 7',rank:'Membre',entryId:null},{name:'— Membre 8',rank:'Membre',entryId:null},{name:'— Membre 9',rank:'Membre',entryId:null}]};db[divId].children.push(dId);})();
+    (()=>{const dId=gid();db[dId]={id:dId,type:'category',kind:'generic',name:'3ème Division',icon:'🔥',subtitle:"Unité d'assaut incendiaire",parentId:divId,children:[],_isDivision:true,divMembers:[{name:'— Commandant',rank:'Commandant',entryId:null},{name:'— Capitaine 1',rank:'Capitaine',entryId:null},{name:'— Capitaine 2',rank:'Capitaine',entryId:null},{name:'— Capitaine 3',rank:'Capitaine',entryId:null},{name:'— Membre 1',rank:'Membre',entryId:null},{name:'— Membre 2',rank:'Membre',entryId:null},{name:'— Membre 3',rank:'Membre',entryId:null},{name:'— Membre 4',rank:'Membre',entryId:null},{name:'— Membre 5',rank:'Membre',entryId:null},{name:'— Membre 6',rank:'Membre',entryId:null},{name:'— Membre 7',rank:'Membre',entryId:null},{name:'— Membre 8',rank:'Membre',entryId:null},{name:'— Membre 9',rank:'Membre',entryId:null}]};db[divId].children.push(dId);})();
+    (()=>{const dId=gid();db[dId]={id:dId,type:'category',kind:'generic',name:'4ème Division',icon:'💀',subtitle:'Corps des ombres',parentId:divId,children:[],_isDivision:true,divMembers:[{name:'— Commandant',rank:'Commandant',entryId:null},{name:'— Capitaine 1',rank:'Capitaine',entryId:null},{name:'— Capitaine 2',rank:'Capitaine',entryId:null},{name:'— Capitaine 3',rank:'Capitaine',entryId:null},{name:'— Membre 1',rank:'Membre',entryId:null},{name:'— Membre 2',rank:'Membre',entryId:null},{name:'— Membre 3',rank:'Membre',entryId:null},{name:'— Membre 4',rank:'Membre',entryId:null},{name:'— Membre 5',rank:'Membre',entryId:null},{name:'— Membre 6',rank:'Membre',entryId:null},{name:'— Membre 7',rank:'Membre',entryId:null},{name:'— Membre 8',rank:'Membre',entryId:null},{name:'— Membre 9',rank:'Membre',entryId:null}]};db[divId].children.push(dId);})();
+    (()=>{const dId=gid();db[dId]={id:dId,type:'category',kind:'generic',name:'5ème Division',icon:'⚡',subtitle:'Foudre et tonnerre',parentId:divId,children:[],_isDivision:true,divMembers:[{name:'— Commandant',rank:'Commandant',entryId:null},{name:'— Capitaine 1',rank:'Capitaine',entryId:null},{name:'— Capitaine 2',rank:'Capitaine',entryId:null},{name:'— Capitaine 3',rank:'Capitaine',entryId:null},{name:'— Membre 1',rank:'Membre',entryId:null},{name:'— Membre 2',rank:'Membre',entryId:null},{name:'— Membre 3',rank:'Membre',entryId:null},{name:'— Membre 4',rank:'Membre',entryId:null},{name:'— Membre 5',rank:'Membre',entryId:null},{name:'— Membre 6',rank:'Membre',entryId:null},{name:'— Membre 7',rank:'Membre',entryId:null},{name:'— Membre 8',rank:'Membre',entryId:null},{name:'— Membre 9',rank:'Membre',entryId:null}]};db[divId].children.push(dId);})();
+    (()=>{const dId=gid();db[dId]={id:dId,type:'category',kind:'generic',name:'6ème Division',icon:'🌙',subtitle:'Sentinelles de la nuit',parentId:divId,children:[],_isDivision:true,divMembers:[{name:'— Commandant',rank:'Commandant',entryId:null},{name:'— Capitaine 1',rank:'Capitaine',entryId:null},{name:'— Capitaine 2',rank:'Capitaine',entryId:null},{name:'— Capitaine 3',rank:'Capitaine',entryId:null},{name:'— Membre 1',rank:'Membre',entryId:null},{name:'— Membre 2',rank:'Membre',entryId:null},{name:'— Membre 3',rank:'Membre',entryId:null},{name:'— Membre 4',rank:'Membre',entryId:null},{name:'— Membre 5',rank:'Membre',entryId:null},{name:'— Membre 6',rank:'Membre',entryId:null},{name:'— Membre 7',rank:'Membre',entryId:null},{name:'— Membre 8',rank:'Membre',entryId:null},{name:'— Membre 9',rank:'Membre',entryId:null}]};db[divId].children.push(dId);})();
+    (()=>{const dId=gid();db[dId]={id:dId,type:'category',kind:'generic',name:'7ème Division',icon:'🌊',subtitle:'Maîtres des flots',parentId:divId,children:[],_isDivision:true,divMembers:[{name:'— Commandant',rank:'Commandant',entryId:null},{name:'— Capitaine 1',rank:'Capitaine',entryId:null},{name:'— Capitaine 2',rank:'Capitaine',entryId:null},{name:'— Capitaine 3',rank:'Capitaine',entryId:null},{name:'— Membre 1',rank:'Membre',entryId:null},{name:'— Membre 2',rank:'Membre',entryId:null},{name:'— Membre 3',rank:'Membre',entryId:null},{name:'— Membre 4',rank:'Membre',entryId:null},{name:'— Membre 5',rank:'Membre',entryId:null},{name:'— Membre 6',rank:'Membre',entryId:null},{name:'— Membre 7',rank:'Membre',entryId:null},{name:'— Membre 8',rank:'Membre',entryId:null},{name:'— Membre 9',rank:'Membre',entryId:null}]};db[divId].children.push(dId);})();
+    (()=>{const dId=gid();db[dId]={id:dId,type:'category',kind:'generic',name:'8ème Division',icon:'🌿',subtitle:'Chasseurs des forêts',parentId:divId,children:[],_isDivision:true,divMembers:[{name:'— Commandant',rank:'Commandant',entryId:null},{name:'— Capitaine 1',rank:'Capitaine',entryId:null},{name:'— Capitaine 2',rank:'Capitaine',entryId:null},{name:'— Capitaine 3',rank:'Capitaine',entryId:null},{name:'— Membre 1',rank:'Membre',entryId:null},{name:'— Membre 2',rank:'Membre',entryId:null},{name:'— Membre 3',rank:'Membre',entryId:null},{name:'— Membre 4',rank:'Membre',entryId:null},{name:'— Membre 5',rank:'Membre',entryId:null},{name:'— Membre 6',rank:'Membre',entryId:null},{name:'— Membre 7',rank:'Membre',entryId:null},{name:'— Membre 8',rank:'Membre',entryId:null},{name:'— Membre 9',rank:'Membre',entryId:null}]};db[divId].children.push(dId);})();
+    (()=>{const dId=gid();db[dId]={id:dId,type:'category',kind:'generic',name:'9ème Division',icon:'🔮',subtitle:'Arcanes et magie de guerre',parentId:divId,children:[],_isDivision:true,divMembers:[{name:'— Commandant',rank:'Commandant',entryId:null},{name:'— Capitaine 1',rank:'Capitaine',entryId:null},{name:'— Capitaine 2',rank:'Capitaine',entryId:null},{name:'— Capitaine 3',rank:'Capitaine',entryId:null},{name:'— Membre 1',rank:'Membre',entryId:null},{name:'— Membre 2',rank:'Membre',entryId:null},{name:'— Membre 3',rank:'Membre',entryId:null},{name:'— Membre 4',rank:'Membre',entryId:null},{name:'— Membre 5',rank:'Membre',entryId:null},{name:'— Membre 6',rank:'Membre',entryId:null},{name:'— Membre 7',rank:'Membre',entryId:null},{name:'— Membre 8',rank:'Membre',entryId:null},{name:'— Membre 9',rank:'Membre',entryId:null}]};db[divId].children.push(dId);})();
+    (()=>{const dId=gid();db[dId]={id:dId,type:'category',kind:'generic',name:'10ème Division',icon:'🏹',subtitle:"Archers d'élite",parentId:divId,children:[],_isDivision:true,divMembers:[{name:'— Commandant',rank:'Commandant',entryId:null},{name:'— Capitaine 1',rank:'Capitaine',entryId:null},{name:'— Capitaine 2',rank:'Capitaine',entryId:null},{name:'— Capitaine 3',rank:'Capitaine',entryId:null},{name:'— Membre 1',rank:'Membre',entryId:null},{name:'— Membre 2',rank:'Membre',entryId:null},{name:'— Membre 3',rank:'Membre',entryId:null},{name:'— Membre 4',rank:'Membre',entryId:null},{name:'— Membre 5',rank:'Membre',entryId:null},{name:'— Membre 6',rank:'Membre',entryId:null},{name:'— Membre 7',rank:'Membre',entryId:null},{name:'— Membre 8',rank:'Membre',entryId:null},{name:'— Membre 9',rank:'Membre',entryId:null}]};db[divId].children.push(dId);})();
+    (()=>{const dId=gid();db[dId]={id:dId,type:'category',kind:'generic',name:'11ème Division',icon:'🗡',subtitle:'Duellistes impitoyables',parentId:divId,children:[],_isDivision:true,divMembers:[{name:'— Commandant',rank:'Commandant',entryId:null},{name:'— Capitaine 1',rank:'Capitaine',entryId:null},{name:'— Capitaine 2',rank:'Capitaine',entryId:null},{name:'— Capitaine 3',rank:'Capitaine',entryId:null},{name:'— Membre 1',rank:'Membre',entryId:null},{name:'— Membre 2',rank:'Membre',entryId:null},{name:'— Membre 3',rank:'Membre',entryId:null},{name:'— Membre 4',rank:'Membre',entryId:null},{name:'— Membre 5',rank:'Membre',entryId:null},{name:'— Membre 6',rank:'Membre',entryId:null},{name:'— Membre 7',rank:'Membre',entryId:null},{name:'— Membre 8',rank:'Membre',entryId:null},{name:'— Membre 9',rank:'Membre',entryId:null}]};db[divId].children.push(dId);})();
+    (()=>{const dId=gid();db[dId]={id:dId,type:'category',kind:'generic',name:'12ème Division',icon:'📜',subtitle:'Stratèges et érudits',parentId:divId,children:[],_isDivision:true,divMembers:[{name:'— Commandant',rank:'Commandant',entryId:null},{name:'— Capitaine 1',rank:'Capitaine',entryId:null},{name:'— Capitaine 2',rank:'Capitaine',entryId:null},{name:'— Capitaine 3',rank:'Capitaine',entryId:null},{name:'— Membre 1',rank:'Membre',entryId:null},{name:'— Membre 2',rank:'Membre',entryId:null},{name:'— Membre 3',rank:'Membre',entryId:null},{name:'— Membre 4',rank:'Membre',entryId:null},{name:'— Membre 5',rank:'Membre',entryId:null},{name:'— Membre 6',rank:'Membre',entryId:null},{name:'— Membre 7',rank:'Membre',entryId:null},{name:'— Membre 8',rank:'Membre',entryId:null},{name:'— Membre 9',rank:'Membre',entryId:null}]};db[divId].children.push(dId);})();
+    (()=>{const dId=gid();db[dId]={id:dId,type:'category',kind:'generic',name:'13ème Division',icon:'👁',subtitle:'Les Indomptables',parentId:divId,children:[],_isDivision:true,divMembers:[{name:'— Commandant',rank:'Commandant',entryId:null},{name:'— Capitaine 1',rank:'Capitaine',entryId:null},{name:'— Capitaine 2',rank:'Capitaine',entryId:null},{name:'— Capitaine 3',rank:'Capitaine',entryId:null},{name:'— Membre 1',rank:'Membre',entryId:null},{name:'— Membre 2',rank:'Membre',entryId:null},{name:'— Membre 3',rank:'Membre',entryId:null},{name:'— Membre 4',rank:'Membre',entryId:null},{name:'— Membre 5',rank:'Membre',entryId:null},{name:'— Membre 6',rank:'Membre',entryId:null},{name:'— Membre 7',rank:'Membre',entryId:null},{name:'— Membre 8',rank:'Membre',entryId:null},{name:'— Membre 9',rank:'Membre',entryId:null}]};db[divId].children.push(dId);})();
   }
 
   // Personnages > Les Gardiens (special immersive subcategory)
@@ -1556,6 +2297,101 @@ function seed(){
 // ════════════════════════════════════════════════
 //  MIGRATION : restructure les anciennes données
 // ════════════════════════════════════════════════
+
+
+// ════════════════════════════════════════════════════
+//  MIGRATION : Populate Divisions 1-12 with characters
+// ════════════════════════════════════════════════════
+function _migrateDivisionCharacters(){
+  if(globalStatNames._divCharsMigrated) return;
+
+  const _MN=['Aldric','Bastien','Caelus','Darius','Edric','Fenris','Gareth','Hadrien','Ivar','Jarek','Kaelen','Lysander','Magnus','Nero','Orion','Percival','Ragnar','Soren','Theron','Ulric','Valen','Wystan','Xander','Zephyr','Arkan','Beric','Corvus','Draven','Eamon','Falken','Galen','Hector','Idris','Jorik','Keiran','Lorcan','Marius','Osric','Pyrrhus','Ronan','Silas','Tiberius','Vareth','Wulfric','Brennan','Caspian','Dorian','Emeric','Faelan','Hawke','Ivan','Jasper','Kael','Leander','Mordecai','Nolan','Owyn','Peregrin','Riven','Stellan','Torben','Viktor','Alaric','Cedric','Damian','Felix','Gideon','Henrik','Isidore','Jovan','Kilian','Lucian','Maxim','Nikolai','Oskar','Pascal','Roland','Stefan','Tristan','Valentin','Werner','Axel','Bjorn','Conrad','Dietrich','Ernst','Friedrich','Hugo','Ignace','Julius','Leonid','Matthias','Niklas','Otto','Rafael','Severin','Theodor','Ulrich','Wilhelm','Yorick','Zarek','Ashton','Caius','Florian','Gunther','Harlan','Kaspar','Leopold'];
+  const _FN=['Aelara','Brielle','Celine','Elara','Freya','Galene','Helena','Iris','Keira','Lyra','Mira','Nadia','Ophelia','Petra','Selene','Thalia','Valeria','Yara','Zara','Astrid','Brenna','Cassandra','Daphne','Elowen','Fiora','Giselle','Hana','Isolde','Kaela','Livia','Morgane','Nerida','Phaedra','Rhiannon','Seraphine','Tatiana','Viola','Xanthe','Ysabel','Brigitte','Camille','Delphine','Elyse','Fleur','Gwenyth','Ingrid','Klara','Lenore','Maren','Naeva','Orianne','Rosalind','Sybille','Tessa','Ulyana','Vivienne','Anya','Celeste','Dahlia'];
+  const _LN=['Ashford','Blackthorn','Creed','Dawnheart','Ember','Frost','Grimwald','Holloway','Ironforge','Kaine','Lorthane','Morven','Nightfall','Orsini','Pyke','Ravencroft','Stormwind','Thornwell','Valdris','Whiteclaw','Ashborne','Brightwood','Caleheart','Darkholme','Evershaw','Fairfax','Greymoor','Hawkridge','Kastner','Langford','Montclair','Northwind','Oakshield','Pendrake','Rosthorne','Silvain','Trevane','Umbrath','Vaelstrom','Wyndham','Aldenmere','Briarstone','Corvane','Dunwald','Elmsward','Falcrest','Galewind','Harrowfield','Ironstag','Lockhart','Marsden','Orenthal','Prideaux','Renwick','Sutherin','Tavaris','Ulvaren','Vexford','Warrick','Belthane','Corwell','Draeven','Estavar','Fernwick','Galbraith','Haldane','Jormund','Kessler','Luthane','Malcorin','Nevarre','Orlen','Pelham','Rathmore','Solaire','Tirion','Uldren','Vaelyn','Wynford','Ashcroft','Beaumont','Caravel','Delmonte','Edgeworth','Foxhaven','Grantham','Helmsworth','Inverness','Jareth','Kingsley','Lomond','Merrick','Norwood','Osgrave','Pemberton','Quennell','Rawlings','Stanhope','Trevelyan','Underhill','Vauclain','Westmere','Yardley','Alderton','Blackmere','Chadwick','Dunmore','Edgerton','Forsythe','Granville','Hartwell','Kettleworth','Landseer','Mayfield','Northgate','Oakmont','Pendleton','Rothschild','Sinclair','Thatcher','Underwood','Vandermeer','Whitmore'];
+
+  function _sh(a){for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];}return a;}
+  function _ri(a,b){return Math.floor(Math.random()*(b-a+1))+a;}
+
+  const mP=_sh([..._MN]),fP=_sh([..._FN]),lP=_sh([..._LN]);
+  let mi=0,fi=0,li=0;
+
+  function _pick(g){
+    let first;
+    if(g==='Masculin'){first=mP[mi%mP.length];mi++;}
+    else{first=fP[fi%fP.length];fi++;}
+    const last=lP[li%lP.length];li++;
+    return{first,last};
+  }
+
+  function _stats(rank){
+    const s={phys:{},magic:{},intel:{}};
+    const P=['For','End','Agi','Vit','Rés','Vol','Cha'];
+    const M=['Contrôle','Réserve','Maîtrise','Précision','Puissance','Létalité'];
+    const I=['Intelligence','Combat IQ','Créativité','Stratégie','Sagesse'];
+    if(rank==='Commandant'){
+      P.forEach(k=>{s.phys[k]=_ri(60,70);});
+      M.forEach(k=>{s.magic[k]=_ri(60,70);});
+      I.forEach(k=>{s.intel[k]=70;});
+    } else if(rank==='Capitaine'){
+      P.forEach(k=>{s.phys[k]=_ri(50,59);});
+      M.forEach(k=>{s.magic[k]=_ri(50,59);});
+      I.forEach(k=>{s.intel[k]=60;});
+    } else {
+      P.forEach(k=>{s.phys[k]=_ri(35,49);});
+      M.forEach(k=>{s.magic[k]=_ri(35,49);});
+      I.forEach(k=>{s.intel[k]=_ri(48,65);});
+    }
+    return s;
+  }
+
+  const divs=Object.values(db).filter(n=>n._isDivision&&n.type==='category');
+  const d13=divs.find(n=>n.name&&n.name.includes('13'));
+  const TARGET=[{rank:'Commandant',count:1},{rank:'Capitaine',count:3},{rank:'Membre',count:9}];
+
+  function _genders(){
+    const g=[];for(let i=0;i<9;i++)g.push('Masculin');for(let i=0;i<4;i++)g.push('Féminin');return _sh(g);
+  }
+
+  let total=0;
+  divs.forEach(dn=>{
+    if(d13&&dn.id===d13.id)return;
+    const gs=_genders();let gi=0;
+    const ex=dn.divMembers||[];
+    const byRank={};
+    ex.forEach(m=>{
+      if(m.entryId&&db[m.entryId]){
+        const r=m.rank||'Membre';
+        const nr=r.includes('Commandant')||r==='Rang 1'?'Commandant':r.includes('Capitaine')||r.includes('Officier')||r==='Rang 2'?'Capitaine':'Membre';
+        if(!byRank[nr])byRank[nr]=[];
+        byRank[nr].push(m);
+      }
+    });
+    const nm=[];
+    dn.divRankOrder=['Commandant','Capitaine','Membre'];
+    TARGET.forEach(t=>{
+      const linked=byRank[t.rank]||[];
+      linked.forEach(m=>{m.rank=t.rank;nm.push(m);});
+      const need=t.count-linked.length;
+      for(let i=0;i<need;i++){
+        const gender=gs[gi%gs.length];gi++;
+        const name=_pick(gender);
+        const stats=_stats(t.rank);
+        const eid=gid();
+        db[eid]={id:eid,type:'entry',entryType:'character',parentId:dn.id,name:name.first,lastName:name.last,icon:dn.icon||'⚔',subtitle:t.rank+' — '+dn.name,charAge:'',charGender:gender,charStatus:'Vivant',charBio:'',charPowers:'',charGoals:'',tags:[],fields:[],body:'',images:[],links:{kingdoms:[],factions:[],gates:[],characters:[]},stats:stats};
+        if(!dn.children)dn.children=[];
+        if(!dn.children.includes(eid))dn.children.push(eid);
+        nm.push({name:name.first+' '+name.last,rank:t.rank,entryId:eid});
+        total++;
+      }
+    });
+    dn.divMembers=nm;
+  });
+  if(total>0){
+    globalStatNames._divCharsMigrated=true;
+    console.log('[GoH] Division characters created:',total);
+  }
+}
+
 function _migrateData(){
   let changed = false;
   // Migration : Les Gardiens → kind='gardiens'
@@ -4642,7 +5478,7 @@ function renderCategory(v,n){
        (parentNode && (parentNode.name==='Les 13 Divisions' || parentNode._isDivisionParent) && n.type==='category') ||
        (n.type==='category' && n.parentId && (() => { let p=db[n.parentId]; return p && (p.name==='Les 13 Divisions'||p._isDivisionParent); })())){
       // Ensure _isDivision flag is set
-      if(!n._isDivision){ n._isDivision=true; if(!n.divMembers) n.divMembers=[{name:'— À définir',rank:'Rang 1',entryId:null},{name:'— À définir',rank:'Rang 2',entryId:null},{name:'— À définir',rank:'Rang 3',entryId:null},{name:'— À définir',rank:'Rang 4',entryId:null}]; save(); }
+      if(!n._isDivision){ n._isDivision=true; if(!n.divMembers) n.divMembers=[{name:'— Commandant',rank:'Commandant',entryId:null},{name:'— Capitaine 1',rank:'Capitaine',entryId:null},{name:'— Capitaine 2',rank:'Capitaine',entryId:null},{name:'— Capitaine 3',rank:'Capitaine',entryId:null},{name:'— Membre 1',rank:'Membre',entryId:null},{name:'— Membre 2',rank:'Membre',entryId:null},{name:'— Membre 3',rank:'Membre',entryId:null},{name:'— Membre 4',rank:'Membre',entryId:null},{name:'— Membre 5',rank:'Membre',entryId:null},{name:'— Membre 6',rank:'Membre',entryId:null},{name:'— Membre 7',rank:'Membre',entryId:null},{name:'— Membre 8',rank:'Membre',entryId:null},{name:'— Membre 9',rank:'Membre',entryId:null}]; save(); }
       renderDivisionImmersive(v,n);
       return;
     }
@@ -5909,18 +6745,18 @@ function renderEntry(v,n){
     const _powers = _arcData ? (_arcData.powers || '') : (n.charPowers || '');
     const _goals  = _arcData ? (_arcData.goals  || '') : (n.charGoals  || '');
     const sections=[
-      {label:'Biographie',          val:_bio},
-      {label:'Capacités & Pouvoirs',val:_powers},
-      {label:'Objectifs & Motivations',val:_goals},
+      {label:'Biographie — Origines & Histoire', val:_bio},
+      {label:'Capacités & Pouvoirs', val:_powers},
+      {label:'Objectifs & Motivations', val:_goals},
     ];
     sections.forEach(s=>{
-      if(s.val) h+=`<div class="sec-label">${s.label}</div><div style="background:var(--bg2);border:1px solid var(--border);border-left:2px solid var(--gold-dim);border-radius:4px;padding:14px 18px;margin-bottom:6px;font-size:15px;line-height:1.85;white-space:pre-wrap;color:var(--text)">${esc(s.val)}</div>`;
+      if(s.val) h+=`<div class="sec-label">${s.label}</div><div style="background:linear-gradient(135deg,var(--bg2),rgba(20,16,30,.95));border:1px solid var(--border);border-left:3px solid var(--gold-dim);border-radius:4px;padding:16px 20px;margin-bottom:8px;font-size:15px;line-height:1.9;white-space:pre-wrap;color:var(--text);box-shadow:0 2px 12px rgba(0,0,0,.15)">${esc(s.val)}</div>`;
     });
-    if(!_bio&&!_powers&&!_goals&&!n.body) h+=`<div class="empty">Fiche vide — cliquez sur Modifier pour remplir.</div>`;
+    if(!_bio&&!_powers&&!_goals&&!n.body) h+=`<div class="empty">Fiche vide — les détails de ce personnage n'ont pas encore été rédigés.</div>`;
   }
 
   if(n.body) h+=`<div class="sec-label">${isChar?'Notes supplémentaires':'Contenu'}</div><div class="ev-body">${esc(n.body)}</div>`;
-  else if(!isChar) h+=`<div class="empty">Aucun contenu. Cliquez sur Modifier.</div>`;
+  else if(!isChar) h+=`<div class="empty">Contenu à rédiger — cette entrée est en attente de rédaction.</div>`;
 
   // ── Stats radar — prend en compte l'arc actif ──
   const _rArcIdx = window._arcView&&window._arcView[n.id]!==undefined?window._arcView[n.id]:-1;
@@ -8530,14 +9366,17 @@ function renderDivisionImmersive(v, n){
   const oldS = document.getElementById('div-style'); if(oldS) oldS.remove();
   const s = document.createElement('style'); s.id = 'div-style';
   s.textContent = `
-    #div-outer{display:flex;flex-direction:column;align-items:center;padding:40px 30px 80px;min-height:calc(100vh - 90px);background:linear-gradient(180deg,#08060e 0%,#0e0a16 40%,#0a0810 100%)}
+    #div-outer{display:flex;flex-direction:column;align-items:center;padding:40px 30px 80px;min-height:calc(100vh - 90px);background:linear-gradient(180deg,#08060e 0%,#0e0a16 40%,#0a0810 100%);position:relative}
+    #div-outer::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse at 50% 0%,rgba(100,60,220,.04) 0%,transparent 60%);pointer-events:none}
     .div-header{display:flex;flex-direction:column;align-items:center;margin-bottom:40px;width:100%;max-width:700px}
-    .div-icon-ring{width:160px;height:160px;border-radius:50%;border:2px solid rgba(160,120,255,.3);display:flex;align-items:center;justify-content:center;background:radial-gradient(circle,rgba(80,50,180,.18) 0%,rgba(20,10,50,.6) 70%);box-shadow:0 0 40px rgba(100,60,220,.15),0 0 80px rgba(60,30,150,.08);margin-bottom:20px;position:relative;cursor:pointer;transition:border-color .3s,box-shadow .3s}
+    .div-icon-ring{width:160px;height:160px;border-radius:50%;border:2px solid rgba(160,120,255,.3);display:flex;align-items:center;justify-content:center;background:radial-gradient(circle,rgba(80,50,180,.18) 0%,rgba(20,10,50,.6) 70%);box-shadow:0 0 40px rgba(100,60,220,.15),0 0 80px rgba(60,30,150,.08);margin-bottom:20px;position:relative;cursor:pointer;transition:border-color .4s,box-shadow .4s,transform .4s;animation:ringPulse 4s ease-in-out infinite}
+    @keyframes ringPulse{0%,100%{box-shadow:0 0 40px rgba(100,60,220,.15),0 0 80px rgba(60,30,150,.08)}50%{box-shadow:0 0 50px rgba(120,80,255,.22),0 0 100px rgba(80,40,180,.12)}}
     .div-icon-ring:hover{border-color:rgba(180,140,255,.5);box-shadow:0 0 50px rgba(120,80,255,.22)}
     .div-icon-ring img{width:140px;height:140px;object-fit:contain;border-radius:50%}
     .div-icon-ring .div-icon-ph{font-size:64px;line-height:1}
     .div-icon-edit{position:absolute;bottom:6px;right:6px;width:26px;height:26px;border-radius:50%;background:rgba(20,10,40,.9);border:1px solid rgba(160,120,255,.4);display:flex;align-items:center;justify-content:center;font-size:11px;color:rgba(180,150,255,.7)}
-    .div-title{font-family:'Cinzel Decorative',serif;font-size:clamp(18px,2.5vw,30px);color:#e8e0f8;text-shadow:0 0 30px rgba(140,100,255,.4);letter-spacing:6px;text-align:center;margin-bottom:6px}
+    .div-title{font-family:'Cinzel Decorative',serif;font-size:clamp(18px,2.5vw,30px);color:#e8e0f8;text-shadow:0 0 40px rgba(140,100,255,.5),0 2px 12px rgba(0,0,0,.8);letter-spacing:6px;text-align:center;margin-bottom:6px;animation:divTitleReveal .8s ease both}
+    @keyframes divTitleReveal{from{opacity:0;transform:translateY(-10px);letter-spacing:12px}to{opacity:1;transform:none;letter-spacing:6px}}
     .div-sub{font-family:'EB Garamond',serif;font-size:14px;color:rgba(200,180,240,.45);font-style:italic;letter-spacing:2px;text-align:center;margin-bottom:16px}
     .div-edit-btn{font-family:'Cinzel',serif;font-size:9px;letter-spacing:1.5px;padding:6px 16px;background:rgba(0,0,0,.3);border:1px solid rgba(160,120,255,.25);border-radius:3px;color:rgba(180,150,255,.7);cursor:pointer;margin-bottom:8px}
     .div-edit-btn:hover{border-color:rgba(180,150,255,.45);color:rgba(200,175,255,.9)}
@@ -8547,10 +9386,12 @@ function renderDivisionImmersive(v, n){
     .div-org-title::before,.div-org-title::after{content:'';flex:1;height:1px;background:linear-gradient(90deg,transparent,rgba(160,120,255,.2),transparent)}
 
     .div-rank-row{display:flex;flex-direction:column;align-items:center;margin-bottom:10px}
-    .div-rank-label{font-family:'Cinzel',serif;font-size:8px;letter-spacing:2px;text-transform:uppercase;color:rgba(180,150,255,.35);margin-bottom:6px}
+    .div-rank-label{font-family:'Cinzel',serif;font-size:8px;letter-spacing:2px;text-transform:uppercase;color:rgba(180,150,255,.35);margin-bottom:6px;padding:4px 16px;background:rgba(20,12,40,.5);border:1px solid rgba(160,120,255,.1);border-radius:20px}
+    .div-rank-row[data-rank-name="Commandant"] .div-rank-label{color:rgba(232,201,122,.6);border-color:rgba(201,168,76,.2);background:rgba(40,30,10,.5)}
+    .div-rank-row[data-rank-name="Capitaine"] .div-rank-label{color:rgba(180,170,230,.5);border-color:rgba(160,140,220,.15)}
     .div-rank-cards{display:flex;flex-wrap:wrap;gap:10px;justify-content:center}
 
-    .div-member-card{background:rgba(18,12,32,.85);border:1px solid rgba(160,120,255,.18);border-radius:6px;padding:12px 16px;min-width:130px;max-width:180px;cursor:pointer;transition:transform .2s,border-color .2s,box-shadow .2s;text-align:center;position:relative}
+    .div-member-card{background:rgba(18,12,32,.85);border:1px solid rgba(160,120,255,.18);border-radius:8px;padding:14px 16px 12px;min-width:140px;max-width:190px;cursor:pointer;transition:transform .3s var(--ease-out-quart),border-color .25s ease,box-shadow .3s var(--ease-out-quart),background .2s ease;text-align:center;position:relative}
     .div-member-card:hover{transform:translateY(-3px);border-color:rgba(180,150,255,.4);box-shadow:0 6px 24px rgba(0,0,0,.5),0 0 12px rgba(140,100,255,.08)}
     .div-member-card.linked{border-color:rgba(140,100,255,.3)}
     .div-member-card.linked:hover{border-color:rgba(180,150,255,.55);box-shadow:0 6px 24px rgba(0,0,0,.5),0 0 16px rgba(140,100,255,.12)}
@@ -8570,7 +9411,8 @@ function renderDivisionImmersive(v, n){
     .div-add-btn{margin-top:20px;font-family:'Cinzel',serif;font-size:9px;letter-spacing:1.5px;padding:8px 20px;background:rgba(0,0,0,.3);border:1px solid rgba(160,120,255,.2);border-radius:3px;color:rgba(180,150,255,.6);cursor:pointer;display:block;margin-left:auto;margin-right:auto}
     .div-add-btn:hover{border-color:rgba(180,150,255,.4);color:rgba(200,175,255,.85)}
 
-    .div-connector{width:1px;height:16px;background:linear-gradient(180deg,rgba(160,120,255,.3),rgba(160,120,255,.08));margin:0 auto}
+    .div-connector{width:1px;height:20px;background:linear-gradient(180deg,rgba(160,120,255,.35),rgba(160,120,255,.05));margin:0 auto;position:relative}
+    .div-connector::after{content:'';position:absolute;bottom:0;left:50%;transform:translateX(-50%);width:3px;height:3px;border-radius:50%;background:rgba(160,120,255,.3)}
     .div-h-line{height:1px;background:linear-gradient(90deg,transparent,rgba(160,120,255,.2),transparent);margin:4px auto 4px;width:60%}
 
     .div-sort-bar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;justify-content:center;margin-bottom:22px;padding:10px 16px;background:rgba(20,12,40,.6);border:1px solid rgba(160,120,255,.12);border-radius:6px;width:100%;max-width:800px}
@@ -8666,14 +9508,33 @@ function renderDivisionImmersive(v, n){
     const isPlaceholder = !m.entryId;
     const adminDrag = _isAdmin() ? `draggable="true" data-div-id="${n.id}" data-member-idx="${idx}"` : '';
     const ctxMenu = _isAdmin() ? `oncontextmenu="event.preventDefault();event.stopPropagation();_divMemberCtx(event,'${n.id}',${idx})"` : '';
+    // Stat summary bar
+    let statBar = '';
+    if(entry && entry.stats){
+      const cats = ['phys','magic','intel'];
+      const colors = ['#6a9fd4','#9b6fd4','#6acd8d'];
+      const totals = cats.map(c => {
+        const vals = Object.values(entry.stats[c]||{});
+        return vals.length ? Math.round(vals.reduce((a,b)=>a+(Number(b)||0),0)/vals.length) : 0;
+      });
+      statBar = `<div style="display:flex;gap:3px;margin-top:6px;width:100%">` +
+        totals.map((t,i) => `<div style="flex:1;height:3px;border-radius:2px;background:rgba(255,255,255,.06);overflow:hidden"><div style="width:${t}%;height:100%;background:${colors[i]};border-radius:2px;transition:width .4s var(--ease-out-expo)"></div></div>`).join('') +
+        `</div>`;
+    }
+    // Gender icon
+    const genderIcon = entry && entry.charGender === 'Féminin' ? '♀' : entry && entry.charGender === 'Masculin' ? '♂' : '';
+    const genderColor = entry && entry.charGender === 'Féminin' ? 'rgba(220,140,180,.5)' : 'rgba(140,180,220,.5)';
+    const genderBadge = genderIcon ? `<span style="position:absolute;top:5px;left:5px;font-size:10px;color:${genderColor};opacity:.7">${genderIcon}</span>` : '';
     return `<div class="div-member-card${linked?' linked':''}${isPlaceholder?' div-member-ph':''}"
       ${adminDrag}
       onclick="divMemberClick('${n.id}',${idx})"
       ${ctxMenu}
       title="${isPlaceholder?'Cliquer pour lier à une fiche':'Voir la fiche / Clic droit pour options'}">
+      ${genderBadge}
       <div class="div-member-avatar">${portrait}</div>
       <div class="div-member-name">${displayName}</div>
       <div class="div-member-rank-badge">${esc(m.rank||'Membre')}</div>
+      ${statBar}
       ${linked?'<span class="div-member-link">🔗</span>':''}
     </div>`;
   }
@@ -8685,7 +9546,7 @@ function renderDivisionImmersive(v, n){
     const rankEscaped = rank.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
     orgHTML += `
       ${ri>0?'<div class="div-connector"></div><div class="div-h-line"></div>':''}
-      <div class="div-rank-row">
+      <div class="div-rank-row" data-rank-name="${rank}">
         <div class="div-rank-label">${esc(rank)}</div>
         <div class="div-rank-cards" data-rank="${rankEscaped}" data-div-id="${n.id}">
           ${memberCards}
@@ -15576,7 +16437,7 @@ renderTree();
 // Ne PAS appeler renderWelcome() ici — _sbInit() le fera après avoir chargé
 // globalStatNames depuis Supabase (image de fond etc.)
 // Afficher l'accueil vide temporairement
-document.getElementById('welcome').innerHTML = '<div id="wlc-ui" style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%"><div style="font-family:Cinzel Decorative,serif;font-size:clamp(28px,5vw,64px);color:#f8f2e0;letter-spacing:8px;opacity:.3">GATES OF HADES</div></div>';
+document.getElementById('welcome').innerHTML = '<div id="wlc-ui" style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;gap:16px"><div style="font-family:Cinzel Decorative,serif;font-size:clamp(28px,5vw,64px);color:#f8f2e0;letter-spacing:8px;opacity:.3;animation:viewSlideIn .6s var(--ease-out-expo)">GATES OF HADES</div><div style="width:200px;height:1px;background:linear-gradient(90deg,transparent,rgba(220,50,10,.3),transparent);animation:viewSlideIn .8s var(--ease-out-expo)"></div><div style="font-family:EB Garamond,serif;font-size:13px;color:rgba(240,230,200,.25);font-style:italic;letter-spacing:3px;animation:viewSlideIn 1s var(--ease-out-expo)">Chargement du Codex…</div></div>';
 // Charger depuis Supabase — appellera renderWelcome() avec les bonnes données
 _sbInit();
 // Global first-interaction handler for autoplay
@@ -15984,7 +16845,7 @@ if(document.readyState !== 'loading') _applyMode();
   <button onclick="_setMasterVol(_masterVol+0.1)"
     style="background:none;border:none;color:rgba(160,170,230,.7);font-size:16px;cursor:pointer;padding:0 2px;line-height:1"
     title="Monter le volume">🔊</button>
-  <span id="_vol-lbl" style="font-size:9px;letter-spacing:1px;color:rgba(140,155,220,.5);min-width:34px;text-align:right">100%</span>
+  <span id="_vol-lbl" style="font-size:9px;letter-spacing:1px;color:rgba(140,155,220,.5);min-width:34px;text-align:right">50%</span>
 </div>
 <script>
 // Initialiser le slider avec la valeur sauvegardée
