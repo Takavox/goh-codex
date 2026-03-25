@@ -3507,37 +3507,42 @@ function _cgCropSave(charId){
 
 
 function _migrateGardiensToFactions(){
-  // Trouver Les Gardiens
   const gardiens = Object.values(db).find(n=>n.kind==='gardiens'||n.name==='Les Gardiens');
   if(!gardiens) return;
-
-  // Trouver Factions
   const factions = Object.values(db).find(n=>n.type==='category'&&n.name==='Factions');
   if(!factions) return;
 
-  // Déjà migré ?
-  if(gardiens.parentId === factions.id) return;
-
-  const oldParentId = gardiens.parentId;
-  const oldParent = db[oldParentId];
-
-  // Retirer des enfants de l'ancien parent
-  if(oldParent && oldParent.children){
-    oldParent.children = oldParent.children.filter(id=>id!==gardiens.id);
+  // ── Déplacer Les Gardiens dans Factions ──
+  if(gardiens.parentId !== factions.id){
+    const oldParent = db[gardiens.parentId];
+    if(oldParent&&oldParent.children) oldParent.children=oldParent.children.filter(id=>id!==gardiens.id);
+    gardiens.parentId=factions.id;
+    if(!factions.children) factions.children=[];
+    if(!factions.children.includes(gardiens.id)) factions.children.push(gardiens.id);
   }
 
-  // Ajouter dans Factions
-  gardiens.parentId = factions.id;
-  if(!factions.children) factions.children=[];
-  if(!factions.children.includes(gardiens.id)) factions.children.push(gardiens.id);
+  // ── S'assurer que les fiches des gardiens sont aussi visibles dans Personnages ──
+  const personnages = Object.values(db).find(n=>n.type==='category'&&n.name==='Personnages');
+  if(!personnages) return;
 
-  // Les fiches des gardiens gardent leur parentId original (Personnages ou sous-cat)
-  // → on ne touche PAS aux entries enfants, seulement à la catégorie Gardiens elle-même
-  // renderCharacterGridView collecte déjà les personnages par parentId récursif,
-  // donc ils restent visibles dans Personnages via leur parentId qui pointe toujours là
+  const gardienEntries = (gardiens.children||[]).map(id=>db[id]).filter(e=>e&&e.type==='entry'&&e.entryType==='character');
+  let changed = false;
+  gardienEntries.forEach(e=>{
+    // Ajouter dans children de Personnages si absent
+    if(!personnages.children) personnages.children=[];
+    if(!personnages.children.includes(e.id)){
+      personnages.children.push(e.id);
+      changed=true;
+    }
+    // Ajouter dans _childOrder de Personnages si absent
+    if(!personnages._childOrder) personnages._childOrder=[];
+    if(!personnages._childOrder.includes(e.id)){
+      personnages._childOrder.push(e.id);
+    }
+  });
 
+  if(changed) console.log('[GoH] Fiches gardiens ajoutées dans Personnages');
   save();
-  console.log('[GoH] Les Gardiens déplacé vers Factions');
 }
 
 function _ensureSolaris(){
@@ -4038,6 +4043,13 @@ function renderSolarisImmersive(v, n){
     {id:"neptune", name:"Neptune",       role:"Unite fantome",       rank:2, ring:2, idx:3}
   ];
 
+  // Appliquer les noms personnalisés sauvegardés
+  if(n._solarNames){
+    NODES.forEach(function(nd){
+      if(n._solarNames[nd.id]) nd.name=n._solarNames[nd.id];
+    });
+  }
+
   var RING_R=[0,155,300];
   var THREADS=[];
   var r1=NODES.filter(function(x){return x.ring===1;});
@@ -4493,8 +4505,10 @@ function renderSolarisImmersive(v, n){
       if(entry){
         actWrap.appendChild(mkBtn("Ouvrir le dossier",function(){ selectNode(entry.id); panel.style.transform="translateX(100%)"; },"background:rgba(160,120,50,.06);border:1px solid rgba(160,120,50,.25);color:rgba(200,160,70,.7)"));
         actWrap.appendChild(mkBtn(entry._hidden?"Reveler":"Reclassifier",function(){ window._solarToggleVis(bodyId,n.id); },"background:transparent;border:1px solid rgba(160,60,40,"+(entry._hidden?.25:.15)+");color:rgba(160,60,40,"+(entry._hidden?.6:.35)+")"));
+        actWrap.appendChild(mkBtn("Renommer cet astre",function(){ window._solarRename(bodyId,n.id); },"background:transparent;border:1px solid rgba(160,120,50,.12);color:rgba(160,120,50,.3)"));
       } else {
         actWrap.appendChild(mkBtn("Lier une fiche",function(){ window._solarLink(bodyId,n.id); },"background:transparent;border:1px dashed rgba(160,120,50,.18);color:rgba(160,120,50,.4)"));
+        actWrap.appendChild(mkBtn("Renommer cet astre",function(){ window._solarRename(bodyId,n.id); },"background:transparent;border:1px solid rgba(160,120,50,.12);color:rgba(160,120,50,.3)"));
       }
     } else if(vis&&entry){
       actWrap.appendChild(mkBtn("Voir la fiche",function(){ selectNode(entry.id); panel.style.transform="translateX(100%)"; },"background:rgba(160,120,50,.06);border:1px solid rgba(160,120,50,.25);color:rgba(200,160,70,.7)"));
@@ -4509,6 +4523,21 @@ function renderSolarisImmersive(v, n){
     fly();
   }
 
+
+  window._solarRename=function(bodyId,catId){
+    var nd=NODES.find(function(x){return x.id===bodyId;}); if(!nd) return;
+    var cat=db[catId]; if(!cat) return;
+    if(!cat._solarNames) cat._solarNames={};
+    var currentName=cat._solarNames[bodyId]||nd.name;
+    var newName=prompt("Nouveau nom pour cet astre :",currentName);
+    if(newName===null) return;
+    newName=newName.trim();
+    if(!newName) return;
+    cat._solarNames[bodyId]=newName;
+    nd.name=newName; // Mettre à jour localement aussi
+    save();
+    openPanel(bodyId);
+  };
   window._solarLink=function(bodyId,catId){
     var chars=Object.values(db).filter(function(e){return e.type==="entry"&&e.entryType==="character";});
     var old=document.getElementById("_sol-modal"); if(old) old.remove();
