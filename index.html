@@ -743,6 +743,127 @@ body.visitor-mode .il-btn-row{ display:none !important; }
   outline-offset:-2px;
 }
 
+
+
+/* Game launcher node in sidebar */
+.tr[data-id="__game_launcher"] .tl {
+  color: var(--gold2) !important;
+  font-weight: 500;
+}
+.tr[data-id="__game_launcher"]:hover .tl {
+  color: var(--gold3) !important;
+}
+.tr[data-id="__game_launcher"] .ti {
+  filter: drop-shadow(0 0 4px rgba(201,168,76,.3));
+}
+
+/* ══ GAME INTEGRATION ══════════════════════════════════ */
+#game-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  z-index: 99990;
+  background: #08070c;
+  flex-direction: column;
+}
+#game-overlay.open {
+  display: flex;
+  animation: gameSlideIn .4s var(--ease-out-expo);
+}
+@keyframes gameSlideIn {
+  from { opacity: 0; transform: scale(.98); }
+  to { opacity: 1; transform: none; }
+}
+#game-topbar {
+  height: 38px;
+  background: rgba(8,7,12,.97);
+  border-bottom: 1px solid rgba(201,168,76,.15);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 16px;
+  flex-shrink: 0;
+  z-index: 2;
+}
+#game-topbar .game-title {
+  font-family: 'Cinzel', serif;
+  font-size: 11px;
+  letter-spacing: 2px;
+  color: var(--gold2);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+#game-topbar .game-title span {
+  font-size: 14px;
+}
+.game-back-btn {
+  font-family: 'Cinzel', serif;
+  font-size: 9px;
+  letter-spacing: 1px;
+  padding: 5px 14px;
+  border: 1px solid rgba(201,168,76,.25);
+  border-radius: 3px;
+  color: var(--gold2);
+  background: rgba(201,168,76,.06);
+  cursor: pointer;
+  transition: all .2s;
+}
+.game-back-btn:hover {
+  border-color: var(--gold);
+  background: rgba(201,168,76,.12);
+  box-shadow: 0 0 12px rgba(201,168,76,.1);
+}
+#game-iframe {
+  flex: 1;
+  border: none;
+  width: 100%;
+  height: 100%;
+  background: #08070c;
+}
+/* Topbar play button */
+.topbtn.play-btn {
+  background: linear-gradient(135deg, rgba(201,168,76,.12), rgba(201,168,76,.04));
+  border-color: rgba(201,168,76,.35);
+  color: var(--gold2);
+  font-weight: 600;
+  letter-spacing: 1px;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+.topbtn.play-btn:hover {
+  border-color: var(--gold);
+  color: var(--gold3);
+  box-shadow: 0 0 16px rgba(201,168,76,.2);
+  transform: translateY(-1px);
+}
+.topbtn.play-btn .play-icon {
+  font-size: 12px;
+}
+/* Sidebar game node */
+.tr.game-node .tl {
+  color: var(--gold2) !important;
+  font-weight: 500;
+}
+.tr.game-node:hover .tl {
+  color: var(--gold3) !important;
+}
+/* Welcome page game card — special styling */
+.wlc-card.wlc-card--game {
+  border-color: rgba(201,168,76,.3);
+  background: rgba(20,15,5,.85);
+  min-width: 180px;
+  width: 180px;
+}
+.wlc-card.wlc-card--game:hover {
+  border-color: rgba(201,168,76,.6);
+  box-shadow: 0 14px 40px rgba(0,0,0,.7), 0 0 30px rgba(201,168,76,.15);
+}
+.wlc-card.wlc-card--game .wlc-card-name {
+  color: var(--gold2);
+}
+
 /* ══ ENHANCED ANIMATIONS & DESIGN — v2.0 ══════════════════════ */
 
 /* --- Global Timing Functions --- */
@@ -1469,6 +1590,9 @@ body.visitor-mode .il-btn-row{ display:none !important; }
     <input id="search" type="text" placeholder="Rechercher dans le codex… (Ctrl+K)" oninput="doSearch(this.value)">
   </div>
   <div id="topbar-r">
+    <button class="topbtn play-btn" onclick="_openGame()" title="Lancer le jeu Gates of Hades">
+      <span class="play-icon">⚔</span> JOUER
+    </button>
     <span id="visitor-badge" style="opacity:.7">👁 VISITEUR</span>
     <span id="_online-badge" title="Personnes en ligne" style="font-family:'Cinzel',serif;font-size:8.5px;letter-spacing:1px;color:rgba(140,200,140,.55);display:flex;align-items:center;gap:4px;padding:3px 8px;border:1px solid rgba(80,160,80,.2);border-radius:10px;background:rgba(40,100,40,.08)">
       <span style="width:6px;height:6px;border-radius:50%;background:rgba(100,220,100,.7);display:inline-block;box-shadow:0 0 5px rgba(80,200,80,.5);animation:pulse-online 2s ease-in-out infinite"></span>
@@ -16846,7 +16970,132 @@ if(document.readyState !== 'loading') _applyMode();
     if(window.supabase){ clearInterval(_pTimer); _initPresence(); }
   }, 500);
 })();
+
+// ════════════════════════════════════════════════════════
+//  GAME INTEGRATION — Lancer le jeu dans un overlay
+// ════════════════════════════════════════════════════════
+
+// URL du jeu (fichier séparé, même dossier)
+const _GAME_URL = 'game-apolyti.html';
+
+function _openGame(){
+  const overlay = document.getElementById('game-overlay');
+  const iframe = document.getElementById('game-iframe');
+  if(!overlay || !iframe) return;
+  
+  // Stop all codex audio
+  _stopAllAudio();
+  
+  // Load game in iframe
+  if(iframe.src === 'about:blank' || !iframe.src.includes('game-apolyti')){
+    iframe.src = _GAME_URL;
+  }
+  
+  overlay.classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+
+function _closeGame(){
+  const overlay = document.getElementById('game-overlay');
+  if(overlay) overlay.classList.remove('open');
+  document.body.style.overflow = '';
+}
+
+// Keyboard: Escape to close game overlay
+document.addEventListener('keydown', e => {
+  if(e.key === 'Escape' && document.getElementById('game-overlay')?.classList.contains('open')){
+    _closeGame();
+    e.stopPropagation();
+  }
+}, true);
+
+// ── Add game node to sidebar tree ──
+function _ensureGameSidebarNode(){
+  // Check if game node already exists in rootIds
+  if(Object.values(db).find(n => n.kind === 'game-launcher')) return;
+  
+  const gameId = '__game_launcher';
+  db[gameId] = {
+    id: gameId,
+    type: 'category',
+    kind: 'game-launcher',
+    name: 'Jouer — Chroniques',
+    icon: '⚔',
+    parentId: null,
+    children: [],
+    subtitle: 'Lancer le jeu Gates of Hades'
+  };
+  if(!rootIds.includes(gameId)) rootIds.push(gameId);
+}
+
+// Override selectNode to intercept game launcher
+const _origSelectNode = typeof selectNode === 'function' ? selectNode : null;
+function _gameSelectNodeIntercept(id){
+  if(id === '__game_launcher'){
+    _openGame();
+    return;
+  }
+  if(_origSelectNode) _origSelectNode(id);
+}
+// Patch selectNode after it's defined
+setTimeout(() => {
+  if(typeof selectNode === 'function' && !window._gamePatched){
+    const _orig = selectNode;
+    selectNode = function(id){
+      if(id === '__game_launcher'){ _openGame(); return; }
+      _orig(id);
+    };
+    window._gamePatched = true;
+  }
+}, 100);
+
+// ── Inject game card into welcome page ──
+const _origRenderWelcome = typeof renderWelcome === 'function' ? renderWelcome : null;
+setTimeout(() => {
+  if(typeof renderWelcome === 'function' && !window._gameWelcomePatched){
+    const _origRW = renderWelcome;
+    renderWelcome = function(){
+      _origRW();
+      // After rendering, inject game card into the grid
+      requestAnimationFrame(() => {
+        const grid = document.querySelector('.wlc-grid');
+        if(!grid) return;
+        // Check if already added
+        if(grid.querySelector('.wlc-card--game')) return;
+        const card = document.createElement('div');
+        card.className = 'wlc-card wlc-card--game';
+        card.onclick = () => _openGame();
+        card.innerHTML = `
+          <div class="wlc-card-icon"><span style="font-size:42px">⚔</span></div>
+          <div class="wlc-card-name" style="color:var(--gold2);font-size:11px">JOUER</div>
+        `;
+        card.style.animation = 'cardFadeUp .5s var(--ease-out-expo) .55s forwards';
+        card.style.opacity = '0';
+        grid.appendChild(card);
+      });
+    };
+    window._gameWelcomePatched = true;
+  }
+}, 200);
+
+// ── Init game sidebar node ──
+setTimeout(() => {
+  if(typeof db !== 'undefined'){
+    _ensureGameSidebarNode();
+    if(typeof renderTree === 'function') renderTree();
+  }
+}, 500);
+
 </script>
 
+
+<!-- ══ GAME OVERLAY ══ -->
+<div id="game-overlay">
+  <div id="game-topbar">
+    <div class="game-title"><span>⚔</span> GATES OF HADES — Chroniques d'Iluminia</div>
+    <button class="game-back-btn" onclick="_closeGame()">← Retour au Codex</button>
+  </div>
+  <iframe id="game-iframe" src="about:blank" allowfullscreen></iframe>
+</div>
 </body>
 </html>
