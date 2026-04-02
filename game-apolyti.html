@@ -2223,12 +2223,12 @@ img { display: block; max-width: 100%; }
 }
 
 </style></head><body>
-<div id="loading-screen"><div class="loading-content"><h1 class="loading-title">Gates of Hades</h1><p class="loading-subtitle">Chroniques d'Iluminia</p><div class="loading-bar-track"><div class="loading-bar-fill" id="loading-bar"></div></div><p class="loading-text" id="loading-text">Chargement d'Apólyti...</p></div></div>
+<div id="loading-screen"><div class="loading-content"><h1 class="loading-title">Gates of Hades</h1><p class="loading-subtitle">Chroniques de Pyli</p><div class="loading-bar-track"><div class="loading-bar-fill" id="loading-bar"></div></div><p class="loading-text" id="loading-text">Chargement d'Apólyti...</p></div></div>
 <div id="game-container"><canvas id="game-canvas"></canvas>
 <div id="hud" class="ui-layer"><div id="hud-top"><div class="hud-party-info"><div class="hud-hero-bar"><span class="hud-label" id="hud-hero-name">Adam</span><div class="hp-bar-container"><div class="hp-bar-fill" id="hud-hero-hp"></div></div><span class="hp-text" id="hud-hero-hp-text">100/100</span></div><div class="hud-meta"><span id="hud-party-count">Équipe: 1/4</span><span class="hud-gold" id="hud-gold">500</span></div></div></div><div id="hud-bottom"><div id="hud-quest-tracker"><span class="quest-label">Aucune quête</span></div><div id="hud-actions"><button class="hud-btn" id="btn-inventory">Inventaire</button><button class="hud-btn" id="btn-party">Équipe</button><button class="hud-btn" id="btn-quests">Quêtes</button><button class="hud-btn" id="btn-menu">Menu</button></div></div></div>
 <div id="menu-overlay" class="ui-layer hidden"><div id="menu-panel" class="panel"><div class="panel-header"><h2 class="panel-title">Menu</h2><button class="panel-close" id="menu-close">✕</button></div><div class="panel-body"><button class="menu-item" data-action="save">Sauvegarder</button><button class="menu-item" data-action="load">Charger</button><button class="menu-item" data-action="export-save">Exporter</button><button class="menu-item" data-action="import-save">Importer</button><button class="menu-item" data-action="settings">Paramètres</button><button class="menu-item menu-item--dev" data-action="devmode">Mode DEV</button></div></div></div>
 <div id="save-overlay" class="ui-layer hidden"><div id="save-panel" class="panel"><div class="panel-header"><h2 class="panel-title" id="save-panel-title">Sauvegarder</h2><button class="panel-close" id="save-close">✕</button></div><div class="panel-body" id="save-slots-container"></div></div></div>
-<div id="settings-overlay" class="ui-layer hidden"><div id="settings-panel" class="panel"><div class="panel-header"><h2 class="panel-title">Paramètres</h2><button class="panel-close" id="settings-close">✕</button></div><div class="panel-body"><div class="setting-row"><label>Musique</label><input type="range" id="setting-music" min="0" max="100" value="70"><span id="setting-music-val">70%</span></div><div class="setting-row"><label>SFX</label><input type="range" id="setting-sfx" min="0" max="100" value="80"><span id="setting-sfx-val">80%</span></div><div class="setting-row"><label>Langue</label><select id="setting-lang"><option value="fr" selected>Français</option><option value="en">English</option></select></div></div></div></div>
+<div id="settings-overlay" class="ui-layer hidden"><div id="settings-panel" class="panel"><div class="panel-header"><h2 class="panel-title">Paramètres</h2><button class="panel-close" id="settings-close">✕</button></div><div class="panel-body"><div class="setting-row"><label>Sprite du héros</label><button id="setting-hero-sprite" class="btn btn-secondary btn-sm" style="padding:4px 12px">📷 Changer sprite</button><span id="setting-hero-sprite-status" style="font-size:11px;color:#9a8e7a">Aucun</span></div><div class="setting-row"><label>Musique</label><input type="range" id="setting-music" min="0" max="100" value="70"><span id="setting-music-val">70%</span></div><div class="setting-row"><label>SFX</label><input type="range" id="setting-sfx" min="0" max="100" value="80"><span id="setting-sfx-val">80%</span></div><div class="setting-row"><label>Langue</label><select id="setting-lang"><option value="fr" selected>Français</option><option value="en">English</option></select></div></div></div></div>
 <div id="toast-container"></div><div id="devmode-overlay" class="ui-layer hidden"></div><input type="file" id="import-save-input" accept=".json" class="hidden-input"></div>
 <script>
 // === js/core/constants.js ===
@@ -2938,13 +2938,30 @@ const Renderer = {
     const sp=this.worldToScreen(inst.position.x*TILE_SIZE,inst.position.y*TILE_SIZE);
     const pulse=Math.sin(Date.now()/600)*0.3+0.7;
     this.ctx.globalAlpha=pulse;
+    // Portal highlight glow
+    if(inst.type==="map_portal"){
+      const glow=this.ctx.createRadialGradient(sp.x+TILE_SIZE/2,sp.y+TILE_SIZE/2,2,sp.x+TILE_SIZE/2,sp.y+TILE_SIZE/2,TILE_SIZE);
+      glow.addColorStop(0,inst.color||"rgba(200,180,100,0.3)");
+      glow.addColorStop(1,"transparent");
+      this.ctx.fillStyle=glow;
+      this.ctx.fillRect(sp.x-TILE_SIZE/2,sp.y-TILE_SIZE/2,TILE_SIZE*2,TILE_SIZE*2);
+    }
     const g=this.ctx.createRadialGradient(sp.x+TILE_SIZE/2,sp.y+TILE_SIZE/2,2,sp.x+TILE_SIZE/2,sp.y+TILE_SIZE/2,TILE_SIZE*0.7);
     g.addColorStop(0,inst.color||"rgba(123,75,179,0.6)"); g.addColorStop(1,"rgba(0,0,0,0)");
     this.ctx.fillStyle=g; this.ctx.fillRect(sp.x-4,sp.y-4,TILE_SIZE+8,TILE_SIZE+8);
     this.ctx.globalAlpha=1;
     this.ctx.font="16px serif"; this.ctx.textAlign="center";
     this.ctx.fillText(inst.icon||"🚪",sp.x+TILE_SIZE/2,sp.y+TILE_SIZE/2+5);
-    if(inst.name){this.ctx.font="bold 9px 'Cinzel',serif";this.ctx.fillStyle="#e8e0d0";this.ctx.fillText(inst.name,sp.x+TILE_SIZE/2,sp.y-4);}
+    if(inst.name){
+      this.ctx.font="bold 8px 'Cinzel',serif";
+      // Background for readability
+      const nm=inst.type==="map_portal"?("→ "+inst.name.split("—")[0].trim()):inst.name;
+      const tw=this.ctx.measureText(nm).width;
+      this.ctx.fillStyle="rgba(0,0,0,0.6)";
+      this.ctx.fillRect(sp.x+TILE_SIZE/2-tw/2-3,sp.y-12,tw+6,12);
+      this.ctx.fillStyle=inst.type==="map_portal"?"#e4cc7a":"#e8e0d0";
+      this.ctx.fillText(nm,sp.x+TILE_SIZE/2,sp.y-3);
+    }
   },
 
   drawChest(chest) {
@@ -3378,7 +3395,7 @@ const GameData = {
       {itemId:"sword_iron",quantity:1},{itemId:"fists_metal",quantity:1},{itemId:"bow_hunter",quantity:1},
       {itemId:"tool_axe",quantity:1},{itemId:"tool_pickaxe",quantity:1},{itemId:"tool_fishing_rod",quantity:1}
     ],
-    unlockedCompanions:["companion_adam","companion_laura","companion_william"], completedQuests:[], activeQuests:[],
+    unlockedCompanions:["companion_laura","companion_william"], completedQuests:[], activeQuests:[],
     worldState:{defeatedEnemies:[],openedChests:[],unlockedZones:["qg_exterior"]},
     _companionBench:{}, playtime:0,
     settings:{musicVolume:0.7,sfxVolume:0.8,language:"fr",showFps:true,showGrid:false}
@@ -3427,29 +3444,7 @@ const GameData = {
     // COMPANIONS — multi-categories + leader_skill
     // ═══════════════════════════════════════
     this.db.companions = {
-      companion_adam: {
-        id:"companion_adam", name:"Adam", rarity:"R",
-        category:"Guerrier", categories:["Guerrier","13e Division"],
-        element:"Vent", portrait_path:null, sprite_path:null,
-        base_stats:{hp:110,atk:14,def:10,mag:6,spd:12}, growth_rates:{hp:6,atk:1.2,def:0.8,mag:0.4,spd:1},
-        leader_skill: {
-          name: "Souffle du Combattant",
-          condition: { type:"min_category_count", category:"13e Division", count:2 },
-          bonuses: [
-            { bonus_type:"atk_percent", value:12, target_categories:["13e Division"] },
-            { bonus_type:"spd_percent", value:8, target_categories:[] }
-          ]
-        },
-        skills: [
-          {id:"wind_slash",name:"Tranchant du Vent",unlock_level:1,damage_multiplier:1.4,mp_cost:8,element:"Vent",target_type:"enemy",effects:[]},
-          {id:"gale_rush",name:"Charge Bourrasque",unlock_level:5,damage_multiplier:1.8,mp_cost:14,element:"Vent",target_type:"enemy",effects:[{status_id:"spd_down",value:15,duration:2,target:"enemy"}]},
-          {id:"storm_blade",name:"Lame de Tempête",unlock_level:12,damage_multiplier:2.5,mp_cost:25,element:"Vent",target_type:"enemy",effects:[{status_id:"def_down",value:20,duration:2,target:"enemy"}]},
-          {id:"hurricane",name:"Ouragan",unlock_level:20,damage_multiplier:3.5,mp_cost:40,element:"Vent",target_type:"enemy",effects:[{status_id:"stun",value:0,duration:1,target:"enemy"},{status_id:"atk_up",value:20,duration:3,target:"self"}]}
-        ],
-        equipment_slots:{weapon:"sword_iron",armor:null,accessory_1:null,accessory_2:null,accessory_3:null},
-        awakening:{current_tier:0,max_tier:4,materials_needed:[]},
-        description:"Membre de la 13e Division. Combattant au style agile, il manie l'épée avec le vent."
-      },
+      // Adam is the player hero — not listed as companion
       companion_laura: {
         id:"companion_laura", name:"Laura", rarity:"R",
         category:"Guerrier", categories:["Guerrier","13e Division"],
@@ -3829,23 +3824,23 @@ const GameData = {
       ],
       instances:[
         {id:"inst_statue",name:"Statue du 1er Gardien",type:"dialogue",position:{x:75,y:54},icon:"👑",
-          dialogue:"Une imposante statue du 1er Gardien, le Roi Fondateur d'Iluminia, trône au centre de la cour.",
+          dialogue:"Une imposante statue du 1er Gardien, le Roi Fondateur de Pyli, trône au centre de la cour.",
           options:[
-            {label:"Lire l'inscription",action:"toast",message:"« Que la force des Gardiens protège Iluminia pour l'éternité. »"},
+            {label:"Lire l'inscription",action:"toast",message:"« Que la force des Gardiens protège Pyli pour l'éternité. »"},
             {label:"Se recueillir (+50 PV)",action:"toast",message:"Une chaleur apaisante vous envahit.",effect:{type:"heal",value:50}},
             {label:"Partir",action:"close"}
           ]},
         {id:"inst_mausolee",name:"Mausolée des Gardiens",type:"dialogue",position:{x:75,y:31},icon:"🏛️",
           dialogue:"Le Mausolée des 8 Gardiens. Huit statues majestueuses veillent dans le silence.",
           options:[
-            {label:"Gardien I — Le Fondateur",action:"toast",message:"La première statue. Celui qui forgea Iluminia."},
+            {label:"Gardien I — Le Fondateur",action:"toast",message:"La première statue. Celui qui forgea Pyli."},
             {label:"Gardien II — Le Stratège",action:"toast",message:"Le stratège militaire qui créa les 13 Divisions."},
             {label:"Gardien III — Le Guérisseur",action:"toast",message:"Celui qui sauva le royaume de la Grande Peste."},
             {label:"Gardien IV — La Sentinelle",action:"toast",message:"Le gardien éternel des Portes."},
             {label:"Gardien V — Le Loup",action:"toast",message:"Le guerrier sauvage, protecteur des frontières."},
             {label:"Gardien VI — L'Oracle",action:"toast",message:"Celui qui pouvait lire le destin dans les étoiles."},
             {label:"Gardien VII — Le Forgeron",action:"toast",message:"Le créateur des armes légendaires."},
-            {label:"Gardien VIII — Le Dernier",action:"toast",message:"Le dernier Gardien à avoir sacrifié sa vie pour Iluminia."},
+            {label:"Gardien VIII — Le Dernier",action:"toast",message:"Le dernier Gardien à avoir sacrifié sa vie pour Pyli."},
             {label:"Partir",action:"close"}
           ]},
         {id:"inst_taverne",name:"Taverne de l'Épée Brisée",type:"dialogue",position:{x:37,y:67},icon:"🍺",
@@ -6764,6 +6759,25 @@ const Menus = {
     Utils.$("#setting-lang").value = s.language;
 
     Utils.$("#settings-overlay").classList.remove("hidden");
+    // Hero sprite upload
+    const _hss=Utils.$("#setting-hero-sprite-status");
+    if(_hss) _hss.textContent=GameData.state.player.sprite_path?"✓ Image définie":"Aucun";
+    Utils.$("#setting-hero-sprite")?.addEventListener("click",()=>{
+      const inp=document.createElement("input");inp.type="file";inp.accept="image/*";
+      inp.onchange=(ev)=>{const f=ev.target.files[0];if(!f)return;
+        const img=new Image();const r=new FileReader();
+        r.onload=(re)=>{img.onload=()=>{
+          const cvs=document.createElement("canvas");const maxS=64;
+          const scale=Math.min(1,maxS/Math.max(img.width,img.height));
+          cvs.width=Math.round(img.width*scale);cvs.height=Math.round(img.height*scale);
+          const ctx2=cvs.getContext("2d");ctx2.imageSmoothingEnabled=false;
+          ctx2.drawImage(img,0,0,cvs.width,cvs.height);
+          GameData.state.player.sprite_path=cvs.toDataURL("image/png");
+          if(_hss) _hss.textContent="✓ Image définie";
+          EventBus.emit("ui:toast",{message:"Sprite du héros mis à jour !",type:"success"});
+        };img.src=re.target.result;};r.readAsDataURL(f);
+      };inp.click();
+    });
     this._openMenu = "settings";
   }
 };
@@ -9109,6 +9123,119 @@ const CompanionRecruitSystem = {
 document.addEventListener("keydown", (e) => { if(e.code==="ShiftLeft"||e.code==="ShiftRight") window._isSprinting=true; });
 document.addEventListener("keyup", (e) => { if(e.code==="ShiftLeft"||e.code==="ShiftRight") window._isSprinting=false; });
 window._isSprinting = false;
+
+
+// ── Auto-enter map portals when walking on them ──
+EventBus.on("player:move", () => {
+  const map = MapSystem.currentMap;
+  if(!map) return;
+  const px = Player.x, py = Player.y;
+  for(const inst of (map.instances || [])) {
+    if(inst.type === "map_portal" && inst.position.x === px && inst.position.y === py) {
+      // Small delay to feel intentional
+      setTimeout(() => {
+        MapSystem.loadMap(inst.target_map, inst.target_position);
+      }, 150);
+      return;
+    }
+  }
+});
+
+
+// ── In-game NPC/Place rename (DEV mode: right-click) ──
+document.addEventListener("contextmenu", (e) => {
+  if(!GameData.state._devMode) return;
+  const canvas = document.getElementById("game-canvas");
+  if(!canvas || e.target !== canvas) return;
+  e.preventDefault();
+  
+  const rect = canvas.getBoundingClientRect();
+  const sx = e.clientX - rect.left;
+  const sy = e.clientY - rect.top;
+  
+  // Convert screen to world coords
+  const wx = Math.floor((sx + Renderer.camera.x) / TILE_SIZE);
+  const wy = Math.floor((sy + Renderer.camera.y) / TILE_SIZE);
+  
+  const map = MapSystem.currentMap;
+  if(!map) return;
+  
+  // Check NPCs
+  for(const npc of (map.npcs || [])) {
+    if(npc.position.x === wx && npc.position.y === wy) {
+      _showGameCtxMenu(e.clientX, e.clientY, [
+        {label: "Renommer: " + npc.name, action: () => {
+          const newName = prompt("Nouveau nom pour ce PNJ:", npc.name);
+          if(newName && newName.trim()) { npc.name = newName.trim(); SaveManager.saveDevData(); }
+        }},
+        {label: "Changer dialogue", action: () => {
+          const newD = prompt("Nouveau dialogue:", npc.dialogue);
+          if(newD !== null) { npc.dialogue = newD; SaveManager.saveDevData(); }
+        }},
+        {label: "Changer sprite (URL)", action: () => {
+          const inp = document.createElement("input"); inp.type="file"; inp.accept="image/*";
+          inp.onchange = (ev) => {
+            const f = ev.target.files[0]; if(!f) return;
+            const img = new Image(); const reader = new FileReader();
+            reader.onload = (re) => { img.onload = () => {
+              const cvs = document.createElement("canvas"); const maxS = 64;
+              const scale = Math.min(1, maxS/Math.max(img.width,img.height));
+              cvs.width = Math.round(img.width*scale); cvs.height = Math.round(img.height*scale);
+              const ctx2 = cvs.getContext("2d"); ctx2.imageSmoothingEnabled = false;
+              ctx2.drawImage(img, 0, 0, cvs.width, cvs.height);
+              npc._sprite = cvs.toDataURL("image/png"); npc.sprite = npc._sprite;
+              SaveManager.saveDevData();
+              EventBus.emit("ui:toast", {message: "Sprite PNJ mis à jour !", type: "success"});
+            }; img.src = re.target.result; }; reader.readAsDataURL(f);
+          }; inp.click();
+        }}
+      ]);
+      return;
+    }
+  }
+  
+  // Check instances
+  for(const inst of (map.instances || [])) {
+    if(inst.position.x === wx && inst.position.y === wy) {
+      _showGameCtxMenu(e.clientX, e.clientY, [
+        {label: "Renommer: " + inst.name, action: () => {
+          const newName = prompt("Nouveau nom:", inst.name);
+          if(newName && newName.trim()) { inst.name = newName.trim(); SaveManager.saveDevData(); }
+        }},
+        {label: "Changer dialogue", action: () => {
+          if(!inst.dialogue) { EventBus.emit("ui:toast",{message:"Pas de dialogue",type:"warning"}); return; }
+          const newD = prompt("Nouveau dialogue:", inst.dialogue);
+          if(newD !== null) { inst.dialogue = newD; SaveManager.saveDevData(); }
+        }}
+      ]);
+      return;
+    }
+  }
+});
+
+function _showGameCtxMenu(x, y, items) {
+  document.getElementById("_game-ctx")?.remove();
+  const m = document.createElement("div"); m.id = "_game-ctx";
+  m.style.cssText = "position:fixed;left:"+x+"px;top:"+y+"px;z-index:99999;background:#0e0c16;border:1px solid rgba(201,168,76,.3);border-radius:6px;padding:4px 0;min-width:200px;box-shadow:0 8px 28px rgba(0,0,0,.8);font-family:'Cinzel',serif;font-size:11px";
+  
+  items.forEach(item => {
+    const row = document.createElement("div");
+    row.style.cssText = "padding:8px 14px;cursor:pointer;color:rgba(232,224,208,.7);transition:background .12s";
+    row.textContent = item.label;
+    row.onmouseenter = () => row.style.background = "rgba(201,168,76,.1)";
+    row.onmouseleave = () => row.style.background = "";
+    row.onclick = () => { m.remove(); item.action(); };
+    m.appendChild(row);
+  });
+  
+  document.body.appendChild(m);
+  setTimeout(() => document.addEventListener("click", () => m.remove(), {once:true}), 10);
+  requestAnimationFrame(() => {
+    const r = m.getBoundingClientRect();
+    if(r.right > window.innerWidth) m.style.left = (x - r.width) + "px";
+    if(r.bottom > window.innerHeight) m.style.top = (y - r.height) + "px";
+  });
+}
 
 window.addEventListener("DOMContentLoaded",()=>{
   Game.init().catch(err=>{console.error("[Game] Fatal:",err);const t=Utils.$("#loading-text");if(t)t.textContent="Erreur: "+err.message;});
