@@ -2926,7 +2926,7 @@ const Renderer = {
   },
 
   drawNPC(npc) {
-    this.drawEntity({x:npc.position.x,y:npc.position.y,color:PLACEHOLDER_COLORS.npc,name:npc.name,direction:npc.direction,sprite:npc.sprite});
+    this.drawEntity({x:npc.position.x,y:npc.position.y,color:npc._color||PLACEHOLDER_COLORS.npc,name:npc.name,direction:npc.direction,sprite:npc.sprite||npc._sprite});
     const sp=this.worldToScreen(npc.position.x*TILE_SIZE,npc.position.y*TILE_SIZE);
     const bob=Math.sin(Date.now()/500)*3;
     this.ctx.fillStyle=npc.type==="merchant"?"#c9a84c":"#e8e0d0";
@@ -3999,6 +3999,19 @@ const GameData = {
           dialogue:"Un copieux ragoût mijote dans la marmite.",
           options:[{label:"Manger (PV max)",action:"toast",message:"Délicieux ! PV et PM restaurés.",effect:{type:"heal",value:9999}},{label:"Partir",action:"close"}]
         });
+        // Laura & William — recruitable companions
+        npcs.push({
+          id:"npc_laura",name:"Laura",type:"companion_npc",
+          position:{x:4,y:8},direction:"right",_color:"#e8d040",
+          dialogue:"Salut Adam ! Tu veux qu'on fasse équipe ?",
+          _companionId:"companion_laura"
+        });
+        npcs.push({
+          id:"npc_william",name:"William",type:"companion_npc",
+          position:{x:4,y:14},direction:"right",_color:"#3aaa5a",
+          dialogue:"Hey ! Besoin d'un archer dans ton équipe ?",
+          _companionId:"companion_william"
+        });
       }
 
     } else if(floor===2){
@@ -4198,7 +4211,7 @@ const GameData = {
 
 const Player = {
   x: 25, y: 25, visualX: 25, visualY: 25,
-  speed: 4, direction: "down", moving: false,
+  speed: 4, sprintSpeed: 8, isSprinting: false, direction: "down", moving: false,
   _targetX: 25, _targetY: 25, _moveTimer: 0, _moveDuration: 0,
   visibleCompanionId: null, // Which companion sprite is shown on map (null = hero)
 
@@ -4240,7 +4253,7 @@ const Player = {
       const newX = this.x + dx, newY = this.y + dy;
       if (!MapSystem.isBlocked(newX, newY)) {
         this._targetX = newX; this._targetY = newY;
-        this._moveDuration = 1 / this.speed;
+        this._moveDuration = 1 / (this.speed * (window._isSprinting ? 2.2 : 1));
         this._moveTimer = this._moveDuration;
         this.moving = true;
         GameData.state.player.position.x = newX;
@@ -8452,6 +8465,9 @@ const DialogueUI = {
             Inventory.addItem(opt.effect.item_id, opt.effect.quantity||1);
           }
         }
+              if(opt.effect.type==="recruit_companion"&&opt.effect.companionId){CompanionRecruitSystem.recruit(opt.effect.companionId);}
+              if(opt.effect.type==="dismiss_companion"&&opt.effect.companionId){CompanionRecruitSystem.dismiss(opt.effect.companionId);}
+              if(opt.effect.type==="save"){SaveManager.autoSave();}
         this.close();
         break;
       case "shop":
@@ -8622,7 +8638,7 @@ const DevMode = {
     });});
 
     // Image uploads
-    const upload=(field)=>{const inp=document.createElement("input");inp.type="file";inp.accept="image/*";inp.onchange=(ev)=>{const f=ev.target.files[0];if(!f)return;const r=new FileReader();r.onload=(re)=>{c[field]=re.target.result;this._dirty=true;this._render();};r.readAsDataURL(f);};inp.click();};
+    const upload=(field)=>{const inp=document.createElement("input");inp.type="file";inp.accept="image/*";inp.onchange=(ev)=>{const f=ev.target.files[0];if(!f)return;const img=new Image();const r=new FileReader();r.onload=(re)=>{img.onload=()=>{const maxW=field.includes("sprite")?64:128;const scale=Math.min(1,maxW/Math.max(img.width,img.height));const cvs=document.createElement("canvas");cvs.width=Math.round(img.width*scale);cvs.height=Math.round(img.height*scale);const ctx2=cvs.getContext("2d");ctx2.imageSmoothingEnabled=field.includes("sprite")?false:true;ctx2.drawImage(img,0,0,cvs.width,cvs.height);const dataUrl=cvs.toDataURL("image/png",0.8);c[field]=dataUrl;this._dirty=true;this._render();EventBus.emit("ui:toast",{message:"Image mise à jour ("+cvs.width+"x"+cvs.height+")",type:"success"});};img.src=re.target.result;};r.readAsDataURL(f);};inp.click();};
     Utils.$("#dev-up-portrait")?.addEventListener("click",(e)=>{e.stopPropagation();upload("portrait_path");});
     Utils.$("#dev-up-sprite")?.addEventListener("click",(e)=>{e.stopPropagation();upload("sprite_path");});
 
@@ -8892,6 +8908,7 @@ const Game = {
     p(50,"Sauvegarde..."); SaveManager.init(); await Utils.wait(60);
     p(70,"Systèmes...");
     MapSystem.init(); Player.init(); CompanionSystem.init();
+    CompanionRecruitSystem.init();
     Combat.init(); Inventory.init(); QuestSystem.init();
     EncounterSystem.init(); HarvestSystem.init();
     await Utils.wait(60);
@@ -8908,6 +8925,18 @@ const Game = {
 
     // NPC interaction
     EventBus.on("npc:interact",(npc)=>{
+      // Companion NPC — show recruit/dismiss dialogue
+      if(npc.type==="companion_npc"&&npc._companionId){
+        const inParty=CompanionRecruitSystem.isInParty(npc._companionId);
+        EventBus.emit("dialogue:open",{npc_name:npc.name,dialogue:npc.dialogue,options:[
+          inParty
+            ?{label:"Renvoyer de l'équipe",action:"toast",message:npc.name+" quitte l'équipe.",effect:{type:"dismiss_companion",companionId:npc._companionId}}
+            :{label:"Recruter dans l'équipe",action:"toast",message:npc.name+" rejoint l'équipe !",effect:{type:"recruit_companion",companionId:npc._companionId}},
+          {label:"Discuter",action:"toast",message:npc.dialogue},
+          {label:"Partir",action:"close"}
+        ]});
+        return;
+      }
       if(npc.type==="merchant") EventBus.emit("ui:toast",{message:`${npc.name}: "${npc.dialogue}"`,type:"info",duration:2000});
       else EventBus.emit("ui:toast",{message:`${npc.name}: "${npc.dialogue}"`,type:"info",duration:4000});
     });
@@ -9011,6 +9040,75 @@ const Game = {
 
   stop(){this._running=false;SaveManager.destroy();}
 };
+
+
+// ════════════════════════════════════════════════════════
+//  COMPANION RECRUIT/DISMISS SYSTEM
+// ════════════════════════════════════════════════════════
+const CompanionRecruitSystem = {
+  init() {
+    // Intercept NPC interactions for companion_npc type
+    EventBus.on("dialogue:open", (data) => {
+      if(data._companionNpc) {
+        this._handleCompanionNPC(data);
+      }
+    });
+  },
+
+  _handleCompanionNPC(data) {
+    // This is handled by the modified interaction code below
+  },
+
+  isInParty(companionId) {
+    return GameData.state.party.some(p => p.templateId === companionId);
+  },
+
+  recruit(companionId) {
+    if(this.isInParty(companionId)) {
+      EventBus.emit("ui:toast", {message: "Déjà dans l'équipe !", type: "warning"});
+      return;
+    }
+    if(GameData.state.party.length >= 3) {
+      EventBus.emit("ui:toast", {message: "Équipe pleine (3 max) ! Renvoyez un membre d'abord.", type: "warning"});
+      return;
+    }
+    // Unlock if not already
+    if(!GameData.state.unlockedCompanions.includes(companionId)) {
+      GameData.state.unlockedCompanions.push(companionId);
+    }
+    // Create instance if needed
+    if(!GameData.state._companionBench) GameData.state._companionBench = {};
+    if(!GameData.state._companionBench[companionId]) {
+      GameData.state._companionBench[companionId] = CompanionSystem.createInstance(companionId);
+    }
+    // Add to party
+    const instance = GameData.state._companionBench[companionId];
+    if(instance) {
+      instance.inParty = true;
+      GameData.state.party.push(instance);
+      EventBus.emit("ui:toast", {message: instance.name + " a rejoint l'équipe !", type: "success"});
+      HUD.refresh();
+    }
+  },
+
+  dismiss(companionId) {
+    const idx = GameData.state.party.findIndex(p => p.templateId === companionId);
+    if(idx >= 0) {
+      const member = GameData.state.party[idx];
+      member.inParty = false;
+      GameData.state.party.splice(idx, 1);
+      EventBus.emit("ui:toast", {message: member.name + " a quitté l'équipe.", type: "info"});
+      HUD.refresh();
+    }
+  }
+};
+
+
+// ── Sprint System ──
+// Hold Shift to move 2x faster
+document.addEventListener("keydown", (e) => { if(e.code==="ShiftLeft"||e.code==="ShiftRight") window._isSprinting=true; });
+document.addEventListener("keyup", (e) => { if(e.code==="ShiftLeft"||e.code==="ShiftRight") window._isSprinting=false; });
+window._isSprinting = false;
 
 window.addEventListener("DOMContentLoaded",()=>{
   Game.init().catch(err=>{console.error("[Game] Fatal:",err);const t=Utils.$("#loading-text");if(t)t.textContent="Erreur: "+err.message;});
