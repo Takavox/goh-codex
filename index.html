@@ -1585,14 +1585,14 @@ body.visitor-mode .il-btn-row{ display:none !important; }
       <span class="sub">CODEX MONDIAL</span>
     </div>
   </div>
+  <button class="topbtn play-btn" onclick="_openGame()" title="Lancer le jeu Gates of Hades" style="margin-left:8px">
+    <span class="play-icon">⚔</span> JOUER
+  </button>
   <div id="search-wrap">
     <span class="si">⌕</span>
     <input id="search" type="text" placeholder="Rechercher dans le codex… (Ctrl+K)" oninput="doSearch(this.value)">
   </div>
   <div id="topbar-r">
-    <button class="topbtn play-btn" onclick="_openGame()" title="Lancer le jeu Gates of Hades">
-      <span class="play-icon">⚔</span> JOUER
-    </button>
     <span id="visitor-badge" style="opacity:.7">👁 VISITEUR</span>
     <span id="_online-badge" title="Personnes en ligne" style="font-family:'Cinzel',serif;font-size:8.5px;letter-spacing:1px;color:rgba(140,200,140,.55);display:flex;align-items:center;gap:4px;padding:3px 8px;border:1px solid rgba(80,160,80,.2);border-radius:10px;background:rgba(40,100,40,.08)">
       <span style="width:6px;height:6px;border-radius:50%;background:rgba(100,220,100,.7);display:inline-block;box-shadow:0 0 5px rgba(80,200,80,.5);animation:pulse-online 2s ease-in-out infinite"></span>
@@ -16979,20 +16979,27 @@ if(document.readyState !== 'loading') _applyMode();
 const _GAME_URL = 'game-apolyti.html';
 
 function _openGame(){
+  // Try overlay first, fallback to new tab
   const overlay = document.getElementById('game-overlay');
   const iframe = document.getElementById('game-iframe');
-  if(!overlay || !iframe) return;
   
   // Stop all codex audio
-  _stopAllAudio();
+  if(typeof _stopAllAudio === 'function') _stopAllAudio();
   
-  // Load game in iframe
-  if(iframe.src === 'about:blank' || !iframe.src.includes('game-apolyti')){
-    iframe.src = _GAME_URL;
+  if(overlay && iframe){
+    // Load game in iframe
+    if(iframe.src === 'about:blank' || !iframe.src.includes('game-apolyti')){
+      iframe.src = _GAME_URL;
+    }
+    overlay.classList.add('open');
+    document.body.style.overflow = 'hidden';
+    
+    // Fallback: if iframe fails to load after 3s, open in new tab
+    iframe.onerror = () => { window.open(_GAME_URL, '_blank'); };
+  } else {
+    // Fallback: open in new tab
+    window.open(_GAME_URL, '_blank');
   }
-  
-  overlay.classList.add('open');
-  document.body.style.overflow = 'hidden';
 }
 
 function _closeGame(){
