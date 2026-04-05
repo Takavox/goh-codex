@@ -3384,7 +3384,7 @@ const GameData = {
 
   state: {
     player: { name:"Adam", level:1, xp:0, gold:500,
-      position:{mapId:"qg_exterior",x:75,y:105},
+      position:{mapId:"qg_exterior",x:125,y:180},
       stats:{hp:100,maxHp:100,atk:12,def:8,mag:5,spd:10},
       portrait_path:null, sprite_path:null, visibleCompanionId:null },
     party:[], leaderId:null,
@@ -3589,306 +3589,521 @@ const GameData = {
   // MAP GENERATORS with biome layers
   // ═══════════════════════════════════════
   _genQGExterior() {
-    // ═══════════════════════════════════════════════════════
-    // QG DES 13 DIVISIONS — Extérieur
-    // 150x120 tiles — une mini-ville militaire d'élite
-    //
-    // LAYOUT:
-    //   Muraille tout autour
-    //   Centre: Cour d'honneur + statue du 1er Gardien + fontaines
-    //   Nord: Mausolée des 8 Gardiens
-    //   Nord-Ouest: Jardins symétriques (style Versailles)
-    //   Est: Les 13 barraques (2 colonnes de 6 + 13e au sud)
-    //   Ouest: Zone commerçants
-    //   Sud: Entrée principale, corps de garde
-    //   Spawn: devant la 13e Division (sud-est)
-    // ═══════════════════════════════════════════════════════
-    const w=150, h=120, bg=[], coll=[], biomes=[];
-    for(let r=0;r<h;r++){bg[r]=[];coll[r]=[];biomes[r]=[];for(let c=0;c<w;c++){bg[r][c]=0;coll[r][c]=0;biomes[r][c]="road";}}
+    const w=250, h=200, bg=[], coll=[], biomes=[];
+    for(let r=0;r<h;r++){bg[r]=[];coll[r]=[];biomes[r]=[];for(let c=0;c<w;c++){bg[r][c]=0;coll[r][c]=0;biomes[r][c]="plains";}}
 
-    function fill(x1,y1,x2,y2,b,col){for(let r=y1;r<=Math.min(y2,h-1);r++)for(let c=x1;c<=Math.min(x2,w-1);c++){if(r>=0&&c>=0){biomes[r][c]=b;coll[r][c]=col?1:0;}}}
-    function bldg(x,y,bw,bh,b,dSide,dOff){
-      fill(x,y,x+bw-1,y+bh-1,b,true);
-      if(dSide==="s"&&y+bh-1<h){coll[y+bh-1][x+dOff]=0;biomes[y+bh-1][x+dOff]="door";}
-      if(dSide==="n"&&y>=0){coll[y][x+dOff]=0;biomes[y][x+dOff]="door";}
-      if(dSide==="e"){coll[y+dOff][x+bw-1]=0;biomes[y+dOff][x+bw-1]="door";}
-      if(dSide==="w"){coll[y+dOff][x]=0;biomes[y+dOff][x]="door";}
-    }
+    const F=(x1,y1,x2,y2,b,cl)=>{for(let r=Math.max(0,y1);r<=Math.min(y2,h-1);r++)for(let c=Math.max(0,x1);c<=Math.min(x2,w-1);c++){biomes[r][c]=b;coll[r][c]=cl?1:0;}};
+    const B=(x,y,bw,bh,b,ds,do2)=>{F(x,y,x+bw-1,y+bh-1,b,true);if(ds==="s"){coll[y+bh-1][x+do2]=0;biomes[y+bh-1][x+do2]="door";}else if(ds==="n"){coll[y][x+do2]=0;biomes[y][x+do2]="door";}else if(ds==="e"){coll[y+do2][x+bw-1]=0;biomes[y+do2][x+bw-1]="door";}else if(ds==="w"){coll[y+do2][x]=0;biomes[y+do2][x]="door";}};
 
-    // ── MURAILLES ──
-    fill(0,0,w-1,2,"wall",true);     // Nord
-    fill(0,h-3,w-1,h-1,"wall",true); // Sud
-    fill(0,0,2,h-1,"wall",true);     // Ouest
-    fill(w-3,0,w-1,h-1,"wall",true); // Est
+    // ══════════════════════════════════════
+    // MURAILLES EXTÉRIEURES
+    // ══════════════════════════════════════
+    F(0,0,w-1,2,"wall",true);      // Nord
+    F(0,h-3,w-1,h-1,"wall",true);  // Sud
+    F(0,0,2,h-1,"wall",true);      // Ouest
+    F(w-3,0,w-1,h-1,"wall",true);  // Est
 
-    // ── PORTE SUD (entrée principale) ──
-    fill(72,h-3,77,h-1,"gate",false);
-    // ── PORTE NORD (vers l'extérieur) ──
-    fill(72,0,77,2,"gate",false);
+    // Tours d'angle
+    F(0,0,4,4,"tower",true);
+    F(w-5,0,w-1,4,"tower",true);
+    F(0,h-5,4,h-1,"tower",true);
+    F(w-5,h-5,w-1,h-1,"tower",true);
 
-    // ── GRANDE AVENUE CENTRALE (nord-sud) ──
-    fill(72,3,77,h-4,"road",false);
+    // ── 4 Portes ──
+    F(120,0,129,2,"gate",false);    // Nord
+    F(120,h-3,129,h-1,"gate",false);// Sud
+    F(0,95,2,104,"gate",false);     // Ouest
+    F(w-3,95,w-1,104,"gate",false); // Est
 
-    // ── AVENUE EST-OUEST ──
-    fill(3,55,w-4,58,"road",false);
+    // ══════════════════════════════════════
+    // ROUTES PRINCIPALES (axes)
+    // ══════════════════════════════════════
+    // Grand axe Nord-Sud
+    F(122,3,127,h-4,"road",false);
+    // Grand axe Est-Ouest
+    F(3,97,w-4,102,"road",false);
+    // Routes secondaires
+    F(60,3,62,h-4,"road",false);    // Ouest vertical
+    F(180,3,182,h-4,"road",false);  // Est vertical
+    F(3,50,w-4,52,"road",false);    // Horizontal nord
+    F(3,145,w-4,147,"road",false);  // Horizontal sud
 
-    // ═══════════════════════════════════
-    // CENTRE: COUR D'HONNEUR (x:55-95, y:45-70)
-    // ═══════════════════════════════════
-    fill(55,45,95,70,"plaza",false);
+    // ══════════════════════════════════════
+    // CENTRE: PLACE D'HONNEUR (x:100-150, y:75-125)
+    // ══════════════════════════════════════
+    F(100,75,150,125,"plaza",false);
 
-    // Statue du 1er Gardien (centre exact)
-    fill(73,55,76,58,"palace",true); // socle
+    // Statue du 1er Gardien (centre)
+    F(122,96,127,103,"palace",true);
 
     // 4 Fontaines symétriques
-    fill(62,50,64,52,"fountain",false);
-    fill(86,50,88,52,"fountain",false);
-    fill(62,63,64,65,"fountain",false);
-    fill(86,63,88,65,"fountain",false);
+    F(106,82,108,84,"fountain",true);
+    F(141,82,143,84,"fountain",true);
+    F(106,116,108,118,"fountain",true);
+    F(141,116,143,118,"fountain",true);
 
-    // Parterres de fleurs dans la cour
-    fill(58,47,61,49,"garden",false);
-    fill(89,47,92,49,"garden",false);
-    fill(58,66,61,68,"garden",false);
-    fill(89,66,92,68,"garden",false);
+    // Parterres décoratifs
+    F(100,75,104,79,"garden",false);
+    F(146,75,150,79,"garden",false);
+    F(100,121,104,125,"garden",false);
+    F(146,121,150,125,"garden",false);
 
-    // Bancs / espaces verts entre fontaines
-    fill(66,53,70,54,"garden",false);
-    fill(80,53,84,54,"garden",false);
-    fill(66,61,70,62,"garden",false);
-    fill(80,61,84,62,"garden",false);
-
-    // ═══════════════════════════════════
-    // NORD: MAUSOLÉE DES 8 GARDIENS (x:55-95, y:8-35)
-    // ═══════════════════════════════════
-    // Allée menant au mausolée
-    fill(72,35,77,44,"road",false);
-
-    // Bâtiment du mausolée
-    fill(58,10,92,32,"ruins",true);
-    // Entrée sud du mausolée
-    fill(73,32,76,32,"door",false);
-    // Intérieur (espace ouvert symbolique)
-    fill(60,12,90,30,"plaza",false);
-
-    // 8 emplacements de statues (4 de chaque côté d'une allée)
-    // Allée centrale du mausolée
-    fill(73,12,76,30,"road",false);
-    // Statues à gauche
-    fill(63,14,65,16,"palace",true); // Gardien I
-    fill(63,19,65,21,"palace",true); // Gardien II
-    fill(63,24,65,26,"palace",true); // Gardien III
-    fill(68,14,70,16,"palace",true); // Gardien IV
-    // Statues à droite
-    fill(79,14,81,16,"palace",true); // Gardien V
-    fill(79,19,81,21,"palace",true); // Gardien VI
-    fill(84,14,86,16,"palace",true); // Gardien VII
-    fill(84,19,86,21,"palace",true); // Gardien VIII
-
-    // Flammes éternelles devant le mausolée
-    fill(70,33,71,34,"lava",false);
-    fill(78,33,79,34,"lava",false);
-
-    // ═══════════════════════════════════
-    // NORD-OUEST: JARDINS SYMÉTRIQUES (x:5-50, y:5-50)
-    // ═══════════════════════════════════
-    fill(5,5,50,50,"garden",false);
-    // Allées en croix
-    fill(26,5,28,50,"road",false);
-    fill(5,26,50,28,"road",false);
-    // Allées diagonales (approximation en marches)
-    for(let i=0;i<20;i++){
-      fill(7+i,7+i,8+i,8+i,"road",false);
-      fill(47-i,7+i,48-i,8+i,"road",false);
+    // Lampadaires le long de la place
+    for(let i=0;i<6;i++){
+      const lx=103+i*8;
+      if(biomes[76]?.[lx]==="plaza"){coll[76][lx]=1;biomes[76][lx]="lamp";}
+      if(biomes[124]?.[lx]==="plaza"){coll[124][lx]=1;biomes[124][lx]="lamp";}
     }
-    // 4 parterres
-    fill(8,8,24,24,"garden",false);
-    fill(30,8,48,24,"garden",false);
-    fill(8,30,24,48,"garden",false);
-    fill(30,30,48,48,"garden",false);
-    // Fontaines centrales des parterres
-    fill(15,15,17,17,"fountain",false);
-    fill(38,15,40,17,"fountain",false);
-    fill(15,38,17,40,"fountain",false);
-    fill(38,38,40,40,"fountain",false);
-    // Haies (collisions décoratives)
-    for(let i=8;i<=48;i+=2){
-      if(i<26||i>28){coll[7][i]=1;coll[49][i]=1;}
-    }
-    for(let i=8;i<=48;i+=2){
-      if(i<26||i>28){coll[i][6]=1;coll[i][49]=1;}
-    }
-    // Grand bassin central
-    fill(24,24,30,28,"fountain",false);
 
-    // Kiosque / pavillon
-    bldg(22,20,5,4,"palace",false,0);
-    fill(24,23,24,23,"door",false);
+    // Bancs
+    F(110,88,112,89,"table",true);
+    F(137,88,139,89,"table",true);
+    F(110,110,112,111,"table",true);
+    F(137,110,139,111,"table",true);
 
-    // ═══════════════════════════════════
-    // EST: LES 13 BARRAQUES (x:100-145, y:5-115)
-    // ═══════════════════════════════════
-    // Mur séparant la zone casernes
-    fill(98,3,99,h-4,"wall",true);
-    fill(98,55,99,58,"gate",false); // passage
+    // ══════════════════════════════════════
+    // NORD: MAUSOLÉE DES 8 GARDIENS (x:95-155, y:10-45)
+    // ══════════════════════════════════════
+    // Allée vers le mausolée
+    F(122,45,127,74,"road",false);
 
-    // Avenue des casernes
-    fill(100,3,101,h-4,"road",false);
-    fill(118,3,119,h-4,"road",false);
+    // Bâtiment mausolée
+    F(95,12,155,42,"ruins",true);
+    // Entrée sud
+    F(122,42,127,42,"door",false);
+    // Intérieur ouvert
+    F(98,14,152,40,"plaza",false);
+    // Allée intérieure
+    F(122,14,127,40,"road",false);
 
-    // Divisions 1-6 (colonne gauche, x:103)
+    // 8 statues (4 de chaque côté)
+    const statuePositions=[
+      [103,17],[103,24],[103,31],[110,17],
+      [140,17],[140,24],[140,31],[147,17]
+    ];
+    statuePositions.forEach(([sx,sy])=>{F(sx,sy,sx+2,sy+2,"statue",true);});
+
+    // Flammes éternelles à l'entrée
+    F(119,43,120,44,"torch",true);
+    F(129,43,130,44,"torch",true);
+
+    // Arbres cérémoniels
+    F(96,10,97,11,"tree_oak",true);
+    F(153,10,154,11,"tree_oak",true);
+    F(96,43,97,44,"tree_oak",true);
+    F(153,43,154,44,"tree_oak",true);
+
+    // ══════════════════════════════════════
+    // NORD-EST: 13e DIVISION — ISOLÉE
+    // Chemin étroit unique pour y accéder
+    // (x:195-245, y:8-55)
+    // ══════════════════════════════════════
+    // Mur intérieur séparant la 13e
+    F(190,5,192,65,"wall",true);
+
+    // Chemin étroit (2 cases de large) traversant le mur
+    F(190,30,192,33,"road",false);
+    // Chemin sinueux menant à la 13e
+    F(183,30,192,33,"road",false);
+
+    // Terrain de la 13e — cour intérieure
+    F(196,10,243,53,"plaza",false);
+
+    // Caserne principale 13e (grande)
+    B(205,15,20,14,"barracks","s",9);
+
+    // Cour d'entraînement privée
+    F(200,35,240,50,"arena",false);
+    F(215,40,225,46,"arena",true); // obstacles
+
+    // Bannières
+    F(197,11,198,12,"banner",true);
+    F(241,11,242,12,"banner",true);
+
+    // Fontaine de la 13e
+    F(218,32,221,34,"fountain",true);
+
+    // Arbre solitaire
+    F(238,14,239,16,"tree_oak",true);
+
+    // ══════════════════════════════════════
+    // EST: CASERNES 1-12 (x:160-245, y:60-190)
+    // 2 colonnes × 6 rangées
+    // ══════════════════════════════════════
     const divNames=["1ère","2ème","3ème","4ème","5ème","6ème","7ème","8ème","9ème","10ème","11ème","12ème","13ème"];
     const divIcons=["⚔","🛡","🔥","💀","⚡","🌙","🌊","🌿","🔮","🏹","🗡","📜","👁"];
 
-    // 6 barraques colonne gauche
+    // Allée militaire
+    F(185,60,187,190,"road",false);
+
     for(let i=0;i<6;i++){
-      bldg(103,6+i*15,12,10,"barracks","s",5);
-      fill(103,16+i*15,114,18+i*15,"plaza",false);
+      // Colonne gauche
+      const ly=65+i*20;
+      B(163,ly,12,10,"barracks","e",4);
+      F(163,ly+10,174,ly+13,"plaza",false);
+      // Colonne droite
+      B(195,ly,12,10,"barracks","w",4);
+      F(195,ly+10,206,ly+13,"plaza",false);
     }
-    // 6 barraques colonne droite
+
+    // Allée entre colonnes
+    F(175,60,194,190,"road",false);
+
+    // ══════════════════════════════════════
+    // OUEST: QUARTIER CIVIL ORGANIQUE
+    // (x:5-55, y:55-190)
+    // ══════════════════════════════════════
+
+    // ── Commerces ──
+    // Rue commerçante (pas parfaitement droite)
+    F(30,55,32,145,"road",false);
+    // Bifurcation
+    F(15,80,32,82,"road",false);
+    F(15,115,32,117,"road",false);
+
+    // Forgeron
+    B(8,60,10,8,"shop","e",3);
+    // Apothicaire
+    B(8,72,10,8,"shop","e",3);
+    // Tailleur
+    B(8,86,10,8,"shop","e",3);
+    // Armurier (grande)
+    B(8,100,12,10,"shop","e",4);
+    // Épicerie
+    B(8,115,10,8,"shop","e",3);
+    // Bijoutier
+    B(8,128,10,8,"shop","e",3);
+
+    // Étal de marché (plein air)
+    F(20,90,28,95,"market",false);
+    F(22,91,23,91,"crate",true);
+    F(26,91,27,91,"barrel",true);
+    F(22,94,23,94,"crate",true);
+
+    // ── Taverne (grande) ──
+    B(35,60,16,12,"tavern","s",7);
+
+    // ── Habitations (organisation organique, pas en grille parfaite) ──
+    B(36,80,8,6,"house","s",3);
+    B(46,78,8,7,"house","s",3);
+    B(36,92,9,7,"house","s",4);
+    B(47,90,8,6,"house","w",2);
+    B(36,105,8,7,"house","s",3);
+    B(47,104,7,6,"house","s",3);
+    B(36,118,8,6,"house","s",3);
+    B(46,116,8,7,"house","s",3);
+    B(36,130,7,6,"house","e",2);
+    B(46,128,8,7,"house","s",3);
+
+    // Petites places / carrefours dans le quartier civil
+    F(42,86,44,88,"plaza",false);
+    F(44,100,46,102,"plaza",false);
+    F(44,125,46,127,"fountain",true);
+
+    // Lampadaires dans les rues civiles
+    for(let ry=62;ry<145;ry+=8){
+      if(biomes[ry]?.[29]==="road"){coll[ry][29]=1;biomes[ry][29]="lamp";}
+    }
+
+    // ══════════════════════════════════════
+    // NORD-OUEST: JARDINS / PARCS
+    // (x:5-90, y:5-48)
+    // ══════════════════════════════════════
+    F(6,5,88,48,"garden",false);
+
+    // Allées du jardin (en croix)
+    F(46,5,48,48,"path",false);
+    F(6,26,88,28,"path",false);
+
+    // Allées diagonales
+    for(let i=0;i<18;i++){
+      F(8+i*2,7+i*2,9+i*2,8+i*2,"path",false);
+      F(85-i*2,7+i*2,86-i*2,8+i*2,"path",false);
+    }
+
+    // 4 parterres avec motifs
+    F(10,8,42,24,"garden",false);
+    F(52,8,85,24,"garden",false);
+    F(10,30,42,46,"garden",false);
+    F(52,30,85,46,"garden",false);
+
+    // Fontaines dans les parterres
+    F(24,14,26,16,"fountain",true);
+    F(66,14,68,16,"fountain",true);
+    F(24,36,26,38,"fountain",true);
+    F(66,36,68,38,"fountain",true);
+
+    // Grand bassin central du jardin
+    F(42,23,52,29,"fountain",true);
+
+    // Arbres le long des allées
+    for(let i=0;i<8;i++){
+      const tx=10+i*10;
+      if(tx!==46&&tx!==48){
+        F(tx,6,tx+1,7,"tree_oak",true);
+        F(tx,47,tx+1,48,"tree_oak",true);
+      }
+    }
+    // Buissons
+    F(7,5,8,6,"bush",true);F(89,5,90,6,"bush",true);
+    F(7,48,8,49,"bush",true);F(89,48,90,49,"bush",true);
+
+    // Fleurs
+    F(15,10,16,11,"flower_red",false);
+    F(35,10,36,11,"flower_yel",false);
+    F(55,10,56,11,"flower_red",false);
+    F(75,10,76,11,"flower_yel",false);
+    F(15,42,16,43,"flower_yel",false);
+    F(35,42,36,43,"flower_red",false);
+
+    // Kiosque / pavillon dans le jardin
+    B(20,20,5,4,"palace","s",2);
+
+    // ══════════════════════════════════════
+    // BÂTIMENTS SPÉCIAUX
+    // ══════════════════════════════════════
+
+    // ── Infirmerie (centre-ouest, près de la place) ──
+    B(80,80,14,10,"house","e",4);
+    // Croix médicale (panneau)
+    F(79,84,79,84,"sign",true);
+
+    // ── Bibliothèque / Archives (nord, entre mausolée et jardin) ──
+    B(70,15,18,12,"house","s",8);
+
+    // ── Prison / Cachots (sud-est) ──
+    B(210,155,16,12,"wall",true);
+    // Porte unique
+    F(217,166,217,166,"door",false);
+    // Intérieur (corridors)
+    F(212,157,224,164,"cave",false);
+    F(217,157,217,164,"road",false);
+    // Cellules
+    F(212,157,215,159,"wall",true);F(212,157,215,157,"wall",true);
+    F(219,157,222,159,"wall",true);F(219,157,222,157,"wall",true);
+    F(212,161,215,163,"wall",true);F(212,161,215,161,"wall",true);
+    F(219,161,222,163,"wall",true);F(219,161,222,161,"wall",true);
+
+    // ── Armurerie Centrale (sud-centre, près place d'armes) ──
+    B(100,135,20,12,"shop","n",9);
+
+    // ══════════════════════════════════════
+    // TERRAIN D'ENTRAÎNEMENT / ARÈNE
+    // (entre place centrale et casernes)
+    // ══════════════════════════════════════
+    F(130,55,158,73,"arena",false);
+    // Ring central
+    F(138,60,150,68,"arena",true);
+    F(143,60,145,60,"door",false); // entrée ring
+    // Mannequins
+    F(140,63,140,63,"weapon_rack",true);
+    F(144,63,144,63,"weapon_rack",true);
+    F(148,63,148,63,"weapon_rack",true);
+
+    // ══════════════════════════════════════
+    // SUD: ENTRÉE PRINCIPALE + CORPS DE GARDE
+    // (y:155-195)
+    // ══════════════════════════════════════
+    // Place d'armes devant l'entrée
+    F(95,160,155,185,"plaza",false);
+
+    // Fontaine de la place d'armes
+    F(122,170,127,175,"fountain",true);
+
+    // Corps de garde (2 tours flanquant l'entrée)
+    B(108,185,10,10,"tower","n",4);
+    B(132,185,10,10,"tower","n",4);
+
+    // Bannières à l'entrée
+    F(118,186,119,187,"banner",true);
+    F(130,186,131,187,"banner",true);
+
+    // ══════════════════════════════════════
+    // DÉTAILS DE VIE — Arbres, lampadaires, etc.
+    // ══════════════════════════════════════
+
+    // Arbres le long du grand axe nord-sud
+    for(let ry=8;ry<h-8;ry+=6){
+      if(biomes[ry]?.[120]==="road"||biomes[ry]?.[120]==="plaza") continue;
+      if(ry>72&&ry<128) continue; // skip place centrale
+      F(120,ry,121,ry+1,"tree_oak",true);
+      F(128,ry,129,ry+1,"tree_oak",true);
+    }
+
+    // Arbres le long de l'axe est-ouest
+    for(let cx=8;cx<w-8;cx+=8){
+      if(biomes[95]?.[cx]==="road"||biomes[95]?.[cx]==="plaza") continue;
+      if(cx>95&&cx<155) continue;
+      F(cx,95,cx+1,96,"tree_oak",true);
+      F(cx,103,cx+1,104,"tree_oak",true);
+    }
+
+    // Lampadaires le long des routes principales
+    for(let ry=10;ry<h-10;ry+=10){
+      if(biomes[ry]?.[121]==="road"){coll[ry][121]=1;biomes[ry][121]="lamp";}
+    }
+    for(let cx=10;cx<w-10;cx+=12){
+      if(biomes[96]?.[cx]==="road"){coll[96][cx]=1;biomes[96][cx]="lamp";}
+    }
+
+    // Clôtures autour du quartier militaire
+    F(160,58,161,192,"fence_iron",true);
+    F(160,97,161,102,"gate",false); // passage
+
+    // Panneaux directionnels
+    F(123,53,123,53,"sign",true);
+    F(63,53,63,53,"sign",true);
+    F(123,148,123,148,"sign",true);
+
+    // Tonneau et caisses près de la taverne
+    F(52,62,52,62,"barrel",true);
+    F(53,62,53,62,"barrel",true);
+    F(52,70,52,70,"crate",true);
+
+    // Puits dans le quartier civil
+    F(40,140,41,141,"well",true);
+
+    // Feux de camp près du terrain d'entraînement
+    F(131,72,131,72,"campfire",true);
+    F(157,72,157,72,"campfire",true);
+
+    // Tombes près du mausolée (petit cimetière)
+    for(let i=0;i<4;i++){
+      F(93+i*3,45,93+i*3,45,"grave",true);
+      F(143+i*3,45,143+i*3,45,"grave",true);
+    }
+
+    // ══════════════════════════════════════
+    // NPCs
+    // ══════════════════════════════════════
+    const npcs=[
+      {id:"npc_captain",name:"Capitaine Daryn",type:"npc",position:{x:210,y:28},direction:"down",dialogue:"Je suis Daryn, Capitaine de la 13e Division. Bienvenue, recrue. Le QG est ton nouveau foyer."},
+      {id:"npc_merchant_forge",name:"Maître-Forgeron Kael",type:"merchant",position:{x:17,y:67},direction:"right",dialogue:"Armes et armures forgées pour les Divisions.",shop_inventory:["sword_iron","sword_steel","fists_metal","bow_hunter","shield_iron","staff_apprentice"]},
+      {id:"npc_merchant_potions",name:"Apothicaire Mira",type:"merchant",position:{x:17,y:79},direction:"right",dialogue:"Potions et remèdes pour les missions.",shop_inventory:["potion_hp_small","potion_hp_medium","potion_mp","elixir_atk","elixir_def","antidote"]},
+      {id:"npc_merchant_tools",name:"Marchande d'Outils",type:"merchant",position:{x:17,y:91},direction:"right",dialogue:"Haches, pioches, cannes — tout pour récolter.",shop_inventory:["tool_axe","tool_pickaxe","tool_fishing_rod"]},
+      {id:"npc_armurier",name:"Armurier Voss",type:"merchant",position:{x:19,y:107},direction:"right",dialogue:"L'armurerie la plus fournie de Pyli.",shop_inventory:["sword_iron","sword_steel","shield_iron","robe_apprentice","ring_power"]},
+      {id:"npc_tavern",name:"Aubergiste Yorik",type:"npc",position:{x:42,y:71},direction:"down",dialogue:"Bienvenue à la Taverne du Loup d'Acier ! Un verre, soldat ?"},
+      {id:"npc_guard_south",name:"Garde de l'Entrée",type:"npc",position:{x:125,y:h-5},direction:"up",dialogue:"Vous quittez le QG ? Les Plaines d'Aurore sont au-delà."},
+      {id:"npc_guard_north",name:"Garde Nord",type:"npc",position:{x:125,y:4},direction:"down",dialogue:"Cette porte mène aux montagnes. Soyez prudent."},
+      {id:"npc_guard_east",name:"Garde Est",type:"npc",position:{x:w-5,y:100},direction:"left",dialogue:"Route commerciale. Passage contrôlé."},
+      {id:"npc_guard_west",name:"Garde Ouest",type:"npc",position:{x:4,y:100},direction:"right",dialogue:"Les forêts de l'ouest. Territoire dangereux."},
+      {id:"npc_guard_13",name:"Sentinelle de la 13e",type:"npc",position:{x:190,y:32},direction:"left",dialogue:"Seuls les membres de la 13e peuvent passer. Identifiez-vous."},
+      {id:"npc_archivist",name:"Archiviste Lena",type:"npc",position:{x:78,y:26},direction:"down",dialogue:"Les archives contiennent l'histoire de chaque Division. Consultez librement."},
+      {id:"npc_medic",name:"Médecin Alara",type:"npc",position:{x:93,y:86},direction:"right",dialogue:"L'infirmerie est ouverte. Montrez-moi vos blessures."},
+      {id:"npc_jailer",name:"Geôlier Mortis",type:"npc",position:{x:218,y:165},direction:"up",dialogue:"Les cachots ne sont pas un endroit pour les curieux."},
+      {id:"npc_trainer",name:"Instructeur Hagen",type:"npc",position:{x:144,y:58},direction:"down",dialogue:"L'arène est ouverte. Entraînez-vous, soldats !"}
+    ];
+
+    // ══════════════════════════════════════
+    // INSTANCES (interactifs)
+    // ══════════════════════════════════════
+    const instances=[
+      {id:"inst_statue",name:"Statue du 1er Gardien",type:"dialogue",position:{x:125,y:95},icon:"👑",
+        dialogue:"Une imposante statue du 1er Gardien, le Roi Fondateur de Pyli, domine la place.",
+        options:[
+          {label:"Lire l'inscription",action:"toast",message:"« Que la force des Gardiens protège Pyli pour l'éternité. »"},
+          {label:"Se recueillir (+50 PV)",action:"toast",message:"Une chaleur apaisante vous envahit.",effect:{type:"heal",value:50}},
+          {label:"Partir",action:"close"}
+        ]},
+      {id:"inst_mausolee",name:"Mausolée des Gardiens",type:"dialogue",position:{x:125,y:41},icon:"🏛️",
+        dialogue:"Le Mausolée des 8 Gardiens. Huit statues majestueuses veillent dans le silence.",
+        options:[
+          {label:"Gardien I — Le Fondateur",action:"toast",message:"Celui qui forgea Pyli et unifia les peuples."},
+          {label:"Gardien II — Le Stratège",action:"toast",message:"Le stratège qui créa les 13 Divisions."},
+          {label:"Gardien III — Le Guérisseur",action:"toast",message:"Celui qui sauva le royaume de la Grande Peste."},
+          {label:"Gardien IV — La Sentinelle",action:"toast",message:"Le gardien éternel des Portes."},
+          {label:"Gardien V — Le Loup",action:"toast",message:"Le guerrier sauvage, protecteur des frontières."},
+          {label:"Gardien VI — L'Oracle",action:"toast",message:"Celui qui lisait le destin dans les étoiles."},
+          {label:"Gardien VII — Le Forgeron",action:"toast",message:"Le créateur des armes légendaires."},
+          {label:"Gardien VIII — Le Dernier",action:"toast",message:"Le dernier à avoir sacrifié sa vie pour Pyli."},
+          {label:"Partir",action:"close"}
+        ]},
+      {id:"inst_taverne",name:"Taverne du Loup d'Acier",type:"dialogue",position:{x:42,y:59},icon:"🍺",
+        dialogue:"L'odeur de ragoût et de bière emplit la taverne des soldats.",
+        options:[
+          {label:"Manger (PV max)",action:"toast",message:"Repas copieux ! PV restaurés.",effect:{type:"heal",value:9999}},
+          {label:"Écouter les rumeurs",action:"toast",message:"On parle de créatures aperçues près des Portes..."},
+          {label:"Partir",action:"close"}
+        ]},
+      {id:"inst_infirmerie",name:"Infirmerie",type:"dialogue",position:{x:93,y:84},icon:"🏥",
+        dialogue:"L'infirmerie du QG. Propre et bien équipée.",
+        options:[
+          {label:"Se faire soigner (PV max)",action:"toast",message:"Le médecin vous soigne. PV restaurés !",effect:{type:"heal",value:9999}},
+          {label:"Partir",action:"close"}
+        ]},
+      {id:"inst_biblio",name:"Bibliothèque & Archives",type:"dialogue",position:{x:78,y:14},icon:"📚",
+        dialogue:"Des milliers de parchemins et livres sur l'histoire de Pyli et des Divisions.",
+        options:[
+          {label:"Consulter les archives",action:"toast",message:"Vous découvrez des récits fascinants sur les anciennes batailles."},
+          {label:"Lire sur les Gardiens",action:"toast",message:"Les 8 Gardiens furent les premiers protecteurs du royaume."},
+          {label:"Partir",action:"close"}
+        ]},
+      {id:"inst_prison",name:"Prison du QG",type:"dialogue",position:{x:218,y:155},icon:"⛓",
+        dialogue:"Les cachots du QG. Froids et silencieux.",
+        options:[
+          {label:"Regarder les cellules",action:"toast",message:"La plupart sont vides. Quelques prisonniers murmurent dans l'ombre."},
+          {label:"Partir",action:"close"}
+        ]},
+      {id:"inst_armurerie",name:"Armurerie Centrale",type:"dialogue",position:{x:109,y:134},icon:"⚔",
+        dialogue:"L'armurerie centrale. Des armes et armures alignées sur les murs.",
+        options:[
+          {label:"Examiner les armes",action:"toast",message:"Des lames, arcs, et armures de qualité militaire."},
+          {label:"Partir",action:"close"}
+        ]},
+      {id:"inst_arena",name:"Arène d'Entraînement",type:"dialogue",position:{x:144,y:68},icon:"⚔",
+        dialogue:"L'arène d'entraînement. Des mannequins en bois et des cibles.",
+        options:[
+          {label:"S'entraîner (+30 XP)",action:"toast",message:"Vous vous entraînez dur !",effect:{type:"xp",value:30}},
+          {label:"Partir",action:"close"}
+        ]}
+    ];
+
+    // ── Portails vers les casernes ──
     for(let i=0;i<6;i++){
-      bldg(122,6+i*15,12,10,"barracks","s",5);
-      fill(122,16+i*15,133,18+i*15,"plaza",false);
-    }
-
-    // 13e Division — plus grande, position spéciale au sud
-    bldg(106,96,14,12,"barracks","n",6);
-    fill(104,93,121,95,"plaza",false); // cour de la 13e
-    fill(112,92,112,92,"fountain",false);
-
-    // Terrain d'entraînement commun
-    fill(103,80,133,90,"arena",false);
-    fill(110,83,126,87,"arena",true); // zone obstacles
-
-    // ═══════════════════════════════════
-    // OUEST: ZONE COMMERÇANTS (x:5-50, y:55-95)
-    // ═══════════════════════════════════
-    fill(5,55,50,95,"market",false);
-    // Avenue commerçante
-    fill(26,55,28,95,"road",false);
-    // Boutiques
-    bldg(7,58,8,6,"shop","e",2);   // Forgeron
-    bldg(7,68,8,6,"shop","e",2);   // Apothicaire
-    bldg(7,78,8,6,"shop","e",2);   // Tailleur
-    bldg(17,58,8,6,"shop","e",2);  // Armurier
-    bldg(17,68,8,6,"shop","e",2);  // Bijoutier
-    bldg(17,78,8,6,"shop","e",2);  // Epicerie
-    // Taverne (plus grande)
-    bldg(32,60,12,8,"shop","s",5);
-    // Quartier général / Administration
-    bldg(32,75,12,10,"house","n",5);
-
-    // ═══════════════════════════════════
-    // SUD: CORPS DE GARDE + Entrée
-    // ═══════════════════════════════════
-    bldg(62,h-12,8,6,"tower","n",3);
-    bldg(80,h-12,8,6,"tower","n",3);
-    // Place d'armes
-    fill(55,h-20,95,h-12,"plaza",false);
-    fill(73,h-18,76,h-15,"fountain",false);
-
-    // ═══════════════════════════════════
-    // DÉTAILS DE VIE
-    // ═══════════════════════════════════
-    // Arbres le long des avenues
-    for(let r=5;r<h-5;r+=4){
-      if(biomes[r]?.[70]==="road"||biomes[r]?.[70]==="plaza") continue;
-      if(r>45&&r<70) continue;
-      coll[r][70]=1; biomes[r][70]="forest";
-      coll[r][79]=1; biomes[r][79]="forest";
-    }
-    // Lampadaires (arbustes décoratifs le long des allées principales)
-    for(let r=5;r<h-5;r+=8){
-      if(biomes[r]?.[71]==="road") continue;
-      coll[r][71]=1; biomes[r][71]="garden";
-    }
-    // Puits dans la zone commerçante
-    fill(26,72,28,74,"fountain",false);
-
-    // Écuries
-    bldg(50,100,8,8,"stable",true);
-    fill(54,107,54,107,"door",false);
-
-    const map={
-      id:"qg_exterior", name:"QG des 13 Divisions", width:w, height:h,
-      layers:{background:bg,collision:coll,foreground:[]}, biomesLayer:biomes,
-      enemy_level_range:{min:1,max:3,scaling_mode:"random"},
-      npcs:[
-        {id:"npc_captain",name:"Capitaine Daryn",type:"npc",position:{x:113,y:94},direction:"down",dialogue:"Je suis Daryn, Capitaine de la 13e Division. Bienvenue, recrue. Le QG est ton nouveau foyer."},
-        {id:"npc_merchant_forge",name:"Maître-Forgeron Kael",type:"merchant",position:{x:14,y:63},direction:"right",dialogue:"Armes et armures forgées pour les Divisions.",shop_inventory:["sword_iron","sword_steel","fists_metal","bow_hunter","shield_iron","staff_apprentice"]},
-        {id:"npc_merchant_potions",name:"Apothicaire Mira",type:"merchant",position:{x:14,y:73},direction:"right",dialogue:"Potions et remèdes pour les missions.",shop_inventory:["potion_hp_small","potion_hp_medium","potion_mp","elixir_atk","elixir_def","antidote"]},
-        {id:"npc_merchant_tools",name:"Marchande d'Outils",type:"merchant",position:{x:14,y:83},direction:"right",dialogue:"Haches, pioches, cannes — tout pour récolter.",shop_inventory:["tool_axe","tool_pickaxe","tool_fishing_rod"]},
-        {id:"npc_tavern",name:"Aubergiste Yorik",type:"npc",position:{x:37,y:68},direction:"down",dialogue:"Bienvenue à la Taverne de l'Épée Brisée ! Un verre pour nos héros ?"},
-        {id:"npc_guard_south",name:"Garde de l'Entrée",type:"npc",position:{x:75,y:h-5},direction:"up",dialogue:"Vous quittez le QG ? Les Plaines d'Aurore sont au-delà."},
-        {id:"npc_archivist",name:"Archiviste Lena",type:"npc",position:{x:37,y:80},direction:"down",dialogue:"Les archives contiennent l'histoire de chaque Division depuis la fondation."}
-      ],
-      instances:[
-        {id:"inst_statue",name:"Statue du 1er Gardien",type:"dialogue",position:{x:75,y:54},icon:"👑",
-          dialogue:"Une imposante statue du 1er Gardien, le Roi Fondateur de Pyli, trône au centre de la cour.",
-          options:[
-            {label:"Lire l'inscription",action:"toast",message:"« Que la force des Gardiens protège Pyli pour l'éternité. »"},
-            {label:"Se recueillir (+50 PV)",action:"toast",message:"Une chaleur apaisante vous envahit.",effect:{type:"heal",value:50}},
-            {label:"Partir",action:"close"}
-          ]},
-        {id:"inst_mausolee",name:"Mausolée des Gardiens",type:"dialogue",position:{x:75,y:31},icon:"🏛️",
-          dialogue:"Le Mausolée des 8 Gardiens. Huit statues majestueuses veillent dans le silence.",
-          options:[
-            {label:"Gardien I — Le Fondateur",action:"toast",message:"La première statue. Celui qui forgea Pyli."},
-            {label:"Gardien II — Le Stratège",action:"toast",message:"Le stratège militaire qui créa les 13 Divisions."},
-            {label:"Gardien III — Le Guérisseur",action:"toast",message:"Celui qui sauva le royaume de la Grande Peste."},
-            {label:"Gardien IV — La Sentinelle",action:"toast",message:"Le gardien éternel des Portes."},
-            {label:"Gardien V — Le Loup",action:"toast",message:"Le guerrier sauvage, protecteur des frontières."},
-            {label:"Gardien VI — L'Oracle",action:"toast",message:"Celui qui pouvait lire le destin dans les étoiles."},
-            {label:"Gardien VII — Le Forgeron",action:"toast",message:"Le créateur des armes légendaires."},
-            {label:"Gardien VIII — Le Dernier",action:"toast",message:"Le dernier Gardien à avoir sacrifié sa vie pour Pyli."},
-            {label:"Partir",action:"close"}
-          ]},
-        {id:"inst_taverne",name:"Taverne de l'Épée Brisée",type:"dialogue",position:{x:37,y:67},icon:"🍺",
-          dialogue:"La taverne des Divisions. L'odeur de ragoût et de bière emplit l'air.",
-          options:[
-            {label:"Manger (PV max)",action:"toast",message:"Vous mangez un copieux repas. PV restaurés !",effect:{type:"heal",value:9999}},
-            {label:"Écouter les rumeurs",action:"toast",message:"On parle de créatures étranges aperçues près des Portes..."},
-            {label:"Partir",action:"close"}
-          ]}
-      ],
-      enemies:[],
-      chests:[
-        {x:40,y:40,id:"chest_garden",loot:[{item_id:"potion_hp_small",quantity:5}],opened:false},
-        {x:115,y:85,id:"chest_arena",loot:[{item_id:"xp_stone_small",quantity:3}],opened:false}
-      ],
-      transitions:[
-        {from:{x:75,y:0},to_map:"aurora_plains",to_position:{x:30,y:43}},
-        {from:{x:74,y:0},to_map:"aurora_plains",to_position:{x:30,y:43}}
-      ],
-      harvestNodes:[], music:null
-    };
-
-    // ── Ajouter les portails vers les intérieurs des barraques ──
-    // Divisions 1-6 (colonne gauche)
-    for(let i=0;i<6;i++){
-      map.instances.push({
+      instances.push({
         id:"inst_div"+(i+1),name:divNames[i]+" Division",type:"map_portal",
-        position:{x:108,y:16+i*15},icon:divIcons[i],
+        position:{x:174,y:69+i*20},icon:divIcons[i],
         color:"rgba(160,120,255,0.4)",
         target_map:"div"+(i+1)+"_floor1",target_position:{x:15,y:28}
       });
-    }
-    // Divisions 7-12 (colonne droite)
-    for(let i=0;i<6;i++){
-      map.instances.push({
+      instances.push({
         id:"inst_div"+(i+7),name:divNames[i+6]+" Division",type:"map_portal",
-        position:{x:127,y:16+i*15},icon:divIcons[i+6],
+        position:{x:206,y:69+i*20},icon:divIcons[i+6],
         color:"rgba(160,120,255,0.4)",
         target_map:"div"+(i+7)+"_floor1",target_position:{x:15,y:28}
       });
     }
     // 13e Division
-    map.instances.push({
+    instances.push({
       id:"inst_div13",name:"13ème Division — Les Indomptables",type:"map_portal",
-      position:{x:112,y:96},icon:"👁",
+      position:{x:214,y:28},icon:"👁",
       color:"rgba(200,160,60,0.5)",
       target_map:"div13_floor1",target_position:{x:15,y:28}
     });
+
+    // ══════════════════════════════════════
+    // SPAWN + TRANSITIONS
+    // ══════════════════════════════════════
+    const spawnX=125, spawnY=180;
+
+    const map={
+      id:"qg_exterior", name:"QG des 13 Divisions", width:w, height:h,
+      layers:{background:bg,collision:coll,foreground:[]}, biomesLayer:biomes,
+      enemy_level_range:{min:1,max:3,scaling_mode:"random"},
+      npcs:npcs, instances:instances, enemies:[],
+      chests:[
+        {x:25,y:15,id:"chest_garden1",loot:[{item_id:"potion_hp_small",quantity:5}],opened:false},
+        {x:67,y:15,id:"chest_garden2",loot:[{item_id:"xp_stone_small",quantity:3}],opened:false},
+        {x:235,y:45,id:"chest_13e",loot:[{item_id:"xp_stone_medium",quantity:2}],opened:false},
+        {x:155,y:70,id:"chest_arena",loot:[{item_id:"elixir_atk",quantity:2}],opened:false}
+      ],
+      transitions:[
+        {from:{x:125,y:0},to_map:"aurora_plains",to_position:{x:30,y:43}},
+        {from:{x:124,y:0},to_map:"aurora_plains",to_position:{x:30,y:43}},
+        {from:{x:126,y:0},to_map:"aurora_plains",to_position:{x:30,y:43}}
+      ],
+      harvestNodes:[], music:null
+    };
 
     map.harvestNodes=HarvestSystem.generateNodes(map);
     return map;
@@ -4103,7 +4318,7 @@ const GameData = {
       instances.push({id:"exit_"+divNum,name:"Sortir — QG Extérieur",type:"map_portal",
         position:{x:15,y:29},icon:"🚪",color:"rgba(200,180,100,0.4)",
         target_map:"qg_exterior",
-        target_position:divNum===13?{x:112,y:97}:divNum<=6?{x:108,y:17+(divNum-1)*15}:{x:127,y:17+(divNum-7)*15}
+        target_position:divNum===13?{x:214,y:30}:divNum<=6?{x:174,y:70+(divNum-1)*20}:{x:206,y:70+(divNum-7)*20}
       });
     }
 
@@ -8713,13 +8928,33 @@ const DevMode = {
     for(const m of maps){
       mapsHtml+=`<div class="list-card" style="margin-bottom:6px">
         <div style="flex:1"><strong>${m.name}</strong> <span style="color:#5c5347;font-size:11px">(${m.width}×${m.height}) id: ${m.id}</span></div>
-        <input class="form-input form-input-sm" value="${m.name}" data-rename-map="${m.id}" placeholder="Renommer" style="width:120px">
+        <div style="display:flex;gap:4px;align-items:center">
+          <input class="form-input form-input-sm" value="${m.name}" data-rename-map="${m.id}" placeholder="Renommer" style="width:100px">
+          <button class="btn btn-secondary btn-sm" data-goto-map="${m.id}" title="Se téléporter">🚀</button>
+          <button class="btn btn-danger btn-sm" data-del-map="${m.id}" title="Supprimer">✕</button>
+        </div>
       </div>`;
     }
-    frag.appendChild(this._sec("Maps Existantes",mapsHtml||"Aucune"));
+    frag.appendChild(this._sec("Maps Existantes ("+maps.length+")",mapsHtml||"Aucune"));
 
-    // Generator
-    frag.appendChild(this._sec("🗺️ Générateur de Map",`
+    // ── IMPORT MAP JSON (from editor) ──
+    frag.appendChild(this._sec("📂 Importer une Map JSON",`
+      <p style="font-size:11px;color:#9a8e7a;margin-bottom:10px;line-height:1.5">
+        Importez un fichier JSON créé avec le Map Editor GoH.<br>
+        La map sera ajoutée et vous pourrez vous y téléporter.
+      </p>
+      <div style="display:flex;gap:8px;align-items:center">
+        <button class="btn btn-success" id="dev-import-map-json" style="flex:1">📂 Charger un fichier JSON</button>
+      </div>
+      <div style="display:flex;gap:8px;margin-top:8px;align-items:center">
+        <label style="font-size:11px;color:#9a8e7a">Remplacer la map de départ ?</label>
+        <input type="checkbox" id="dev-map-replace-start">
+      </div>
+      <div id="dev-map-import-status" style="font-size:11px;color:#5c5347;margin-top:6px"></div>
+    `));
+
+    // Generator (existing)
+    frag.appendChild(this._sec("🗺️ Générateur Procédural",`
       <div class="form-row"><div class="form-group"><label>Nom</label><input class="form-input" id="gen-name" value="Nouvelle Zone"></div><div class="form-group"><label>Largeur</label><input class="form-input" type="number" id="gen-w" value="60"></div><div class="form-group"><label>Hauteur</label><input class="form-input" type="number" id="gen-h" value="45"></div></div>
       <div class="form-row">
         <div class="form-group"><label>Biome Principal</label><select class="form-select" id="gen-biome1">${BIOME_KEYS.filter(b=>!["wall","door","lava","path"].includes(b)).map(b=>`<option value="${b}">${BIOMES[b].name}</option>`).join("")}</select></div>
@@ -8742,6 +8977,115 @@ const DevMode = {
     setTimeout(()=>{
       // Rename
       Utils.$$("[data-rename-map]").forEach(inp=>{inp.addEventListener("change",(e)=>{e.stopPropagation();const m=GameData.getMap(inp.dataset.renameMap);if(m){m.name=inp.value;this._dirty=true;EventBus.emit("ui:toast",{message:`Map renommée: ${inp.value}`,type:"success"});}});});
+      
+      // Goto map (teleport)
+      Utils.$$("[data-goto-map]").forEach(btn=>{btn.addEventListener("click",(e)=>{
+        e.stopPropagation();
+        const mapId=btn.dataset.gotoMap;
+        MapSystem.loadMap(mapId,{x:1,y:1});
+        this.hide();
+        EventBus.emit("ui:toast",{message:`Téléporté vers: ${mapId}`,type:"success"});
+      });});
+      
+      // Delete map
+      Utils.$$("[data-del-map]").forEach(btn=>{btn.addEventListener("click",(e)=>{
+        e.stopPropagation();
+        const mapId=btn.dataset.delMap;
+        if(mapId===MapSystem.currentMapId){EventBus.emit("ui:toast",{message:"Impossible de supprimer la map active",type:"error"});return;}
+        if(!confirm(`Supprimer la map "${mapId}" ?`))return;
+        delete GameData.db.maps[mapId];
+        this._dirty=true;this._render();
+        EventBus.emit("ui:toast",{message:`Map ${mapId} supprimée`,type:"success"});
+      });});
+      
+      // ── JSON MAP IMPORT ──
+      Utils.$("#dev-import-map-json")?.addEventListener("click",(e)=>{
+        e.stopPropagation();
+        const inp=document.createElement("input");inp.type="file";inp.accept=".json";
+        inp.onchange=(ev)=>{
+          const f=ev.target.files[0];if(!f)return;
+          const reader=new FileReader();
+          reader.onload=(re)=>{
+            try{
+              const data=JSON.parse(re.target.result);
+              const status=Utils.$("#dev-map-import-status");
+              
+              // Validate required fields
+              if(!data.width||!data.height){throw new Error("Fichier invalide: width/height manquants");}
+              
+              // Build map object compatible with the game
+              const mapId=data.id||("imported_"+Date.now());
+              const mapName=data.name||"Map Importée";
+              const w=data.width, h=data.height;
+              
+              // Build biomesLayer from the editor's format
+              let biomes=data.biomesLayer;
+              if(!biomes){
+                // Fallback: create from background layer
+                biomes=Array.from({length:h},()=>Array(w).fill("plains"));
+              }
+              
+              let collision=data.layers?.collision;
+              if(!collision){
+                collision=Array.from({length:h},()=>Array(w).fill(0));
+              }
+              
+              const map={
+                id:mapId, name:mapName, width:w, height:h,
+                layers:{background:data.layers?.background||Array.from({length:h},()=>Array(w).fill(0)), collision:collision, foreground:[]},
+                biomesLayer:biomes,
+                decorLayer:data.decorLayer||null,
+                enemy_level_range:data.enemy_level_range||{min:1,max:5,scaling_mode:"random"},
+                npcs:data.npcs||[],
+                instances:data.instances||[],
+                enemies:data.enemies||[],
+                chests:data.chests||[],
+                transitions:data.transitions||[],
+                harvestNodes:data.harvestNodes||[],
+                music:data.music||null
+              };
+              
+              // Generate harvest nodes if empty
+              if(!map.harvestNodes.length&&typeof HarvestSystem!=="undefined"){
+                map.harvestNodes=HarvestSystem.generateNodes(map);
+              }
+              
+              // Add to game
+              GameData.db.maps[mapId]=map;
+              
+              // Replace start map if checked
+              const replaceStart=Utils.$("#dev-map-replace-start")?.checked;
+              if(replaceStart){
+                GameData.state.player.position.mapId=mapId;
+                const spawn=data.spawn||{x:1,y:1};
+                GameData.state.player.position.x=spawn.x;
+                GameData.state.player.position.y=spawn.y;
+              }
+              
+              this._dirty=true;
+              SaveManager.saveDevData();
+              
+              if(status) status.innerHTML=`<span style="color:#5fa35e">✓ Map "${mapName}" importée (${w}×${h})</span>`;
+              EventBus.emit("ui:toast",{message:`Map "${mapName}" importée !`,type:"success"});
+              
+              // Ask to teleport
+              if(confirm(`Map "${mapName}" importée ! Se téléporter dessus ?`)){
+                const spawn=data.spawn||{x:1,y:1};
+                MapSystem.loadMap(mapId,spawn);
+                this.hide();
+              }
+              
+              this._render();
+            }catch(err){
+              const status=Utils.$("#dev-map-import-status");
+              if(status) status.innerHTML=`<span style="color:#c03030">✗ Erreur: ${err.message}</span>`;
+              EventBus.emit("ui:toast",{message:"Erreur d'import: "+err.message,type:"error"});
+            }
+          };
+          reader.readAsText(f);
+        };
+        inp.click();
+      });
       // Generate
       Utils.$("#gen-create")?.addEventListener("click",(e)=>{
         e.stopPropagation();
