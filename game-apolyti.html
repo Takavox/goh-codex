@@ -2228,7 +2228,7 @@ img { display: block; max-width: 100%; }
 <div id="hud" class="ui-layer"><div id="hud-top"><div class="hud-party-info"><div class="hud-hero-bar"><span class="hud-label" id="hud-hero-name">Adam</span><div class="hp-bar-container"><div class="hp-bar-fill" id="hud-hero-hp"></div></div><span class="hp-text" id="hud-hero-hp-text">100/100</span></div><div class="hud-meta"><span id="hud-party-count">Équipe: 1/4</span><span class="hud-gold" id="hud-gold">500</span></div></div></div><div id="hud-bottom"><div id="hud-quest-tracker"><span class="quest-label">Aucune quête</span></div><div id="hud-actions"><button class="hud-btn" id="btn-inventory">Inventaire</button><button class="hud-btn" id="btn-party">Équipe</button><button class="hud-btn" id="btn-quests">Quêtes</button><button class="hud-btn" id="btn-menu">Menu</button></div></div></div>
 <div id="menu-overlay" class="ui-layer hidden"><div id="menu-panel" class="panel"><div class="panel-header"><h2 class="panel-title">Menu</h2><button class="panel-close" id="menu-close">✕</button></div><div class="panel-body"><button class="menu-item" data-action="save">Sauvegarder</button><button class="menu-item" data-action="load">Charger</button><button class="menu-item" data-action="export-save">Exporter</button><button class="menu-item" data-action="import-save">Importer</button><button class="menu-item" data-action="settings">Paramètres</button><button class="menu-item menu-item--dev" data-action="devmode">Mode DEV</button></div></div></div>
 <div id="save-overlay" class="ui-layer hidden"><div id="save-panel" class="panel"><div class="panel-header"><h2 class="panel-title" id="save-panel-title">Sauvegarder</h2><button class="panel-close" id="save-close">✕</button></div><div class="panel-body" id="save-slots-container"></div></div></div>
-<div id="settings-overlay" class="ui-layer hidden"><div id="settings-panel" class="panel"><div class="panel-header"><h2 class="panel-title">Paramètres</h2><button class="panel-close" id="settings-close">✕</button></div><div class="panel-body"><div class="setting-row"><label>Sprite du héros</label><button id="setting-hero-sprite" class="btn btn-secondary btn-sm" style="padding:4px 12px">📷 Changer sprite</button><span id="setting-hero-sprite-status" style="font-size:11px;color:#9a8e7a">Aucun</span></div><div class="setting-row"><label>Musique</label><input type="range" id="setting-music" min="0" max="100" value="70"><span id="setting-music-val">70%</span></div><div class="setting-row"><label>SFX</label><input type="range" id="setting-sfx" min="0" max="100" value="80"><span id="setting-sfx-val">80%</span></div><div class="setting-row"><label>Langue</label><select id="setting-lang"><option value="fr" selected>Français</option><option value="en">English</option></select></div></div></div></div>
+<div id="settings-overlay" class="ui-layer hidden"><div id="settings-panel" class="panel"><div class="panel-header"><h2 class="panel-title">Paramètres</h2><button class="panel-close" id="settings-close">✕</button></div><div class="panel-body"><div class="setting-row"><label>Sprite du héros</label><button id="setting-hero-sprite" class="btn btn-secondary btn-sm" style="padding:4px 12px">📷 Changer sprite</button><span id="setting-hero-sprite-status" style="font-size:11px;color:#9a8e7a">Aucun</span></div><div class="setting-row"><label>🔆 Luminosité</label><input type="range" id="setting-brightness" min="50" max="200" value="100"><span id="setting-brightness-val">100%</span></div><div class="setting-row"><label>🎵 Musique</label><input type="range" id="setting-music" min="0" max="100" value="70"><span id="setting-music-val">70%</span></div><div class="setting-row"><label>🔊 SFX</label><input type="range" id="setting-sfx" min="0" max="100" value="80"><span id="setting-sfx-val">80%</span></div><div class="setting-row"><label>🔈 Volume Général</label><input type="range" id="setting-master-vol" min="0" max="100" value="100"><span id="setting-master-vol-val">100%</span></div><div class="setting-row"><label>Langue</label><select id="setting-lang"><option value="fr" selected>Français</option><option value="en">English</option></select></div><div style="border-top:1px solid rgba(201,168,76,0.1);margin-top:12px;padding-top:12px"><p style="font-size:11px;color:#5c5347;margin-bottom:8px">Données locales</p><button class="btn btn-danger btn-sm" id="setting-clear-storage" style="width:100%;padding:8px">🗑 Effacer toutes les sauvegardes locales</button><p style="font-size:10px;color:#5c5347;margin-top:4px">Supprime les saves, les données DEV et le cache. Le jeu redémarrera à zéro.</p></div></div></div></div>
 <div id="toast-container"></div><div id="devmode-overlay" class="ui-layer hidden"></div><input type="file" id="import-save-input" accept=".json" class="hidden-input"></div>
 <script>
 // === js/core/constants.js ===
@@ -6882,6 +6882,38 @@ const Menus = {
       GameData.state.settings.sfxVolume = v / 100;
     });
 
+    // Brightness
+    Utils.$("#setting-brightness")?.addEventListener("input", (e) => {
+      const v = parseInt(e.target.value);
+      Utils.$("#setting-brightness-val").textContent = v + "%";
+      const canvas = Utils.$("#game-canvas");
+      if(canvas) canvas.style.filter = `brightness(${v/100})`;
+      GameData.state.settings.brightness = v;
+      localStorage.setItem("goh_brightness", v);
+    });
+
+    // Master Volume
+    Utils.$("#setting-master-vol")?.addEventListener("input", (e) => {
+      const v = parseInt(e.target.value);
+      Utils.$("#setting-master-vol-val").textContent = v + "%";
+      GameData.state.settings.masterVolume = v / 100;
+      localStorage.setItem("goh_master_vol", v);
+    });
+
+    // Clear all localStorage
+    Utils.$("#setting-clear-storage")?.addEventListener("click", () => {
+      if(!confirm("⚠️ Effacer TOUTES les sauvegardes locales ?\n\nCette action est irréversible. Le jeu redémarrera à zéro.")) return;
+      // Remove all goh_ prefixed keys
+      const keysToRemove = [];
+      for(let i = 0; i < localStorage.length; i++){
+        const key = localStorage.key(i);
+        if(key && (key.startsWith("goh_") || key.startsWith("goh-"))) keysToRemove.push(key);
+      }
+      keysToRemove.forEach(k => localStorage.removeItem(k));
+      EventBus.emit("ui:toast", {message: "Données effacées ! Rechargement...", type: "success"});
+      setTimeout(() => location.reload(), 1000);
+    });
+
     Utils.$("#setting-lang").addEventListener("change", (e) => {
       GameData.state.settings.language = e.target.value;
     });
@@ -7048,6 +7080,16 @@ const Menus = {
     Utils.$("#setting-sfx").value = Math.round(s.sfxVolume * 100);
     Utils.$("#setting-sfx-val").textContent = Math.round(s.sfxVolume * 100) + "%";
     Utils.$("#setting-lang").value = s.language;
+
+    // Brightness sync
+    const brightness = s.brightness || parseInt(localStorage.getItem("goh_brightness")) || 100;
+    const bEl = Utils.$("#setting-brightness");
+    if(bEl) { bEl.value = brightness; Utils.$("#setting-brightness-val").textContent = brightness + "%"; }
+
+    // Master volume sync
+    const masterVol = s.masterVolume !== undefined ? Math.round(s.masterVolume * 100) : parseInt(localStorage.getItem("goh_master_vol")) || 100;
+    const mvEl = Utils.$("#setting-master-vol");
+    if(mvEl) { mvEl.value = masterVol; Utils.$("#setting-master-vol-val").textContent = masterVol + "%"; }
 
     Utils.$("#settings-overlay").classList.remove("hidden");
     // Hero sprite upload
@@ -9392,6 +9434,13 @@ const Game = {
     this._running=true; this._lastTime=performance.now();
     requestAnimationFrame((t)=>this._loop(t));
     EventBus.emit("game:ready");
+
+    // Restore brightness from settings
+    const _savedBrightness = GameData.state.settings.brightness || parseInt(localStorage.getItem("goh_brightness")) || 100;
+    if(_savedBrightness !== 100) {
+      const _gc = Utils.$("#game-canvas");
+      if(_gc) _gc.style.filter = `brightness(${_savedBrightness/100})`;
+    }
   },
 
   _loop(ts) {
