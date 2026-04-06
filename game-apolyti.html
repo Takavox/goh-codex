@@ -3623,7 +3623,8 @@ const GameData = {
       bone_fragment:{id:"bone_fragment",name:"Fragment Os",category:"MATERIALS",rarity:"N",base_value:8,stackable:true,max_stack:999,can_sell:true,can_drop:true,description:"Os ancien."},
       sap_tree:{id:"sap_tree",name:"Sève",category:"HARVEST",rarity:"N",base_value:8,stackable:true,max_stack:999,can_sell:true,can_drop:true,description:"Sève d'arbre."},
       fruit_wild:{id:"fruit_wild",name:"Fruit Sauvage",category:"HARVEST",rarity:"N",base_value:6,stackable:true,max_stack:999,can_sell:true,can_drop:true,description:"Fruit comestible."},
-      crystal_shard:{id:"crystal_shard",name:"Éclat Cristal",category:"HARVEST",rarity:"R",base_value:60,stackable:true,max_stack:999,can_sell:true,can_drop:true,description:"Cristal lumineux."}
+      crystal_shard:{id:"crystal_shard",name:"Éclat Cristal",category:"HARVEST",rarity:"R",base_value:60,stackable:true,max_stack:999,can_sell:true,can_drop:true,description:"Cristal lumineux."},
+      potion_speed:{id:"potion_speed",name:"Potion de Vitesse",category:"CONSUMABLES",rarity:"SR",base_value:500,stackable:true,max_stack:10,can_sell:true,can_drop:true,stats:{spd:5},description:"Augmente temporairement la vitesse de déplacement."}
     };
 
     // ═══════════════════════════════════════
@@ -4095,6 +4096,24 @@ const GameData = {
           {label:"Écouter les rumeurs",action:"toast",message:"On parle de créatures aperçues près des Portes..."},
           {label:"Partir",action:"close"}
         ]},
+      {id:"inst_forge",name:"La Forge de Kael",type:"dialogue",position:{x:17,y:60},icon:"⚔",
+        dialogue:"L'atelier du forgeron. Des lames étincellent dans la chaleur.",
+        options:[
+          {label:"Acheter des armes",action:"toast",message:"Consultez le Forgeron Kael pour acheter."},
+          {label:"Partir",action:"close"}
+        ]},
+      {id:"inst_apothi",name:"Apothicaire de Mira",type:"dialogue",position:{x:17,y:72},icon:"🧪",
+        dialogue:"Des fioles et des herbes emplissent les étagères.",
+        options:[
+          {label:"Acheter des potions",action:"toast",message:"Consultez Mira pour acheter."},
+          {label:"Partir",action:"close"}
+        ]},
+      {id:"inst_epicerie",name:"Épicerie du QG",type:"dialogue",position:{x:17,y:115},icon:"🍎",
+        dialogue:"Provisions et nourriture pour les soldats.",
+        options:[
+          {label:"Acheter des provisions",action:"toast",message:"Consultez le marchand pour acheter."},
+          {label:"Partir",action:"close"}
+        ]},
       {id:"inst_infirmerie",name:"Infirmerie",type:"dialogue",position:{x:93,y:84},icon:"🏥",
         dialogue:"L'infirmerie du QG. Propre et bien équipée.",
         options:[
@@ -4121,9 +4140,61 @@ const GameData = {
           {label:"Partir",action:"close"}
         ]},
       {id:"inst_arena",name:"Arène d'Entraînement",type:"dialogue",position:{x:144,y:68},icon:"⚔",
-        dialogue:"L'arène d'entraînement. Des mannequins en bois et des cibles.",
+        dialogue:"L'arène d'entraînement. Un instructeur vous attend.",
         options:[
-          {label:"S'entraîner (+30 XP)",action:"toast",message:"Vous vous entraînez dur !",effect:{type:"xp",value:30}},
+          {label:"Duel d'entraînement",action:"toast",message:"Choisissez un adversaire.",effect:{type:"open_duel"}},
+          {label:"S'entraîner seul (+15 XP)",action:"toast",message:"Vous frappez les mannequins pendant un moment.",effect:{type:"xp",value:15}},
+          {label:"Partir",action:"close"}
+        ]},
+      // ── BOUTIQUES avec marchands ──
+      {id:"inst_shop_forge",name:"Forge de Kael",type:"dialogue",position:{x:17,y:59},icon:"🔨",
+        dialogue:"La chaleur de la forge vous enveloppe. Des armes et boucliers pendent aux murs.",
+        options:[
+          {label:"Acheter une Épée de Fer (100 or)",action:"toast",message:"Épée de Fer achetée !",effect:{type:"buy",itemId:"sword_iron",cost:100}},
+          {label:"Acheter une Épée d'Acier (500 or)",action:"toast",message:"Épée d'Acier achetée !",effect:{type:"buy",itemId:"sword_steel",cost:500}},
+          {label:"Acheter des Poings de Métal (180 or)",action:"toast",message:"Poings de Métal achetés !",effect:{type:"buy",itemId:"fists_metal",cost:180}},
+          {label:"Acheter un Arc du Chasseur (160 or)",action:"toast",message:"Arc du Chasseur acheté !",effect:{type:"buy",itemId:"bow_hunter",cost:160}},
+          {label:"Acheter un Bouclier de Bronze (120 or)",action:"toast",message:"Bouclier acheté !",effect:{type:"buy",itemId:"shield_iron",cost:120}},
+          {label:"Partir",action:"close"}
+        ]},
+      {id:"inst_shop_potions",name:"Échoppe de Mira",type:"dialogue",position:{x:17,y:71},icon:"🧪",
+        dialogue:"Des fioles colorées s'alignent sur les étagères. L'air sent les herbes.",
+        options:[
+          {label:"Potion de Vie P (50 or)",action:"toast",message:"Potion achetée !",effect:{type:"buy",itemId:"potion_hp_small",cost:50}},
+          {label:"Potion de Vie M (200 or)",action:"toast",message:"Potion achetée !",effect:{type:"buy",itemId:"potion_hp_medium",cost:200}},
+          {label:"Élixir de Mana (60 or)",action:"toast",message:"Élixir acheté !",effect:{type:"buy",itemId:"potion_mp",cost:60}},
+          {label:"Antidote (80 or)",action:"toast",message:"Antidote acheté !",effect:{type:"buy",itemId:"antidote",cost:80}},
+          {label:"Élixir Rage (+ATK, 300 or)",action:"toast",message:"Élixir acheté !",effect:{type:"buy",itemId:"elixir_atk",cost:300}},
+          {label:"Élixir Pierre (+DEF, 300 or)",action:"toast",message:"Élixir acheté !",effect:{type:"buy",itemId:"elixir_def",cost:300}},
+          {label:"Partir",action:"close"}
+        ]},
+      {id:"inst_shop_tailor",name:"Atelier du Tailleur",type:"dialogue",position:{x:17,y:85},icon:"🧵",
+        dialogue:"Des robes et armures légères sont exposées. Le tailleur ajuste un col.",
+        options:[
+          {label:"Robe d'Enchanteur (80 or)",action:"toast",message:"Robe achetée !",effect:{type:"buy",itemId:"robe_apprentice",cost:80}},
+          {label:"Bâton Runique (90 or)",action:"toast",message:"Bâton acheté !",effect:{type:"buy",itemId:"staff_apprentice",cost:90}},
+          {label:"Partir",action:"close"}
+        ]},
+      {id:"inst_shop_armurier",name:"Armurerie de Voss",type:"dialogue",position:{x:19,y:99},icon:"🛡",
+        dialogue:"L'armurier polit un bouclier. Des armures complètes ornent les murs.",
+        options:[
+          {label:"Anneau de Puissance (300 or)",action:"toast",message:"Anneau acheté !",effect:{type:"buy",itemId:"ring_power",cost:300}},
+          {label:"Partir",action:"close"}
+        ]},
+      {id:"inst_shop_tools",name:"Boutique d'Outils",type:"dialogue",position:{x:17,y:114},icon:"🪓",
+        dialogue:"Haches, pioches et cannes à pêche — tout pour la récolte.",
+        options:[
+          {label:"Hache (50 or)",action:"toast",message:"Hache achetée !",effect:{type:"buy",itemId:"tool_axe",cost:50}},
+          {label:"Pioche (50 or)",action:"toast",message:"Pioche achetée !",effect:{type:"buy",itemId:"tool_pickaxe",cost:50}},
+          {label:"Canne à Pêche (50 or)",action:"toast",message:"Canne achetée !",effect:{type:"buy",itemId:"tool_fishing_rod",cost:50}},
+          {label:"Partir",action:"close"}
+        ]},
+      {id:"inst_shop_rare",name:"Marchand Ambulant Zoren",type:"dialogue",position:{x:24,y:92},icon:"✨",
+        dialogue:"Un marchand mystérieux avec une capuche. Ses articles sont... spéciaux.",
+        options:[
+          {label:"Potion de Vitesse (500 or)",action:"toast",message:"Potion rare achetée !",effect:{type:"buy",itemId:"potion_speed",cost:500}},
+          {label:"Pierre d'XP M (400 or)",action:"toast",message:"Pierre achetée !",effect:{type:"buy",itemId:"xp_stone_medium",cost:400}},
+          {label:"Pierre d'XP G (1500 or)",action:"toast",message:"Pierre achetée !",effect:{type:"buy",itemId:"xp_stone_large",cost:1500}},
           {label:"Partir",action:"close"}
         ]}
     ];
@@ -4134,13 +4205,13 @@ const GameData = {
         id:"inst_div"+(i+1),name:divNames[i]+" Division",type:"map_portal",
         position:{x:174,y:69+i*20},icon:divIcons[i],
         color:"rgba(160,120,255,0.4)",
-        target_map:"div"+(i+1)+"_floor1",target_position:{x:15,y:28}
+        target_map:"div"+(i+1)+"_floor1",target_position:{x:15,y:26}
       });
       instances.push({
         id:"inst_div"+(i+7),name:divNames[i+6]+" Division",type:"map_portal",
         position:{x:206,y:69+i*20},icon:divIcons[i+6],
         color:"rgba(160,120,255,0.4)",
-        target_map:"div"+(i+7)+"_floor1",target_position:{x:15,y:28}
+        target_map:"div"+(i+7)+"_floor1",target_position:{x:15,y:26}
       });
     }
     // 13e Division
@@ -4148,7 +4219,7 @@ const GameData = {
       id:"inst_div13",name:"13ème Division — Les Indomptables",type:"map_portal",
       position:{x:214,y:28},icon:"👁",
       color:"rgba(200,160,60,0.5)",
-      target_map:"div13_floor1",target_position:{x:15,y:28}
+      target_map:"div13_floor1",target_position:{x:15,y:26}
     });
 
     // ══════════════════════════════════════
@@ -4368,27 +4439,27 @@ const GameData = {
       chests.push({x:5,y:10,id:"chest_stock_"+divNum,loot:[{item_id:"potion_hp_small",quantity:3},{item_id:"xp_stone_small",quantity:2}],opened:false});
     }
 
-    // ── ESCALIERS (toujours au même endroit) ──
-    // Escalier vers le haut (si pas étage 3)
+    // ── ESCALIERS (positions décalées pour éviter boucles) ──
+    // Stairs UP at (13,2), landing on upper floor at (13,25) — down stairs on upper at (17,27)
+    // Stairs DOWN at (17,27), landing on lower floor at (17,4) — up stairs on lower at (13,2)
+    // Exit at (15,29), landing at QG exterior
     if(floor<3){
       const upMap = "div"+divNum+(floor===2?"_floor3":"_floor"+(floor+1));
       instances.push({id:"stairs_up_"+divNum+"_"+floor,name:"Monter — "+floorNames[Math.min(floor+1,3)],type:"map_portal",
-        position:{x:15,y:2},icon:"⬆",color:"rgba(100,200,100,0.4)",
-        target_map:upMap,target_position:{x:15,y:27}});
+        position:{x:13,y:2},icon:"⬆",color:"rgba(100,200,100,0.4)",
+        target_map:upMap,target_position:{x:15,y:25}});
     }
-    // Escalier vers le bas (si pas sous-sol)
     if(floor>0){
       const downMap = "div"+divNum+(floor===1?"_basement":"_floor"+(floor-1));
       instances.push({id:"stairs_down_"+divNum+"_"+floor,name:"Descendre — "+floorNames[Math.max(floor-1,0)],type:"map_portal",
-        position:{x:15,y:27},icon:"⬇",color:"rgba(200,100,100,0.4)",
-        target_map:downMap,target_position:{x:15,y:3}});
+        position:{x:17,y:27},icon:"⬇",color:"rgba(200,100,100,0.4)",
+        target_map:downMap,target_position:{x:15,y:4}});
     }
-    // Sortie (depuis étage 1 seulement)
     if(floor===1){
       instances.push({id:"exit_"+divNum,name:"Sortir — QG Extérieur",type:"map_portal",
         position:{x:15,y:29},icon:"🚪",color:"rgba(200,180,100,0.4)",
         target_map:"qg_exterior",
-        target_position:divNum===13?{x:214,y:30}:divNum<=6?{x:174,y:70+(divNum-1)*20}:{x:206,y:70+(divNum-7)*20}
+        target_position:divNum===13?{x:214,y:32}:divNum<=6?{x:174,y:72+(divNum-1)*20}:{x:206,y:72+(divNum-7)*20}
       });
     }
 
@@ -4454,7 +4525,7 @@ const GameData = {
       layers:{background:bg,collision:coll,foreground:[]},biomesLayer:biomes,
       enemy_level_range:{min:10,max:25,scaling_mode:"progressive"},
       npcs:[{id:"npc_guardian",name:"Gardien Vorn",type:"npc",position:{x:20,y:17},direction:"down",dialogue:"Seuls les courageux s'aventurent ici."}],
-      instances:[{id:"inst_exit",name:"Retour",type:"map_portal",position:{x:15,y:3},icon:"🔼",color:"rgba(201,168,76,0.5)",target_map:"apolyti",target_position:{x:30,y:43}}],
+      instances:[{id:"inst_exit",name:"Retour au QG",type:"map_portal",position:{x:15,y:3},icon:"🔼",color:"rgba(201,168,76,0.5)",target_map:"qg_exterior",target_position:{x:125,y:5}}],
       enemies:[
         {spawn_zone:{x:3,y:3,width:15,height:28},enemy_id:"enemy_skeleton",spawn_rate:0.035,max_count:4},
         {spawn_zone:{x:22,y:3,width:15,height:28},enemy_id:"enemy_infernal_wolf",spawn_rate:0.03,max_count:3}
@@ -4652,6 +4723,10 @@ const MapSystem = {
       GameData.state.player.position={mapId,x:spawnPos.x,y:spawnPos.y};
     }
     EventBus.emit("map:change",{mapId});
+    // Force camera sync immediately
+    if(typeof Renderer !== 'undefined' && Renderer.centerCameraOn) {
+      Renderer.centerCameraOn(Player.visualX * TILE_SIZE + TILE_SIZE/2, Player.visualY * TILE_SIZE + TILE_SIZE/2);
+    }
     return true;
   },
 
@@ -8815,6 +8890,21 @@ const DialogueUI = {
               if(opt.effect.type==="recruit_companion"&&opt.effect.companionId){CompanionRecruitSystem.recruit(opt.effect.companionId);}
               if(opt.effect.type==="dismiss_companion"&&opt.effect.companionId){CompanionRecruitSystem.dismiss(opt.effect.companionId);}
               if(opt.effect.type==="save"){SaveManager.autoSave();}
+              if(opt.effect.type==="training_duel"){setTimeout(()=>TrainingDuelSystem.showOpponentSelect(),300);}
+              if(opt.effect.type==="start_duel"&&opt.effect.opponentId){setTimeout(()=>TrainingDuelSystem.startDuel(opt.effect.opponentId),300);}
+              if(opt.effect.type==="xp"&&opt.effect.value){GameData.state.player.xp=(GameData.state.player.xp||0)+opt.effect.value;if(typeof HUD!=="undefined")HUD.refresh();}
+              if(opt.effect.type==="xp"){GameData.state.player.xp=(GameData.state.player.xp||0)+opt.effect.value;HUD.refresh();EventBus.emit("ui:toast",{message:"+"+opt.effect.value+" XP",type:"success"});}
+              if(opt.effect.type==="buy"){
+                const cost=opt.effect.cost||0;
+                if(GameData.state.player.gold<cost){EventBus.emit("ui:toast",{message:"Pas assez d'or ! ("+GameData.state.player.gold+"/"+cost+")",type:"error"});}
+                else{
+                  GameData.state.player.gold-=cost;
+                  const existing=GameData.state.inventory.find(it=>it.itemId===opt.effect.itemId);
+                  if(existing)existing.quantity++;
+                  else GameData.state.inventory.push({itemId:opt.effect.itemId,quantity:1});
+                  HUD.refresh();
+                }
+              }
         this.close();
         break;
       case "shop":
@@ -9385,6 +9475,7 @@ const Game = {
     p(70,"Systèmes...");
     MapSystem.init(); Player.init(); CompanionSystem.init();
     CompanionRecruitSystem.init();
+    TrainingDuelSystem.init();
     Combat.init(); Inventory.init(); QuestSystem.init();
     EncounterSystem.init(); HarvestSystem.init();
     await Utils.wait(60);
@@ -9595,16 +9686,24 @@ window._isSprinting = false;
 
 
 // ── Auto-enter map portals when walking on them ──
+// Portal system: walk ON portal + small delay = auto-trigger
+// Uses a robust cooldown per-map-change to prevent loops
+let _portalLock = false;
+EventBus.on("map:change", () => { _portalLock = true; setTimeout(() => { _portalLock = false; }, 1200); });
 EventBus.on("player:move", () => {
+  if(_portalLock) return;
   const map = MapSystem.currentMap;
   if(!map) return;
-  const px = Player.x, py = Player.y;
+  // Use TARGET position (where player is moving to), not current
+  const px = Player._targetX, py = Player._targetY;
   for(const inst of (map.instances || [])) {
     if(inst.type === "map_portal" && inst.position.x === px && inst.position.y === py) {
-      // Small delay to feel intentional
+      _portalLock = true;
       setTimeout(() => {
-        MapSystem.loadMap(inst.target_map, inst.target_position);
-      }, 150);
+        if(_portalLock) { // Still locked = we initiated this
+          MapSystem.loadMap(inst.target_map, inst.target_position);
+        }
+      }, 250);
       return;
     }
   }
@@ -9705,6 +9804,148 @@ function _showGameCtxMenu(x, y, items) {
     if(r.bottom > window.innerHeight) m.style.top = (y - r.height) + "px";
   });
 }
+
+
+// ════════════════════════════════════════════════════════
+//  TRAINING DUEL SYSTEM
+// ════════════════════════════════════════════════════════
+const TrainingDuelSystem = {
+  opponents: [
+    {id:"duel_recruit",name:"Recrue",level:1,unlocked:true,
+      stats:{hp:40,atk:6,def:4,mag:2,spd:5},
+      skills:[{name:"Frappe",dmg:1.0,element:"Neutre"}],
+      xpFirst:50,xpRepeat:15,defeated:false},
+    {id:"duel_soldier",name:"Soldat Vétéran",level:5,unlocked:true,
+      stats:{hp:80,atk:12,def:8,mag:4,spd:8},
+      skills:[{name:"Frappe lourde",dmg:1.4,element:"Neutre"},{name:"Parade",dmg:0,element:"Neutre",defend:true}],
+      xpFirst:100,xpRepeat:25,defeated:false},
+    {id:"duel_laura",name:"Laura",level:3,unlocked:false,
+      stats:{hp:65,atk:14,def:6,mag:8,spd:12},
+      skills:[{name:"Poing Tonnerre",dmg:1.5,element:"Électrique"}],
+      xpFirst:120,xpRepeat:30,defeated:false},
+    {id:"duel_william",name:"William",level:3,unlocked:false,
+      stats:{hp:55,atk:11,def:5,mag:10,spd:14},
+      skills:[{name:"Flèche de Lierre",dmg:1.4,element:"Nature"}],
+      xpFirst:120,xpRepeat:30,defeated:false},
+  ],
+
+  init() {
+    // Load unlock state from devdata
+    const saved = GameData.state._duelUnlocks;
+    if(saved) {
+      this.opponents.forEach(o => {
+        if(saved[o.id]) { o.unlocked = true; o.defeated = saved[o.id].defeated || false; }
+      });
+    }
+    // Unlock Laura/William after recruiting them
+    EventBus.on("ui:toast", (data) => {
+      if(data.message && data.message.includes("rejoint l'équipe")) {
+        if(data.message.includes("Laura")) this._unlock("duel_laura");
+        if(data.message.includes("William")) this._unlock("duel_william");
+      }
+    });
+  },
+
+  _unlock(id) {
+    const opp = this.opponents.find(o => o.id === id);
+    if(opp && !opp.unlocked) {
+      opp.unlocked = true;
+      this._save();
+      EventBus.emit("ui:toast", {message: opp.name + " est maintenant disponible comme partenaire de duel !", type: "success"});
+    }
+  },
+
+  _save() {
+    if(!GameData.state._duelUnlocks) GameData.state._duelUnlocks = {};
+    this.opponents.forEach(o => {
+      GameData.state._duelUnlocks[o.id] = {unlocked: o.unlocked, defeated: o.defeated};
+    });
+  },
+
+  showOpponentSelect() {
+    const unlocked = this.opponents.filter(o => o.unlocked);
+    if(!unlocked.length) {
+      EventBus.emit("ui:toast", {message: "Aucun adversaire disponible.", type: "warning"});
+      return;
+    }
+    const options = unlocked.map(o => ({
+      label: (o.defeated ? "⭐ " : "") + o.name + " (Nv." + o.level + ")" + (o.defeated ? " — Vaincu" : ""),
+      action: "toast",
+      message: "Duel contre " + o.name + " !",
+      effect: {type: "start_duel", opponentId: o.id}
+    }));
+    options.push({label: "Annuler", action: "close"});
+    EventBus.emit("dialogue:open", {
+      npc_name: "Instructeur Hagen",
+      dialogue: "Choisissez votre adversaire d'entraînement :",
+      options: options
+    });
+  },
+
+  startDuel(opponentId) {
+    const opp = this.opponents.find(o => o.id === opponentId);
+    if(!opp) return;
+
+    // Simple turn-based duel using toast messages
+    const playerStats = GameData.state.player.stats;
+    let playerHp = playerStats.hp;
+    let oppHp = opp.stats.hp;
+    const playerAtk = playerStats.atk || 10;
+    const oppAtk = opp.stats.atk;
+    const playerDef = playerStats.def || 5;
+    const oppDef = opp.stats.def;
+
+    let turn = 0;
+    let log = [];
+
+    while(playerHp > 0 && oppHp > 0 && turn < 30) {
+      turn++;
+      // Player attacks
+      const pDmg = Math.max(1, Math.round(playerAtk * (0.8 + Math.random() * 0.4) - oppDef * 0.3));
+      oppHp -= pDmg;
+      log.push("Adam inflige " + pDmg + " dégâts à " + opp.name);
+
+      if(oppHp <= 0) break;
+
+      // Opponent attacks
+      const oDmg = Math.max(1, Math.round(oppAtk * (0.8 + Math.random() * 0.4) - playerDef * 0.3));
+      playerHp -= oDmg;
+      log.push(opp.name + " inflige " + oDmg + " dégâts à Adam");
+    }
+
+    const won = oppHp <= 0;
+    const xp = won ? (opp.defeated ? opp.xpRepeat : opp.xpFirst) : Math.round(opp.xpRepeat * 0.3);
+
+    // Apply XP
+    GameData.state.player.xp = (GameData.state.player.xp || 0) + xp;
+
+    if(won && !opp.defeated) {
+      opp.defeated = true;
+      this._save();
+    }
+
+    // Restore player HP (training duel, not to the death)
+    GameData.state.player.stats.hp = playerStats.maxHp || playerStats.hp;
+
+    // Show result
+    const resultMsg = won
+      ? "Victoire contre " + opp.name + " ! +" + xp + " XP" + (!opp.defeated ? "" : "") + "\nDuel en " + turn + " tours."
+      : "Défaite contre " + opp.name + "... +" + xp + " XP d'entraînement.\nDuel en " + turn + " tours.";
+
+    EventBus.emit("dialogue:open", {
+      npc_name: "Résultat du Duel",
+      dialogue: resultMsg,
+      options: [
+        {label: "Revanche", action: "toast", message: "Nouveau duel !", effect: {type: "start_duel", opponentId: opponentId}},
+        {label: "Changer d'adversaire", action: "toast", message: "Choix...", effect: {type: "training_duel"}},
+        {label: "Partir", action: "close"}
+      ]
+    });
+
+    if(typeof HUD !== "undefined") HUD.refresh();
+  }
+};
+
 
 window.addEventListener("DOMContentLoaded",()=>{
   Game.init().catch(err=>{console.error("[Game] Fatal:",err);const t=Utils.$("#loading-text");if(t)t.textContent="Erreur: "+err.message;});
