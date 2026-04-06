@@ -2788,93 +2788,163 @@ const Renderer = {
     const sc=Math.floor(this.camera.x/TILE_SIZE), sr=Math.floor(this.camera.y/TILE_SIZE);
     const ec=Math.min(mapData.width,sc+Math.ceil(this.width/TILE_SIZE)+2);
     const er=Math.min(mapData.height,sr+Math.ceil(this.height/TILE_SIZE)+2);
+    const T=TILE_SIZE, ctx=this.ctx, now=Date.now();
 
-    // Seeded noise for consistent tile variations
-    const _tHash=(c,r)=>((c*374761393+r*668265263)^(c*1274126177))>>>0;
-    
+    // Seeded random per tile
+    const H=(c,r,s)=>{let h=(c*374761393+r*668265263+(s||0)*1274126177)|0;h=((h^(h>>13))*1274126177)|0;return((h^(h>>16))>>>0)/4294967296;};
+
     for(let r=Math.max(0,sr);r<er;r++) {
       for(let c=Math.max(0,sc);c<ec;c++) {
-        const sp=this.worldToScreen(c*TILE_SIZE,r*TILE_SIZE);
-        const biome = mapData.biomesLayer?.[r]?.[c];
-        let baseColor;
-        if (biome && BIOMES[biome]) {
-          baseColor = BIOMES[biome].color;
-        } else {
-          const tileId = mapData.layers.background[r]?.[c] || 0;
-          const bKey = BIOME_KEYS[tileId];
-          baseColor = bKey && BIOMES[bKey] ? BIOMES[bKey].color : "#2a3328";
+        const x=c*T-this.camera.x, y=r*T-this.camera.y;
+        if(x+T<0||x>this.width||y+T<0||y>this.height) continue;
+        const b=mapData.biomesLayer?.[r]?.[c]||"plains";
+        const h=H(c,r,0), h2=H(c,r,7), h3=H(c,r,13);
+
+        // ── BASE FILL ──
+        if(b==="plains"||b==="grass"||b==="garden"){
+          const g=35+h*20, gg=65+h*30, gb=25+h*15;
+          ctx.fillStyle=`rgb(${g|0},${gg|0},${gb|0})`;
+          ctx.fillRect(x,y,T,T);
+          // Grass blades
+          for(let i=0;i<(b==="garden"?8:5);i++){
+            const bx=x+H(c,r,20+i)*T, by=y+T*0.3+H(c,r,30+i)*T*0.6;
+            const bh=2+H(c,r,40+i)*4, lean=(H(c,r,50+i)-0.5)*2;
+            ctx.strokeStyle=`rgba(${50+h*40|0},${90+h*50|0},${30+h*20|0},${0.35+h*0.25})`;
+            ctx.lineWidth=0.5+h2*0.3;
+            ctx.beginPath();ctx.moveTo(bx,by);ctx.quadraticCurveTo(bx+lean,by-bh*0.6,bx+lean*1.5,by-bh);ctx.stroke();
+          }
+          if(b==="garden"&&h3>0.7){
+            const cols=["#d44a","#e8c8","#a04a","#4a8a"];
+            ctx.fillStyle=cols[(h*4)|0]; ctx.beginPath();ctx.arc(x+h2*T*0.7+T*0.15,y+h3*T*0.5+T*0.2,1.5,0,Math.PI*2);ctx.fill();
+          }
         }
-        
-        // Parse color and add seeded variation
-        const hash = _tHash(c,r);
-        const variation = ((hash % 20) - 10) / 255;
-        this.ctx.fillStyle = baseColor;
-        this.ctx.fillRect(sp.x,sp.y,TILE_SIZE,TILE_SIZE);
-        
-        // Subtle brightness variation (seeded, not random)
-        const bv = ((hash >> 8) % 15) / 255;
-        this.ctx.fillStyle = `rgba(${bv>0.03?255:0},${bv>0.03?255:0},${bv>0.03?255:0},${Math.abs(bv)})`;
-        this.ctx.fillRect(sp.x,sp.y,TILE_SIZE,TILE_SIZE);
-        
-        // Biome-specific decorations
-        if(biome==="road"||biome==="path"){
-          // Cobblestone pattern
-          if((hash%3)===0){
-            this.ctx.strokeStyle="rgba(60,55,48,0.25)"; this.ctx.lineWidth=0.5;
-            const ox=(hash%8)-4, oy=((hash>>4)%8)-4;
-            this.ctx.strokeRect(sp.x+4+ox,sp.y+4+oy,TILE_SIZE/2-2,TILE_SIZE/2-2);
+        else if(b==="forest"||b==="tree_oak"||b==="tree_pine"||b==="bush"){
+          // Dark forest floor
+          ctx.fillStyle=`rgb(${18+h*12|0},${32+h*15|0},${14+h*8|0})`;ctx.fillRect(x,y,T,T);
+          // Tree
+          const tx=x+T*0.5, ty=y+T*0.4+h2*T*0.15;
+          ctx.fillStyle="rgba(0,0,0,0.2)";ctx.beginPath();ctx.ellipse(tx,ty+5,5,2.5,0,0,Math.PI*2);ctx.fill();
+          ctx.fillStyle=`rgb(${55+h*20|0},${35+h*10|0},20)`;ctx.fillRect(tx-1.5,ty-3,3,8);
+          const cr=b==="bush"?4:5+h*3;
+          for(let l=2;l>=0;l--){
+            const s=25+l*18+h*12;
+            ctx.fillStyle=`rgb(${s-5|0},${s+18|0},${s-8|0})`;
+            ctx.beginPath();ctx.arc(tx+(l-1),ty-4-l*2,cr-l*1.2,0,Math.PI*2);ctx.fill();
           }
-        } else if(biome==="plaza"||biome==="market"){
-          // Stone tile pattern
-          if((c+r)%2===0){ this.ctx.fillStyle="rgba(255,255,255,0.02)"; this.ctx.fillRect(sp.x,sp.y,TILE_SIZE,TILE_SIZE); }
-        } else if(biome==="wall"||biome==="tower"){
-          // Brick lines
-          this.ctx.strokeStyle="rgba(0,0,0,0.2)"; this.ctx.lineWidth=0.5;
-          this.ctx.beginPath();
-          this.ctx.moveTo(sp.x,sp.y+TILE_SIZE/2); this.ctx.lineTo(sp.x+TILE_SIZE,sp.y+TILE_SIZE/2);
-          if((r+c)%2===0){ this.ctx.moveTo(sp.x+TILE_SIZE/2,sp.y); this.ctx.lineTo(sp.x+TILE_SIZE/2,sp.y+TILE_SIZE); }
-          this.ctx.stroke();
-        } else if(biome==="garden"||biome==="plains"||biome==="forest"){
-          // Grass tufts
-          if((hash%5)===0){
-            this.ctx.fillStyle=biome==="forest"?"rgba(30,60,20,0.4)":"rgba(50,80,30,0.3)";
-            const gx=sp.x+(hash%20)+4, gy=sp.y+((hash>>5)%20)+4;
-            this.ctx.beginPath(); this.ctx.arc(gx,gy,2,0,Math.PI*2); this.ctx.fill();
-          }
-        } else if(biome==="fountain"||biome==="river"||biome==="lake"){
-          // Water shimmer
-          const shimmer = Math.sin(Date.now()*0.002+c*0.5+r*0.7)*0.05+0.05;
-          this.ctx.fillStyle=`rgba(100,160,220,${shimmer})`;
-          this.ctx.fillRect(sp.x,sp.y,TILE_SIZE,TILE_SIZE);
-        } else if(biome==="palace"){
-          // Royal purple tint
-          this.ctx.fillStyle="rgba(80,40,100,0.08)";
-          this.ctx.fillRect(sp.x,sp.y,TILE_SIZE,TILE_SIZE);
-          // Gold trim
-          if(r===40||r===56||c===50||c===70){
-            this.ctx.fillStyle="rgba(200,170,60,0.15)";
-            this.ctx.fillRect(sp.x,sp.y,TILE_SIZE,TILE_SIZE);
-          }
-        } else if(biome==="barracks"){
-          // Military pattern
-          if((c+r)%3===0){ this.ctx.fillStyle="rgba(100,90,130,0.06)"; this.ctx.fillRect(sp.x,sp.y,TILE_SIZE,TILE_SIZE); }
-        } else if(biome==="gate"){
-          // Gate glow
-          this.ctx.fillStyle="rgba(200,160,60,0.12)";
-          this.ctx.fillRect(sp.x,sp.y,TILE_SIZE,TILE_SIZE);
-        } else if(biome==="arena"){
-          // Arena sand
-          this.ctx.fillStyle="rgba(180,150,100,0.06)";
-          this.ctx.fillRect(sp.x,sp.y,TILE_SIZE,TILE_SIZE);
-        } else if(biome==="house"||biome==="shop"){
-          // Roof shadow
-          this.ctx.fillStyle="rgba(0,0,0,0.08)";
-          this.ctx.fillRect(sp.x,sp.y,TILE_SIZE,TILE_SIZE/3);
         }
-        
-        // Subtle grid (lighter than before)
-        this.ctx.strokeStyle="rgba(0,0,0,0.06)"; this.ctx.lineWidth=0.3;
-        this.ctx.strokeRect(sp.x,sp.y,TILE_SIZE,TILE_SIZE);
+        else if(b==="river"||b==="lake"||b==="fountain"||b==="shallow"||b==="waterfall"){
+          const t=now*0.001;
+          ctx.fillStyle=b==="fountain"?`rgb(${20+h*8|0},${45+h*12|0},${80+h*15|0})`:`rgb(${15+h*8|0},${35+h*12|0},${70+h*15|0})`;
+          ctx.fillRect(x,y,T,T);
+          // Waves
+          ctx.strokeStyle=`rgba(120,180,230,${0.1+Math.sin(t*1.5+c)*0.04})`;ctx.lineWidth=0.5;
+          for(let i=0;i<2;i++){ctx.beginPath();for(let wx=0;wx<=T;wx+=2){const wy=y+T*0.3+i*T*0.3+Math.sin((x+wx)*0.08+t*2+i)*1.5;wx===0?ctx.moveTo(x+wx,wy):ctx.lineTo(x+wx,wy);}ctx.stroke();}
+          if(b==="fountain"){ctx.fillStyle="rgba(150,200,240,0.15)";ctx.beginPath();ctx.arc(x+T/2,y+T/2,T*0.3,0,Math.PI*2);ctx.fill();}
+        }
+        else if(b==="road"||b==="path"||b==="bridge"){
+          ctx.fillStyle=b==="bridge"?`rgb(${75+h*10|0},${60+h*8|0},${40+h*6|0})`:`rgb(${55+h*10|0},${50+h*8|0},${45+h*6|0})`;
+          ctx.fillRect(x,y,T,T);
+          // Cobblestones
+          for(let i=0;i<5;i++){
+            const cx2=x+2+H(c,r,60+i)*(T-4),cy2=y+2+H(c,r,70+i)*(T-4);
+            const cw=3+H(c,r,80+i)*4,ch=2+H(c,r,90+i)*3;
+            const sh=H(c,r,100+i)>0.5?5:-5;
+            ctx.fillStyle=`rgba(${60+sh},${55+sh},${50+sh},0.35)`;
+            ctx.fillRect(cx2,cy2,cw,ch);
+            ctx.strokeStyle="rgba(30,28,25,0.15)";ctx.lineWidth=0.3;ctx.strokeRect(cx2,cy2,cw,ch);
+          }
+        }
+        else if(b==="wall"||b==="tower"||b==="fence_iron"||b==="fence_wood"){
+          const wb=b==="tower"?40:35;
+          ctx.fillStyle=`rgb(${wb+h*10|0},${wb-2+h*8|0},${wb-4+h*6|0})`;ctx.fillRect(x,y,T,T);
+          const bkH=T/3;
+          for(let row=0;row<3;row++){
+            const off=(c+row)%2===0?0:T*0.4;
+            for(let col2=-1;col2<3;col2++){
+              const bx2=x+col2*T*0.5+off,sh=H(c*3+col2,r*3+row,0)*10-5;
+              ctx.fillStyle=`rgba(${wb+5+sh|0},${wb+2+sh|0},${wb+sh|0},0.6)`;
+              ctx.fillRect(bx2+0.5,y+row*bkH+0.5,T*0.48-1,bkH-1);
+              ctx.strokeStyle="rgba(20,18,16,0.3)";ctx.lineWidth=0.5;ctx.strokeRect(bx2+0.5,y+row*bkH+0.5,T*0.48-1,bkH-1);
+            }
+          }
+          if(b==="tower"){ctx.fillStyle="rgba(60,50,40,0.15)";ctx.fillRect(x,y,T,T);}
+        }
+        else if(b==="plaza"||b==="market"||b==="village"){
+          ctx.fillStyle=b==="market"?`rgb(${52+h*8|0},${45+h*6|0},${32+h*5|0})`:`rgb(${50+h*8|0},${46+h*6|0},${40+h*5|0})`;
+          ctx.fillRect(x,y,T,T);
+          if((c+r)%2===0){ctx.fillStyle="rgba(255,255,255,0.025)";ctx.fillRect(x,y,T,T);}
+        }
+        else if(b==="palace"||b==="statue"){
+          ctx.fillStyle=`rgb(${50+h*10|0},${38+h*8|0},${60+h*10|0})`;ctx.fillRect(x,y,T,T);
+          ctx.fillStyle="rgba(200,170,80,0.08)";ctx.fillRect(x,y,T,T);
+          if(b==="statue"){ctx.fillStyle="rgba(180,170,150,0.3)";ctx.beginPath();ctx.arc(x+T/2,y+T/2,T*0.3,0,Math.PI*2);ctx.fill();}
+        }
+        else if(b==="barracks"){
+          ctx.fillStyle=`rgb(${38+h*8|0},${36+h*6|0},${48+h*8|0})`;ctx.fillRect(x,y,T,T);
+          if((c+r)%3===0){ctx.fillStyle="rgba(100,90,130,0.06)";ctx.fillRect(x,y,T,T);}
+        }
+        else if(b==="house"||b==="shop"||b==="tavern"||b==="temple"){
+          const hue=b==="tavern"?[50,35,18]:b==="temple"?[35,28,50]:b==="shop"?[48,40,25]:[42,35,28];
+          ctx.fillStyle=`rgb(${hue[0]+h*10|0},${hue[1]+h*8|0},${hue[2]+h*6|0})`;ctx.fillRect(x,y,T,T);
+          ctx.fillStyle="rgba(0,0,0,0.06)";ctx.fillRect(x,y,T,T*0.3);
+        }
+        else if(b==="door"||b==="gate"){
+          ctx.fillStyle=b==="gate"?`rgb(${70+h*10|0},${55+h*8|0},${30+h*5|0})`:`rgb(${80+h*10|0},${55+h*8|0},${30+h*5|0})`;
+          ctx.fillRect(x,y,T,T);
+          if(b==="gate"){ctx.fillStyle="rgba(200,160,60,0.1)";ctx.fillRect(x,y,T,T);}
+        }
+        else if(b==="arena"){
+          ctx.fillStyle=`rgb(${60+h*12|0},${50+h*10|0},${35+h*8|0})`;ctx.fillRect(x,y,T,T);
+          ctx.fillStyle="rgba(180,150,100,0.04)";ctx.fillRect(x,y,T,T);
+        }
+        else if(b==="lava"||b==="torch"||b==="campfire"){
+          const t=now*0.001;
+          ctx.fillStyle=b==="lava"?`rgb(${130+h*30|0},${25+h*15|0},8)`:`rgb(${80+h*20|0},${40+h*10|0},10)`;
+          ctx.fillRect(x,y,T,T);
+          const fl=Math.sin(t*3+c+r)*0.1+0.2;
+          ctx.fillStyle=`rgba(255,${140+Math.sin(t*2)*30|0},30,${fl})`;
+          ctx.beginPath();ctx.arc(x+T/2,y+T/2,T*0.25,0,Math.PI*2);ctx.fill();
+        }
+        else if(b==="snow"||b==="tundra"){
+          const v=210+h*25;
+          ctx.fillStyle=`rgb(${v|0},${v+3|0},${v+8|0})`;ctx.fillRect(x,y,T,T);
+          if(h3>0.6){ctx.fillStyle="rgba(255,255,255,0.2)";ctx.fillRect(x+h*T*0.3,y+h2*T*0.3,2,2);}
+        }
+        else if(b==="sand"||b==="desert"){
+          ctx.fillStyle=`rgb(${195+h*15|0},${175+h*12|0},${120+h*10|0})`;ctx.fillRect(x,y,T,T);
+          ctx.strokeStyle=`rgba(210,190,135,0.2)`;ctx.lineWidth=0.4;
+          ctx.beginPath();for(let wx=0;wx<=T;wx+=3){ctx.lineTo(x+wx,y+T*0.5+Math.sin(wx*0.2+r)*1.5);}ctx.stroke();
+        }
+        else if(b==="cave"||b==="ruins"){
+          ctx.fillStyle=b==="ruins"?`rgb(${50+h*10|0},${38+h*8|0},${50+h*8|0})`:`rgb(${22+h*8|0},${20+h*6|0},${20+h*5|0})`;
+          ctx.fillRect(x,y,T,T);
+        }
+        else if(b==="lamp"||b==="sign"||b==="banner"||b==="weapon_rack"||b==="barrel"||b==="crate"||b==="well"||b==="grave"){
+          // Decor objects: draw base terrain underneath first, then the object
+          ctx.fillStyle=`rgb(${48+h*8|0},${44+h*6|0},${38+h*5|0})`;ctx.fillRect(x,y,T,T);
+          const icons={lamp:"🏮",sign:"📋",banner:"🚩",weapon_rack:"⚔",barrel:"🪵",crate:"📦",well:"🪣",grave:"🪦"};
+          ctx.font=`${T*0.55}px serif`;ctx.textAlign="center";
+          ctx.fillText(icons[b]||"•",x+T/2,y+T/2+T*0.15);
+        }
+        else if(b==="flower_red"||b==="flower_yel"||b==="mushroom"||b==="crystal"||b==="hay"){
+          ctx.fillStyle=`rgb(${35+h*15|0},${55+h*20|0},${25+h*10|0})`;ctx.fillRect(x,y,T,T);
+          const icons2={flower_red:"🌹",flower_yel:"🌻",mushroom:"🍄",crystal:"💎",hay:"🌾"};
+          ctx.font=`${T*0.45}px serif`;ctx.textAlign="center";
+          ctx.fillText(icons2[b]||"•",x+T/2,y+T/2+T*0.12);
+        }
+        else if(b==="floor_wood"||b==="floor_stone"||b==="carpet"||b==="rug"){
+          if(b==="carpet"||b==="rug"){ctx.fillStyle=`rgb(${90+h*15|0},${25+h*10|0},${25+h*8|0})`;ctx.fillRect(x,y,T,T);}
+          else if(b==="floor_stone"){ctx.fillStyle=`rgb(${50+h*8|0},${48+h*6|0},${46+h*5|0})`;ctx.fillRect(x,y,T,T);}
+          else{
+            ctx.fillStyle=`rgb(${80+h*12|0},${58+h*10|0},${35+h*6|0})`;ctx.fillRect(x,y,T,T);
+            ctx.strokeStyle="rgba(40,30,20,0.2)";ctx.lineWidth=0.5;
+            for(let i=0;i<3;i++){const py=y+i*T/3;ctx.beginPath();ctx.moveTo(x,py);ctx.lineTo(x+T,py);ctx.stroke();}
+          }
+        }
+        else{
+          const def=BIOMES[b];
+          ctx.fillStyle=def?def.color:"#2a3328";ctx.fillRect(x,y,T,T);
+        }
       }
     }
 
@@ -4566,8 +4636,14 @@ const MapSystem = {
   },
 
   loadMap(mapId, spawnPos) {
-    const mapData = GameData.getMap(mapId);
-    if (!mapData) { console.error(`[Map] Not found: ${mapId}`); return false; }
+    let mapData = GameData.getMap(mapId);
+    if (!mapData) {
+      console.warn(`[Map] Not found: ${mapId}, falling back to qg_exterior`);
+      mapId = "qg_exterior";
+      mapData = GameData.getMap(mapId);
+      spawnPos = {x:125, y:180};
+      if(!mapData) { console.error("[Map] qg_exterior also missing!"); return false; }
+    }
     this.currentMap = mapData; this.currentMapId = mapId;
     if (spawnPos) {
       Player.x=spawnPos.x; Player.y=spawnPos.y;
@@ -9278,7 +9354,7 @@ const Game = {
     await Utils.wait(60);
 
     p(95,"Carte...");
-    MapSystem.loadMap(GameData.state.player.position.mapId||"apolyti");
+    MapSystem.loadMap(GameData.state.player.position.mapId||"qg_exterior");
     await Utils.wait(80);
 
     // NPC interaction
