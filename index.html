@@ -740,7 +740,7 @@ body.visitor-mode .il-btn-row{ display:none !important; }
 /* ══ WEBNOVEL / CHRONIQUES ═════════════════════════ */
 .wn-container { max-width:760px; margin:0 auto; padding:20px 24px 60px; }
 .wn-header { text-align:center; margin-bottom:30px; }
-.wn-header h1 { font-family:'Cinzel',serif; font-size:22px; color:var(--gold2); letter-spacing:3px; margin-bottom:6px; }
+.wn-reading-scope .wn-header h1 { font-family:'Cinzel',serif; font-size:22px; color:var(--wn-r-accent); letter-spacing:3px; margin-bottom:6px; }
 .wn-header p { font-size:13px; color:rgba(168,156,192,.6); font-style:italic; }
 .wn-sort-bar { display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; padding:8px 0; border-bottom:1px solid rgba(201,168,76,.1); }
 .wn-sort-bar span { font-family:'Cinzel',serif; font-size:9px; letter-spacing:2px; color:rgba(168,156,192,.5); text-transform:uppercase; }
@@ -752,7 +752,7 @@ body.visitor-mode .il-btn-row{ display:none !important; }
 .wn-chapter-item.wn-dragging { opacity:.4; }
 .wn-chapter-item.wn-drag-over { border-color:var(--gold); box-shadow:0 0 0 1px rgba(201,168,76,.3) inset; }
 .wn-ch-num { font-family:'Cinzel',serif; font-size:11px; color:rgba(106,85,32,1); min-width:32px; text-align:center; }
-.wn-ch-title { flex:1; font-family:'Crimson Pro',serif; font-size:15px; color:rgba(232,224,208,.8); }
+.wn-ch-title { flex:1; font-family:var(--wn-r-font); font-size:15px; color:var(--wn-r-text); }
 .wn-ch-date { font-size:10px; color:rgba(168,156,192,.4); }
 .wn-ch-drag { cursor:grab; color:rgba(168,156,192,.3); font-size:13px; user-select:none; }
 .wn-ch-drag:active { cursor:grabbing; }
@@ -761,20 +761,56 @@ body.visitor-mode .il-btn-row{ display:none !important; }
 .wn-ch-actions button:hover { border-color:rgba(106,85,32,1); color:var(--gold2); }
 .wn-add-btn { display:flex; align-items:center; justify-content:center; gap:8px; width:100%; padding:12px; margin-top:12px; background:rgba(201,168,76,.04); border:1px dashed rgba(201,168,76,.2); border-radius:6px; color:var(--gold2); font-family:'Cinzel',serif; font-size:10px; letter-spacing:1px; cursor:pointer; transition:all .15s; }
 .wn-add-btn:hover { background:rgba(201,168,76,.1); border-color:var(--gold); }
+/* Variables de lecture — surchargées par les préférences du lecteur */
+.wn-reading-scope {
+  --wn-r-bg: transparent;
+  --wn-r-text: rgba(232,224,208,.78);
+  --wn-r-accent: var(--gold2);
+  --wn-r-size: 16px;
+  --wn-r-font: 'Crimson Pro', serif;
+  --wn-r-lh: 1.85;
+  min-height:100%;
+  transition:background .25s;
+}
 .wn-reading { max-width:680px; margin:0 auto; padding:20px 24px 80px; }
-.wn-reading-title { font-family:'Cinzel',serif; font-size:20px; color:var(--gold2); letter-spacing:2px; text-align:center; margin-bottom:8px; }
+.wn-reading-title { font-family:'Cinzel',serif; font-size:20px; color:var(--wn-r-accent); letter-spacing:2px; text-align:center; margin-bottom:8px; }
 .wn-reading-meta { text-align:center; font-size:11px; color:rgba(168,156,192,.4); margin-bottom:30px; }
-.wn-reading-body { font-family:'Crimson Pro',serif; font-size:16px; line-height:1.85; color:rgba(232,224,208,.78); }
-.wn-reading-body p { margin-bottom:14px; text-indent:1.5em; }
-.wn-reading-body h1 { font-family:'Cinzel',serif; font-size:19px; color:var(--gold2); margin:30px 0 14px; letter-spacing:1px; text-indent:0; }
-.wn-reading-body h2 { font-family:'Cinzel',serif; font-size:16px; color:var(--gold2); margin:28px 0 12px; letter-spacing:1px; text-indent:0; }
-.wn-reading-body h3 { font-family:'Cinzel',serif; font-size:14px; color:rgba(201,168,76,.75); margin:22px 0 10px; letter-spacing:1px; text-indent:0; }
-.wn-reading-body blockquote { border-left:2px solid rgba(201,168,76,.2); margin:16px 0; padding:8px 16px; font-style:italic; color:rgba(201,168,76,.5); text-indent:0; }
-.wn-reading-body hr { border:none; border-top:1px solid rgba(201,168,76,.15); margin:26px 18%; }
-.wn-reading-body ul, .wn-reading-body ol { margin:14px 0 14px 1.6em; }
-.wn-reading-body li { margin-bottom:6px; }
-.wn-reading-body b, .wn-reading-body strong { color:rgba(232,224,208,.95); font-weight:600; }
+.wn-reading-body { font-family:var(--wn-r-font); font-size:var(--wn-r-size); line-height:var(--wn-r-lh); color:var(--wn-r-text); }
+.wn-reading-body p { margin-bottom:.9em; text-indent:1.5em; }
+.wn-reading-body h1 { font-family:'Cinzel',serif; font-size:1.2em; color:var(--wn-r-accent); margin:1.9em 0 .85em; letter-spacing:1px; text-indent:0; }
+.wn-reading-body h2 { font-family:'Cinzel',serif; font-size:1.05em; color:var(--wn-r-accent); margin:1.75em 0 .75em; letter-spacing:1px; text-indent:0; }
+.wn-reading-body h3 { font-family:'Cinzel',serif; font-size:.92em; color:var(--wn-r-accent); margin:1.4em 0 .65em; letter-spacing:1px; text-indent:0; opacity:.85; }
+.wn-reading-body blockquote { border-left:2px solid var(--wn-r-accent); margin:1em 0; padding:8px 16px; font-style:italic; opacity:.78; text-indent:0; }
+.wn-reading-body hr { border:none; border-top:1px solid var(--wn-r-accent); opacity:.3; margin:1.6em 18%; }
+.wn-reading-body ul, .wn-reading-body ol { margin:.9em 0 .9em 1.6em; }
+.wn-reading-body li { margin-bottom:.35em; }
+.wn-reading-body b, .wn-reading-body strong { font-weight:600; }
 .wn-reading-body i, .wn-reading-body em { font-style:italic; }
+/* ── Préférences de lecture ── */
+.wn-prefs-fab { position:fixed; right:22px; bottom:22px; z-index:8800; width:42px; height:42px; border-radius:50%; background:#14111e; border:1px solid rgba(201,168,76,.35); color:var(--gold2); font-size:17px; cursor:pointer; display:flex; align-items:center; justify-content:center; box-shadow:0 6px 22px rgba(0,0,0,.6); transition:all .15s; }
+.wn-prefs-fab:hover { border-color:var(--gold); transform:scale(1.07); background:rgba(201,168,76,.1); }
+.wn-prefs-panel { position:fixed; right:22px; bottom:74px; z-index:8801; width:268px; background:#14111e; border:1px solid rgba(201,168,76,.3); border-radius:10px; box-shadow:0 14px 40px rgba(0,0,0,.72); padding:14px 16px 16px; display:none; }
+.wn-prefs-panel.open { display:block; }
+.wn-prefs-panel h4 { font-family:'Cinzel',serif; font-size:10px; letter-spacing:2px; color:var(--gold2); text-transform:uppercase; margin-bottom:12px; display:flex; justify-content:space-between; align-items:center; }
+.wn-prefs-panel h4 button { background:none; border:none; color:rgba(168,156,192,.5); font-size:14px; cursor:pointer; padding:0; }
+.wn-prefs-panel h4 button:hover { color:var(--gold2); }
+.wn-prefs-group { margin-bottom:13px; }
+.wn-prefs-group:last-of-type { margin-bottom:6px; }
+.wn-prefs-group > label { display:block; font-family:'Cinzel',serif; font-size:8px; letter-spacing:1.5px; color:rgba(168,156,192,.55); text-transform:uppercase; margin-bottom:6px; }
+.wn-prefs-swatches { display:flex; gap:7px; flex-wrap:wrap; }
+.wn-swatch { width:26px; height:26px; border-radius:50%; cursor:pointer; border:2px solid transparent; box-shadow:0 0 0 1px rgba(255,255,255,.12) inset; transition:transform .12s; }
+.wn-swatch:hover { transform:scale(1.12); }
+.wn-swatch.wn-sw-active { border-color:var(--gold); box-shadow:0 0 8px rgba(201,168,76,.5); }
+.wn-prefs-row { display:flex; gap:6px; }
+.wn-prefs-row .wn-seg { flex:1; }
+.wn-seg { background:rgba(255,255,255,.04); border:1px solid rgba(255,255,255,.1); color:rgba(232,224,208,.6); font-family:'Cinzel',serif; font-size:9px; letter-spacing:.5px; padding:6px 4px; border-radius:4px; cursor:pointer; text-align:center; transition:all .12s; }
+.wn-seg:hover { border-color:rgba(201,168,76,.3); color:var(--gold2); }
+.wn-seg.wn-seg-active { background:rgba(201,168,76,.16); border-color:rgba(201,168,76,.4); color:var(--gold2); }
+.wn-prefs-size { display:flex; align-items:center; gap:8px; }
+.wn-prefs-size input[type=range] { flex:1; accent-color:#c9a84c; cursor:pointer; }
+.wn-prefs-size span { font-family:'Cinzel',serif; font-size:10px; color:var(--gold2); min-width:38px; text-align:right; }
+.wn-prefs-reset { width:100%; margin-top:10px; background:none; border:1px solid rgba(255,255,255,.1); color:rgba(168,156,192,.5); font-family:'Cinzel',serif; font-size:8.5px; letter-spacing:1px; padding:6px; border-radius:4px; cursor:pointer; transition:all .12s; }
+.wn-prefs-reset:hover { border-color:rgba(201,168,76,.3); color:var(--gold2); }
 /* Lien vers une fiche du Codex */
 .wn-codex-link { color:var(--gold2); text-decoration:none; border-bottom:1px dotted rgba(201,168,76,.45); cursor:pointer; transition:all .15s; padding:0 1px; }
 .wn-codex-link:hover { background:rgba(201,168,76,.12); border-bottom-color:var(--gold); }
@@ -16220,7 +16256,7 @@ function _wnRenderSummary(viewEl){
   });
   const isAdm = _isAdmin();
 
-  let html = '<div class="wn-container">';
+  let html = '<div class="wn-reading-scope"><div class="wn-container">';
   html += '<div class="wn-header"><h1>📖 Chroniques</h1><p>L\'histoire de Gates of Hades — ' + chapters.length + ' chapitre' + (chapters.length>1?'s':'') + '</p></div>';
 
   html += '<div class="wn-sort-bar">';
@@ -16256,10 +16292,11 @@ function _wnRenderSummary(viewEl){
   }
 
   html += '</div>';
+  html += _wnPrefsPanelHtml();
+  html += '</div>';
   viewEl.innerHTML = html;
+  _wnApplyPrefs();
 }
-
-// ── Réordonnancement par glisser-déposer ──
 function _wnDragStart(e, id){
   _wnDragId = id;
   e.dataTransfer.effectAllowed = 'move';
@@ -16298,6 +16335,144 @@ function _wnDrop(e, targetId){
 }
 
 // ════════════════════════════════════════════
+//  PRÉFÉRENCES DE LECTURE — propres au lecteur
+// ════════════════════════════════════════════
+// Stockées en localStorage (préférence personnelle, propre à chaque
+// visiteur — ne doit pas être partagée via Supabase).
+const _WN_PREFS_KEY = 'goh_wn_read_prefs';
+
+const _WN_THEMES = {
+  parchemin : { label:'Parchemin', bg:'#1a1410', text:'rgba(232,224,208,.82)', accent:'#c9a84c' },
+  encre     : { label:'Encre',     bg:'transparent', text:'rgba(232,224,208,.78)', accent:'#c9a84c' },
+  nuit      : { label:'Nuit',      bg:'#070510', text:'rgba(200,205,225,.78)', accent:'#8c9fd4' },
+  sepia     : { label:'Sépia',     bg:'#2a2118', text:'rgba(236,222,196,.88)', accent:'#d4a960' },
+  clair     : { label:'Clair',     bg:'#ebe6da', text:'rgba(40,34,26,.88)', accent:'#7a5a1e' },
+  ardoise   : { label:'Ardoise',   bg:'#161a1f', text:'rgba(214,222,228,.82)', accent:'#7fa6b0' }
+};
+const _WN_FONTS = {
+  serif    : { label:'Serif',    css:"'Crimson Pro', Georgia, serif" },
+  classique: { label:'Classique', css:"'EB Garamond', Garamond, serif" },
+  titre    : { label:'Cinzel',   css:"'Cinzel', serif" },
+  sans     : { label:'Sans',     css:"'Inter', system-ui, sans-serif" },
+  mono     : { label:'Mono',     css:"'Courier New', monospace" }
+};
+const _WN_PREFS_DEFAULT = { theme:'encre', font:'serif', size:16, lineHeight:1.85 };
+
+function _wnLoadPrefs(){
+  try{
+    const raw = localStorage.getItem(_WN_PREFS_KEY);
+    if(raw){
+      const p = JSON.parse(raw);
+      return Object.assign({}, _WN_PREFS_DEFAULT, p);
+    }
+  }catch(e){}
+  return Object.assign({}, _WN_PREFS_DEFAULT);
+}
+function _wnSavePrefs(p){
+  try{ localStorage.setItem(_WN_PREFS_KEY, JSON.stringify(p)); }catch(e){}
+}
+let _wnPrefs = _wnLoadPrefs();
+
+// Applique les préférences au conteneur de lecture (variables CSS)
+function _wnApplyPrefs(){
+  const scope = document.querySelector('.wn-reading-scope');
+  if(!scope) return;
+  const th = _WN_THEMES[_wnPrefs.theme] || _WN_THEMES.encre;
+  const fn = _WN_FONTS[_wnPrefs.font]   || _WN_FONTS.serif;
+  scope.style.setProperty('--wn-r-bg',     th.bg);
+  scope.style.setProperty('--wn-r-text',   th.text);
+  scope.style.setProperty('--wn-r-accent', th.accent);
+  scope.style.setProperty('--wn-r-font',   fn.css);
+  scope.style.setProperty('--wn-r-size',   _wnPrefs.size + 'px');
+  scope.style.setProperty('--wn-r-lh',     _wnPrefs.lineHeight);
+  // Fond appliqué directement au scope (couvre lecture ET sommaire)
+  scope.style.background = th.bg;
+}
+
+// Génère le HTML du bouton flottant + panneau de préférences
+function _wnPrefsPanelHtml(){
+  let h = '<button class="wn-prefs-fab" id="wn-prefs-fab" onclick="_wnTogglePrefs()" title="Préférences de lecture">Aa</button>';
+  h += '<div class="wn-prefs-panel" id="wn-prefs-panel">';
+  h += '<h4>Lecture <button onclick="_wnTogglePrefs()" title="Fermer">✕</button></h4>';
+
+  // Thème / fond
+  h += '<div class="wn-prefs-group"><label>Ambiance &amp; fond</label><div class="wn-prefs-swatches">';
+  for(const k in _WN_THEMES){
+    const t = _WN_THEMES[k];
+    const sw = t.bg === 'transparent' ? '#0d0a14' : t.bg;
+    const act = _wnPrefs.theme === k ? ' wn-sw-active' : '';
+    h += '<div class="wn-swatch'+act+'" data-theme="'+k+'" title="'+t.label+'" '
+       + 'style="background:'+sw+'" onclick="_wnSetPref(\'theme\',\''+k+'\')"></div>';
+  }
+  h += '</div></div>';
+
+  // Police
+  h += '<div class="wn-prefs-group"><label>Police</label><div class="wn-prefs-row" style="flex-wrap:wrap;gap:6px">';
+  for(const k in _WN_FONTS){
+    const act = _wnPrefs.font === k ? ' wn-seg-active' : '';
+    h += '<div class="wn-seg'+act+'" data-font="'+k+'" style="flex:0 0 auto;padding:6px 10px;font-family:'
+       + _WN_FONTS[k].css.replace(/"/g,"'") + '" onclick="_wnSetPref(\'font\',\''+k+'\')">'+_WN_FONTS[k].label+'</div>';
+  }
+  h += '</div></div>';
+
+  // Taille du texte
+  h += '<div class="wn-prefs-group"><label>Taille du texte</label><div class="wn-prefs-size">';
+  h += '<input type="range" id="wn-prefs-size" min="13" max="24" step="1" value="'+_wnPrefs.size+'" '
+     + 'oninput="_wnSetPref(\'size\',parseInt(this.value))">';
+  h += '<span id="wn-prefs-size-val">'+_wnPrefs.size+' px</span>';
+  h += '</div></div>';
+
+  // Interligne
+  h += '<div class="wn-prefs-group"><label>Interligne</label><div class="wn-prefs-row">';
+  [['Serré',1.55],['Normal',1.85],['Aéré',2.2]].forEach(([lbl,val])=>{
+    const act = Math.abs(_wnPrefs.lineHeight - val) < .01 ? ' wn-seg-active' : '';
+    h += '<div class="wn-seg'+act+'" data-lh="'+val+'" onclick="_wnSetPref(\'lineHeight\','+val+')">'+lbl+'</div>';
+  });
+  h += '</div></div>';
+
+  h += '<button class="wn-prefs-reset" onclick="_wnResetPrefs()">↺ Réinitialiser</button>';
+  h += '</div>';
+  return h;
+}
+
+function _wnTogglePrefs(){
+  const p = document.getElementById('wn-prefs-panel');
+  if(p) p.classList.toggle('open');
+}
+
+// Modifie une préférence, sauvegarde, applique et rafraîchit l'état du panneau
+function _wnSetPref(key, value){
+  _wnPrefs[key] = value;
+  _wnSavePrefs(_wnPrefs);
+  _wnApplyPrefs();
+  _wnRefreshPrefsUI();
+}
+
+function _wnResetPrefs(){
+  _wnPrefs = Object.assign({}, _WN_PREFS_DEFAULT);
+  _wnSavePrefs(_wnPrefs);
+  _wnApplyPrefs();
+  _wnRefreshPrefsUI();
+}
+
+// Met à jour les indicateurs actifs sans reconstruire le panneau
+function _wnRefreshPrefsUI(){
+  document.querySelectorAll('.wn-swatch[data-theme]').forEach(el=>{
+    el.classList.toggle('wn-sw-active', el.getAttribute('data-theme') === _wnPrefs.theme);
+  });
+  document.querySelectorAll('.wn-seg[data-font]').forEach(el=>{
+    el.classList.toggle('wn-seg-active', el.getAttribute('data-font') === _wnPrefs.font);
+  });
+  document.querySelectorAll('.wn-seg[data-lh]').forEach(el=>{
+    el.classList.toggle('wn-seg-active', Math.abs(parseFloat(el.getAttribute('data-lh')) - _wnPrefs.lineHeight) < .01);
+  });
+  const sv = document.getElementById('wn-prefs-size-val');
+  if(sv) sv.textContent = _wnPrefs.size + ' px';
+  const sr = document.getElementById('wn-prefs-size');
+  if(sr) sr.value = _wnPrefs.size;
+}
+
+// ════════════════════════════════════════════
 //  LECTURE — Mode visiteur / index
 // ════════════════════════════════════════════
 function _wnReadChapter(chId){
@@ -16312,7 +16487,7 @@ function _wnReadChapter(chId){
   const next = idx < sorted.length-1 ? sorted[idx+1] : null;
 
   const v = document.getElementById('view');
-  let html = '<div class="wn-reading">';
+  let html = '<div class="wn-reading-scope"><div class="wn-reading">';
   html += '<div class="wn-reading-title">Chapitre ' + ch.num + '</div>';
   html += '<div class="wn-reading-title" style="font-size:24px;margin-bottom:4px">' + _esc(ch.title) + '</div>';
   if(ch.date) html += '<div class="wn-reading-meta">Publié le ' + ch.date + '</div>';
@@ -16333,8 +16508,11 @@ function _wnReadChapter(chId){
   html += '</div>';
 
   html += '</div>';
+  html += _wnPrefsPanelHtml();
+  html += '</div>';
   v.innerHTML = html;
   v.scrollTop = 0;
+  _wnApplyPrefs();
   _wnBindReadingLinks();
 }
 
