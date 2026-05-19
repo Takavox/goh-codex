@@ -749,9 +749,13 @@ body.visitor-mode .il-btn-row{ display:none !important; }
 .wn-chapter-list { display:flex; flex-direction:column; gap:6px; }
 .wn-chapter-item { display:flex; align-items:center; gap:12px; padding:12px 16px; background:rgba(255,255,255,.02); border:1px solid rgba(255,255,255,.05); border-radius:6px; cursor:pointer; transition:all .18s; }
 .wn-chapter-item:hover { background:rgba(201,168,76,.06); border-color:rgba(201,168,76,.15); transform:translateX(4px); }
+.wn-chapter-item.wn-dragging { opacity:.4; }
+.wn-chapter-item.wn-drag-over { border-color:var(--gold); box-shadow:0 0 0 1px rgba(201,168,76,.3) inset; }
 .wn-ch-num { font-family:'Cinzel',serif; font-size:11px; color:rgba(106,85,32,1); min-width:32px; text-align:center; }
 .wn-ch-title { flex:1; font-family:'Crimson Pro',serif; font-size:15px; color:rgba(232,224,208,.8); }
 .wn-ch-date { font-size:10px; color:rgba(168,156,192,.4); }
+.wn-ch-drag { cursor:grab; color:rgba(168,156,192,.3); font-size:13px; user-select:none; }
+.wn-ch-drag:active { cursor:grabbing; }
 .wn-ch-actions { display:flex; gap:4px; }
 .wn-ch-actions button { background:none; border:1px solid rgba(255,255,255,.1); color:rgba(168,156,192,.5); font-size:10px; padding:3px 8px; border-radius:3px; cursor:pointer; transition:all .12s; }
 .wn-ch-actions button:hover { border-color:rgba(106,85,32,1); color:var(--gold2); }
@@ -762,24 +766,83 @@ body.visitor-mode .il-btn-row{ display:none !important; }
 .wn-reading-meta { text-align:center; font-size:11px; color:rgba(168,156,192,.4); margin-bottom:30px; }
 .wn-reading-body { font-family:'Crimson Pro',serif; font-size:16px; line-height:1.85; color:rgba(232,224,208,.78); }
 .wn-reading-body p { margin-bottom:14px; text-indent:1.5em; }
-.wn-reading-body h2 { font-family:'Cinzel',serif; font-size:16px; color:var(--gold2); margin:28px 0 12px; letter-spacing:1px; }
-.wn-reading-body blockquote { border-left:2px solid rgba(201,168,76,.2); margin:16px 0; padding:8px 16px; font-style:italic; color:rgba(201,168,76,.5); }
+.wn-reading-body h1 { font-family:'Cinzel',serif; font-size:19px; color:var(--gold2); margin:30px 0 14px; letter-spacing:1px; text-indent:0; }
+.wn-reading-body h2 { font-family:'Cinzel',serif; font-size:16px; color:var(--gold2); margin:28px 0 12px; letter-spacing:1px; text-indent:0; }
+.wn-reading-body h3 { font-family:'Cinzel',serif; font-size:14px; color:rgba(201,168,76,.75); margin:22px 0 10px; letter-spacing:1px; text-indent:0; }
+.wn-reading-body blockquote { border-left:2px solid rgba(201,168,76,.2); margin:16px 0; padding:8px 16px; font-style:italic; color:rgba(201,168,76,.5); text-indent:0; }
+.wn-reading-body hr { border:none; border-top:1px solid rgba(201,168,76,.15); margin:26px 18%; }
+.wn-reading-body ul, .wn-reading-body ol { margin:14px 0 14px 1.6em; }
+.wn-reading-body li { margin-bottom:6px; }
+.wn-reading-body b, .wn-reading-body strong { color:rgba(232,224,208,.95); font-weight:600; }
+.wn-reading-body i, .wn-reading-body em { font-style:italic; }
+/* Lien vers une fiche du Codex */
+.wn-codex-link { color:var(--gold2); text-decoration:none; border-bottom:1px dotted rgba(201,168,76,.45); cursor:pointer; transition:all .15s; padding:0 1px; }
+.wn-codex-link:hover { background:rgba(201,168,76,.12); border-bottom-color:var(--gold); }
 .wn-nav { display:flex; justify-content:space-between; align-items:center; margin-top:40px; padding-top:20px; border-top:1px solid rgba(201,168,76,.1); }
 .wn-nav-btn { background:rgba(201,168,76,.06); border:1px solid rgba(201,168,76,.2); color:var(--gold2); font-family:'Cinzel',serif; font-size:9px; letter-spacing:1px; padding:8px 16px; border-radius:4px; cursor:pointer; transition:all .15s; }
 .wn-nav-btn:hover { border-color:var(--gold); background:rgba(201,168,76,.12); }
 .wn-nav-btn:disabled { opacity:.3; cursor:default; pointer-events:none; }
 .wn-nav-center { font-family:'Cinzel',serif; font-size:9px; color:rgba(168,156,192,.4); letter-spacing:1px; cursor:pointer; }
 .wn-nav-center:hover { color:var(--gold2); }
-.wn-editor-overlay { display:none; position:fixed; inset:0; z-index:9000; background:rgba(0,0,0,.7); align-items:center; justify-content:center; }
+/* Carte de preview au survol d'un lien */
+.wn-preview-card { position:fixed; z-index:9500; width:240px; background:#14111e; border:1px solid rgba(201,168,76,.3); border-radius:8px; overflow:hidden; box-shadow:0 12px 36px rgba(0,0,0,.7); pointer-events:none; opacity:0; transform:translateY(4px); transition:opacity .14s, transform .14s; }
+.wn-preview-card.show { opacity:1; transform:translateY(0); }
+.wn-preview-card img { width:100%; height:130px; object-fit:cover; display:block; background:rgba(255,255,255,.03); }
+.wn-preview-noimg { width:100%; height:130px; display:flex; align-items:center; justify-content:center; font-size:40px; background:rgba(60,40,100,.25); }
+.wn-preview-body { padding:9px 12px; }
+.wn-preview-name { font-family:'Cinzel',serif; font-size:12px; color:var(--gold2); letter-spacing:1px; margin-bottom:3px; }
+.wn-preview-sub { font-family:'Crimson Pro',serif; font-size:11px; color:rgba(168,156,192,.55); font-style:italic; }
+.wn-preview-type { font-family:'Cinzel',serif; font-size:7.5px; letter-spacing:1.5px; text-transform:uppercase; color:rgba(168,156,192,.4); margin-top:5px; }
+/* ── Éditeur d'écriture ── */
+.wn-editor-overlay { display:none; position:fixed; inset:0; z-index:9000; background:rgba(0,0,0,.78); align-items:center; justify-content:center; }
 .wn-editor-overlay.open { display:flex; }
-.wn-editor { background:#12101a; border:1px solid rgba(201,168,76,.2); border-radius:8px; width:90vw; max-width:800px; max-height:90vh; display:flex; flex-direction:column; overflow:hidden; }
+.wn-editor { background:#12101a; border:1px solid rgba(201,168,76,.2); border-radius:8px; width:94vw; max-width:880px; max-height:92vh; display:flex; flex-direction:column; overflow:hidden; }
 .wn-editor-header { padding:12px 16px; border-bottom:1px solid rgba(201,168,76,.1); display:flex; align-items:center; justify-content:space-between; }
 .wn-editor-header h3 { font-family:'Cinzel',serif; font-size:12px; color:var(--gold2); letter-spacing:2px; }
 .wn-editor-body { flex:1; padding:16px; overflow-y:auto; display:flex; flex-direction:column; gap:10px; }
 .wn-editor-body label { font-family:'Cinzel',serif; font-size:8px; letter-spacing:1.5px; color:rgba(168,156,192,.5); text-transform:uppercase; }
-.wn-editor-body input, .wn-editor-body textarea { width:100%; background:rgba(255,255,255,.04); border:1px solid rgba(255,255,255,.1); color:rgba(232,224,208,.85); font-family:'Crimson Pro',serif; font-size:14px; padding:8px 12px; border-radius:4px; outline:none; box-sizing:border-box; }
-.wn-editor-body textarea { min-height:300px; resize:vertical; line-height:1.7; }
+.wn-editor-body input[type=text], .wn-editor-body input[type=number] { width:100%; background:rgba(255,255,255,.04); border:1px solid rgba(255,255,255,.1); color:rgba(232,224,208,.85); font-family:'Crimson Pro',serif; font-size:14px; padding:8px 12px; border-radius:4px; outline:none; box-sizing:border-box; }
+.wn-editor-body input:focus { border-color:rgba(201,168,76,.4); }
+.wn-editor-row { display:flex; gap:12px; }
+.wn-editor-row > div { flex:1; }
 .wn-editor-footer { padding:12px 16px; border-top:1px solid rgba(201,168,76,.1); display:flex; gap:8px; justify-content:flex-end; }
+/* Barre d'outils du rich editor */
+.wn-toolbar { display:flex; flex-wrap:wrap; gap:3px; padding:6px; background:rgba(255,255,255,.03); border:1px solid rgba(255,255,255,.1); border-radius:5px 5px 0 0; border-bottom:none; }
+.wn-tool-btn { background:none; border:1px solid transparent; color:rgba(232,224,208,.6); width:30px; height:28px; border-radius:4px; cursor:pointer; font-size:13px; display:flex; align-items:center; justify-content:center; transition:all .12s; padding:0; }
+.wn-tool-btn:hover { background:rgba(201,168,76,.12); color:var(--gold2); }
+.wn-tool-btn.wn-tool-active { background:rgba(201,168,76,.18); color:var(--gold2); border-color:rgba(201,168,76,.3); }
+.wn-tool-btn.wn-tool-link { color:rgba(140,180,255,.8); }
+.wn-tool-btn.wn-tool-link:hover { background:rgba(140,180,255,.14); color:rgba(170,200,255,1); }
+.wn-tool-sep { width:1px; background:rgba(255,255,255,.1); margin:2px 4px; }
+/* Zone d'écriture contentEditable */
+.wn-rich { min-height:340px; max-height:48vh; overflow-y:auto; background:rgba(255,255,255,.04); border:1px solid rgba(255,255,255,.1); border-radius:0 0 5px 5px; color:rgba(232,224,208,.85); font-family:'Crimson Pro',serif; font-size:15px; line-height:1.8; padding:14px 18px; outline:none; box-sizing:border-box; }
+.wn-rich:focus { border-color:rgba(201,168,76,.4); }
+.wn-rich:empty:before { content:attr(data-placeholder); color:rgba(168,156,192,.3); font-style:italic; }
+.wn-rich h1 { font-family:'Cinzel',serif; font-size:19px; color:var(--gold2); margin:18px 0 10px; }
+.wn-rich h2 { font-family:'Cinzel',serif; font-size:16px; color:var(--gold2); margin:16px 0 9px; }
+.wn-rich h3 { font-family:'Cinzel',serif; font-size:14px; color:rgba(201,168,76,.75); margin:14px 0 8px; }
+.wn-rich blockquote { border-left:2px solid rgba(201,168,76,.25); margin:12px 0; padding:6px 14px; font-style:italic; color:rgba(201,168,76,.55); }
+.wn-rich hr { border:none; border-top:1px solid rgba(201,168,76,.2); margin:18px 0; }
+.wn-rich .wn-codex-link { color:var(--gold2); border-bottom:1px dotted rgba(201,168,76,.5); background:rgba(201,168,76,.08); border-radius:2px; }
+.wn-rich ul, .wn-rich ol { margin:8px 0 8px 1.6em; }
+/* Modal de recherche de fiche pour les liens */
+.wn-link-modal { display:none; position:fixed; inset:0; z-index:9600; background:rgba(0,0,0,.6); align-items:center; justify-content:center; }
+.wn-link-modal.open { display:flex; }
+.wn-link-box { background:#14111e; border:1px solid rgba(201,168,76,.25); border-radius:8px; width:90vw; max-width:440px; max-height:80vh; display:flex; flex-direction:column; overflow:hidden; }
+.wn-link-head { padding:12px 16px; border-bottom:1px solid rgba(201,168,76,.1); }
+.wn-link-head h3 { font-family:'Cinzel',serif; font-size:11px; color:var(--gold2); letter-spacing:2px; margin-bottom:8px; }
+.wn-link-head input { width:100%; background:rgba(255,255,255,.04); border:1px solid rgba(255,255,255,.12); color:rgba(232,224,208,.85); font-family:'Crimson Pro',serif; font-size:14px; padding:8px 12px; border-radius:4px; outline:none; box-sizing:border-box; }
+.wn-link-head input:focus { border-color:rgba(201,168,76,.4); }
+.wn-link-results { flex:1; overflow-y:auto; padding:8px; display:flex; flex-direction:column; gap:3px; }
+.wn-link-item { display:flex; align-items:center; gap:10px; padding:7px 10px; border-radius:5px; cursor:pointer; transition:background .12s; }
+.wn-link-item:hover { background:rgba(201,168,76,.1); }
+.wn-link-item img { width:30px; height:30px; border-radius:50%; object-fit:cover; flex-shrink:0; }
+.wn-link-item .wn-li-ic { width:30px; height:30px; border-radius:50%; background:rgba(60,40,100,.5); display:flex; align-items:center; justify-content:center; font-size:15px; flex-shrink:0; }
+.wn-link-item .wn-li-name { flex:1; font-family:'Crimson Pro',serif; font-size:14px; color:rgba(232,224,208,.85); }
+.wn-link-item .wn-li-type { font-family:'Cinzel',serif; font-size:8px; letter-spacing:1px; color:rgba(168,156,192,.4); text-transform:uppercase; }
+.wn-link-empty { text-align:center; padding:24px; color:rgba(168,156,192,.4); font-style:italic; font-size:13px; }
+.wn-link-foot { padding:10px 16px; border-top:1px solid rgba(201,168,76,.1); display:flex; justify-content:space-between; align-items:center; }
+.wn-link-foot .wn-li-sel { font-family:'Crimson Pro',serif; font-size:12px; color:rgba(168,156,192,.6); font-style:italic; }
 .wlc-card.wlc-card--webnovel { border-color:rgba(140,120,200,.3); background:rgba(15,10,25,.85); }
 .wlc-card.wlc-card--webnovel:hover { border-color:rgba(140,120,200,.6); box-shadow:0 14px 40px rgba(0,0,0,.7),0 0 30px rgba(140,120,200,.15); }
 .tr[data-id="__webnovel_root"] .tl { color:rgba(180,160,230,.8) !important; }
@@ -16080,14 +16143,17 @@ if(document.readyState !== 'loading') _applyMode();
   }, 500);
 })();
 
+
 // ════════════════════════════════════════════════════════
-//  WEBNOVEL / CHRONIQUES — Reading system
+//  WEBNOVEL / CHRONIQUES — Éditeur d'écriture intégré
 // ════════════════════════════════════════════════════════
 
 const _WN_NODE_ID = '__webnovel_root';
 let _wnSortAsc = true;
-let _wnEditingId = null; // null = new, string = editing existing
-let _wnCurrentChapter = null; // chapter being read
+let _wnEditingId = null;       // null = nouveau, string = édition
+let _wnCurrentChapter = null;  // chapitre en cours de lecture
+let _wnSavedRange = null;      // sélection mémorisée pour insertion de lien
+let _wnDragId = null;          // chapitre en cours de déplacement
 
 function _wnEnsureNode(){
   if(db[_WN_NODE_ID]) return;
@@ -16112,41 +16178,79 @@ function _wnGetChapters(){
   return node._chapters;
 }
 
+// Tri pour la lecture : par "order" si présent, sinon par "num"
+function _wnSortedForReading(){
+  const ch = _wnGetChapters();
+  return [...ch].sort((a,b)=>{
+    const oa = (a.order!=null)?a.order:a.num, ob = (b.order!=null)?b.order:b.num;
+    return oa - ob;
+  });
+}
+
+function _esc(s){ return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
+
+// ── Résolution d'une fiche du Codex ──
+function _wnResolveSheet(id){
+  const n = db[id];
+  if(!n) return null;
+  return {
+    id: n.id,
+    name: n.name || 'Sans nom',
+    icon: n.icon && !n.icon.startsWith('<img') ? n.icon : '📄',
+    image: (n.images && n.images[0]) || null,
+    subtitle: n.subtitle || '',
+    entryType: n.entryType || n.kind || n.type || ''
+  };
+}
+
+const _WN_TYPE_LABELS = {
+  character:'Personnage', ability:'Pouvoir', secret:'Secret', generic:'Fiche',
+  world:'Royaume', faction:'Faction', gate:'Porte', 'gate-root':'Portes', category:'Catégorie'
+};
+function _wnTypeLabel(t){ return _WN_TYPE_LABELS[t] || 'Fiche'; }
+
+// ════════════════════════════════════════════
+//  SOMMAIRE — Liste des chapitres
+// ════════════════════════════════════════════
 function _wnRenderSummary(viewEl){
   const chapters = _wnGetChapters();
-  const sorted = [...chapters].sort((a,b) => _wnSortAsc ? a.num - b.num : b.num - a.num);
+  const sorted = [...chapters].sort((a,b)=>{
+    const oa = (a.order!=null)?a.order:a.num, ob = (b.order!=null)?b.order:b.num;
+    return _wnSortAsc ? oa - ob : ob - oa;
+  });
   const isAdm = _isAdmin();
 
   let html = '<div class="wn-container">';
   html += '<div class="wn-header"><h1>📖 Chroniques</h1><p>L\'histoire de Gates of Hades — ' + chapters.length + ' chapitre' + (chapters.length>1?'s':'') + '</p></div>';
 
-  // Sort bar
   html += '<div class="wn-sort-bar">';
   html += '<span>' + chapters.length + ' chapitre' + (chapters.length>1?'s':'') + '</span>';
   html += '<button class="wn-sort-btn" onclick="_wnToggleSort()">' + (_wnSortAsc ? '↑ Croissant' : '↓ Décroissant') + '</button>';
   html += '</div>';
 
-  // Chapter list
-  html += '<div class="wn-chapter-list">';
+  html += '<div class="wn-chapter-list" id="wn-chapter-list">';
   if(sorted.length === 0){
     html += '<div style="text-align:center;padding:40px;color:rgba(168,156,192,.4);font-style:italic">Aucun chapitre pour le moment.</div>';
   }
   for(const ch of sorted){
-    html += '<div class="wn-chapter-item" onclick="_wnReadChapter(\''+ch.id+'\')">';
+    const dragAttrs = isAdm
+      ? ' draggable="true" ondragstart="_wnDragStart(event,\''+ch.id+'\')" ondragover="_wnDragOver(event,\''+ch.id+'\')" ondragleave="_wnDragLeave(event)" ondrop="_wnDrop(event,\''+ch.id+'\')" ondragend="_wnDragEnd(event)"'
+      : '';
+    html += '<div class="wn-chapter-item" data-chid="'+ch.id+'"'+dragAttrs+' onclick="_wnReadChapter(\''+ch.id+'\')">';
+    if(isAdm) html += '<span class="wn-ch-drag" title="Glisser pour réordonner" onclick="event.stopPropagation()">⠿</span>';
     html += '<div class="wn-ch-num">Ch.' + ch.num + '</div>';
     html += '<div class="wn-ch-title">' + _esc(ch.title) + '</div>';
     if(ch.date) html += '<div class="wn-ch-date">' + ch.date + '</div>';
     if(isAdm){
       html += '<div class="wn-ch-actions" onclick="event.stopPropagation()">';
-      html += '<button onclick="_wnEditChapter(\''+ch.id+'\')">✏</button>';
-      html += '<button onclick="_wnDeleteChapter(\''+ch.id+'\')">🗑</button>';
+      html += '<button onclick="_wnEditChapter(\''+ch.id+'\')" title="Modifier">✏</button>';
+      html += '<button onclick="_wnDeleteChapter(\''+ch.id+'\')" title="Supprimer">🗑</button>';
       html += '</div>';
     }
     html += '</div>';
   }
   html += '</div>';
 
-  // Add button (admin only)
   if(isAdm){
     html += '<div class="wn-add-btn" onclick="_wnNewChapter()">+ Ajouter un chapitre</div>';
   }
@@ -16155,13 +16259,54 @@ function _wnRenderSummary(viewEl){
   viewEl.innerHTML = html;
 }
 
+// ── Réordonnancement par glisser-déposer ──
+function _wnDragStart(e, id){
+  _wnDragId = id;
+  e.dataTransfer.effectAllowed = 'move';
+  const el = e.currentTarget;
+  if(el) el.classList.add('wn-dragging');
+}
+function _wnDragOver(e, id){
+  e.preventDefault();
+  e.dataTransfer.dropEffect = 'move';
+  if(id !== _wnDragId) e.currentTarget.classList.add('wn-drag-over');
+}
+function _wnDragLeave(e){ e.currentTarget.classList.remove('wn-drag-over'); }
+function _wnDragEnd(e){
+  document.querySelectorAll('.wn-chapter-item').forEach(el=>{
+    el.classList.remove('wn-dragging','wn-drag-over');
+  });
+  _wnDragId = null;
+}
+function _wnDrop(e, targetId){
+  e.preventDefault();
+  e.currentTarget.classList.remove('wn-drag-over');
+  if(!_wnDragId || _wnDragId === targetId) return;
+  const chapters = _wnGetChapters();
+  // Normaliser l'ordre courant
+  const sorted = _wnSortedForReading();
+  sorted.forEach((c,i)=>{ c.order = i; });
+  const from = sorted.findIndex(c=>c.id===_wnDragId);
+  const to   = sorted.findIndex(c=>c.id===targetId);
+  if(from<0 || to<0) return;
+  const [moved] = sorted.splice(from,1);
+  sorted.splice(to,0,moved);
+  sorted.forEach((c,i)=>{ c.order = i; });
+  db[_WN_NODE_ID]._chapters = chapters;
+  save();
+  _wnBackToSummary();
+}
+
+// ════════════════════════════════════════════
+//  LECTURE — Mode visiteur / index
+// ════════════════════════════════════════════
 function _wnReadChapter(chId){
   const chapters = _wnGetChapters();
   const ch = chapters.find(c => c.id === chId);
   if(!ch) return;
   _wnCurrentChapter = chId;
 
-  const sorted = [...chapters].sort((a,b) => a.num - b.num);
+  const sorted = _wnSortedForReading();
   const idx = sorted.findIndex(c => c.id === chId);
   const prev = idx > 0 ? sorted[idx-1] : null;
   const next = idx < sorted.length-1 ? sorted[idx+1] : null;
@@ -16171,18 +16316,17 @@ function _wnReadChapter(chId){
   html += '<div class="wn-reading-title">Chapitre ' + ch.num + '</div>';
   html += '<div class="wn-reading-title" style="font-size:24px;margin-bottom:4px">' + _esc(ch.title) + '</div>';
   if(ch.date) html += '<div class="wn-reading-meta">Publié le ' + ch.date + '</div>';
-  html += '<div class="wn-reading-body">' + _wnMarkdownToHtml(ch.content || '') + '</div>';
+  html += '<div class="wn-reading-body" id="wn-reading-body">' + _wnGetChapterHtml(ch) + '</div>';
 
-  // Navigation
   html += '<div class="wn-nav">';
   if(prev){
-    html += '<button class="wn-nav-btn" onclick="_wnReadChapter(\''+prev.id+'\')">← Ch.' + prev.num + ' : ' + _esc(prev.title).substring(0,25) + '</button>';
+    html += '<button class="wn-nav-btn" onclick="_wnReadChapter(\''+prev.id+'\')">← Ch.' + prev.num + ' : ' + _esc((prev.title||'').substring(0,25)) + '</button>';
   } else {
     html += '<button class="wn-nav-btn" disabled>← Début</button>';
   }
   html += '<span class="wn-nav-center" onclick="_wnBackToSummary()">☰ Sommaire</span>';
   if(next){
-    html += '<button class="wn-nav-btn" onclick="_wnReadChapter(\''+next.id+'\')">Ch.' + next.num + ' : ' + _esc(next.title).substring(0,25) + ' →</button>';
+    html += '<button class="wn-nav-btn" onclick="_wnReadChapter(\''+next.id+'\')">Ch.' + next.num + ' : ' + _esc((next.title||'').substring(0,25)) + ' →</button>';
   } else {
     html += '<button class="wn-nav-btn" disabled>Fin →</button>';
   }
@@ -16191,9 +16335,77 @@ function _wnReadChapter(chId){
   html += '</div>';
   v.innerHTML = html;
   v.scrollTop = 0;
+  _wnBindReadingLinks();
+}
+
+// Récupère le HTML du chapitre (nouveau format html, ou ancien markdown)
+function _wnGetChapterHtml(ch){
+  if(ch.html != null && ch.html !== '') return ch.html;
+  if(ch.content != null) return _wnMarkdownToHtml(ch.content);
+  return '<p><em>Contenu vide</em></p>';
+}
+
+// Active les clics + previews sur les liens Codex en lecture
+function _wnBindReadingLinks(){
+  const body = document.getElementById('wn-reading-body');
+  if(!body) return;
+  body.querySelectorAll('.wn-codex-link').forEach(link=>{
+    const sid = link.getAttribute('data-sheet-id');
+    link.onclick = (e)=>{
+      e.preventDefault();
+      if(sid && db[sid] && typeof selectNode === 'function'){
+        selectNode(sid);
+      }
+    };
+    link.onmouseenter = (e)=> _wnShowPreview(e, sid);
+    link.onmousemove  = (e)=> _wnMovePreview(e);
+    link.onmouseleave = ()=> _wnHidePreview();
+  });
+}
+
+// ── Carte de preview au survol ──
+function _wnShowPreview(e, sheetId){
+  _wnHidePreview();
+  const sheet = _wnResolveSheet(sheetId);
+  if(!sheet) return;
+  const card = document.createElement('div');
+  card.className = 'wn-preview-card';
+  card.id = '_wn-preview';
+  let inner = '';
+  if(sheet.image){
+    inner += '<img src="'+_esc(sheet.image)+'" alt="">';
+  } else {
+    inner += '<div class="wn-preview-noimg">'+(sheet.icon||'📄')+'</div>';
+  }
+  inner += '<div class="wn-preview-body">';
+  inner += '<div class="wn-preview-name">'+_esc(sheet.name)+'</div>';
+  if(sheet.subtitle) inner += '<div class="wn-preview-sub">'+_esc(sheet.subtitle)+'</div>';
+  inner += '<div class="wn-preview-type">'+_wnTypeLabel(sheet.entryType)+'</div>';
+  inner += '</div>';
+  card.innerHTML = inner;
+  document.body.appendChild(card);
+  _wnMovePreview(e);
+  requestAnimationFrame(()=> card.classList.add('show'));
+}
+function _wnMovePreview(e){
+  const card = document.getElementById('_wn-preview');
+  if(!card) return;
+  const w = 240, h = card.offsetHeight || 200, pad = 14;
+  let x = e.clientX + 16, y = e.clientY + 16;
+  if(x + w + pad > window.innerWidth)  x = e.clientX - w - 16;
+  if(y + h + pad > window.innerHeight) y = e.clientY - h - 16;
+  if(x < pad) x = pad;
+  if(y < pad) y = pad;
+  card.style.left = x + 'px';
+  card.style.top  = y + 'px';
+}
+function _wnHidePreview(){
+  const card = document.getElementById('_wn-preview');
+  if(card) card.remove();
 }
 
 function _wnBackToSummary(){
+  _wnHidePreview();
   const v = document.getElementById('view');
   _wnRenderSummary(v);
 }
@@ -16203,7 +16415,7 @@ function _wnToggleSort(){
   _wnBackToSummary();
 }
 
-// ── Simple markdown → HTML ──
+// ── Markdown → HTML (compatibilité anciens chapitres) ──
 function _wnMarkdownToHtml(md){
   if(!md) return '<p><em>Contenu vide</em></p>';
   return md
@@ -16213,18 +16425,18 @@ function _wnMarkdownToHtml(md){
     .replace(/^&gt; (.+)$/gm, '<blockquote>$1</blockquote>')
     .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
     .replace(/\*(.+?)\*/g, '<em>$1</em>')
-    .replace(/^---$/gm, '<hr style="border:none;border-top:1px solid rgba(201,168,76,.1);margin:24px 0">')
+    .replace(/^---$/gm, '<hr>')
     .replace(/\n\n+/g, '</p><p>')
     .replace(/\n/g, '<br>')
     .replace(/^/, '<p>').replace(/$/, '</p>')
     .replace(/<p><h([23])>/g, '<h$1>').replace(/<\/h([23])><\/p>/g, '</h$1>')
     .replace(/<p><blockquote>/g, '<blockquote>').replace(/<\/blockquote><\/p>/g, '</blockquote>')
-    .replace(/<p><hr/g, '<hr').replace(/><\/p>/g, '>');
+    .replace(/<p><hr><\/p>/g, '<hr>');
 }
 
-function _esc(s){ return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
-
-// ── Editor ──
+// ════════════════════════════════════════════
+//  ÉDITEUR — Rich text + liens Codex
+// ════════════════════════════════════════════
 function _wnNewChapter(){
   _wnEditingId = null;
   const chapters = _wnGetChapters();
@@ -16232,8 +16444,9 @@ function _wnNewChapter(){
   document.getElementById('wn-editor-title').textContent = 'Nouveau Chapitre';
   document.getElementById('wn-ed-num').value = maxNum + 1;
   document.getElementById('wn-ed-title').value = '';
-  document.getElementById('wn-ed-content').value = '';
+  _wnSetRichContent('');
   document.getElementById('wn-editor-overlay').classList.add('open');
+  setTimeout(()=>document.getElementById('wn-ed-title').focus(), 50);
 }
 
 function _wnEditChapter(chId){
@@ -16243,37 +16456,50 @@ function _wnEditChapter(chId){
   document.getElementById('wn-editor-title').textContent = 'Modifier — Ch.' + ch.num;
   document.getElementById('wn-ed-num').value = ch.num;
   document.getElementById('wn-ed-title').value = ch.title || '';
-  document.getElementById('wn-ed-content').value = ch.content || '';
+  _wnSetRichContent(_wnGetChapterHtml(ch));
   document.getElementById('wn-editor-overlay').classList.add('open');
+  setTimeout(()=>document.getElementById('wn-ed-title').focus(), 50);
+}
+
+function _wnSetRichContent(html){
+  const rich = document.getElementById('wn-rich');
+  if(!rich) return;
+  rich.innerHTML = html || '';
+  _wnBindEditorLinks();
 }
 
 function _wnCloseEditor(){
   document.getElementById('wn-editor-overlay').classList.remove('open');
   _wnEditingId = null;
+  _wnSavedRange = null;
 }
 
 function _wnSaveChapter(){
   const num = parseInt(document.getElementById('wn-ed-num').value) || 1;
   const title = document.getElementById('wn-ed-title').value.trim() || 'Sans titre';
-  const content2 = document.getElementById('wn-ed-content').value;
+  const rich = document.getElementById('wn-rich');
+  const html = _wnCleanHtml(rich ? rich.innerHTML : '');
   const chapters = _wnGetChapters();
 
   if(_wnEditingId){
-    // Edit existing
     const ch = chapters.find(c => c.id === _wnEditingId);
-    if(ch){ ch.num = num; ch.title = title; ch.content = content2; ch.date = new Date().toLocaleDateString('fr-FR'); }
+    if(ch){
+      ch.num = num; ch.title = title; ch.html = html;
+      delete ch.content; // retirer l'ancien champ markdown
+      ch.date = new Date().toLocaleDateString('fr-FR');
+    }
   } else {
-    // New chapter
+    const maxOrder = chapters.reduce((m,c)=>Math.max(m, (c.order!=null?c.order:c.num)||0), -1);
     chapters.push({
       id: '_wn_ch_' + Date.now(),
       num: num,
       title: title,
-      content: content2,
+      html: html,
+      order: maxOrder + 1,
       date: new Date().toLocaleDateString('fr-FR')
     });
   }
 
-  // Save to DB (Supabase will pick it up)
   db[_WN_NODE_ID]._chapters = chapters;
   save();
   _wnCloseEditor();
@@ -16289,7 +16515,189 @@ function _wnDeleteChapter(chId){
   _wnBackToSummary();
 }
 
-// ── Init: add node + intercept rendering ──
+// Nettoie le HTML produit par l'éditeur (sécurité basique + normalisation des liens)
+function _wnCleanHtml(html){
+  const tmp = document.createElement('div');
+  tmp.innerHTML = html || '';
+  // Retirer scripts / styles éventuels collés
+  tmp.querySelectorAll('script,style').forEach(el=>el.remove());
+  // Normaliser chaque lien Codex
+  tmp.querySelectorAll('.wn-codex-link').forEach(link=>{
+    const sid = link.getAttribute('data-sheet-id');
+    if(!sid || !db[sid]){
+      // Lien orphelin → garder le texte seulement
+      const txt = document.createTextNode(link.textContent || '');
+      link.replaceWith(txt);
+      return;
+    }
+    // Réécrire proprement les attributs
+    const txt = link.textContent;
+    link.removeAttribute('style');
+    link.removeAttribute('onclick');
+    link.className = 'wn-codex-link';
+    link.setAttribute('data-sheet-id', sid);
+    link.setAttribute('contenteditable', 'false');
+    link.textContent = txt;
+  });
+  return tmp.innerHTML;
+}
+
+// ── Barre d'outils : formatage ──
+function _wnFocusRich(){
+  const rich = document.getElementById('wn-rich');
+  if(rich) rich.focus();
+}
+function _wnExec(cmd, val){
+  _wnFocusRich();
+  document.execCommand(cmd, false, val || null);
+  _wnUpdateToolbar();
+}
+function _wnFormatBlock(tag){
+  _wnFocusRich();
+  // Si le bloc est déjà ce tag, repasser en paragraphe
+  document.execCommand('formatBlock', false, '<'+tag+'>');
+  _wnUpdateToolbar();
+}
+function _wnInsertHr(){
+  _wnFocusRich();
+  document.execCommand('insertHTML', false, '<hr>');
+}
+
+// Met à jour l'état actif des boutons gras/italique/etc.
+function _wnUpdateToolbar(){
+  const map = { wnBold:'bold', wnItalic:'italic', wnUnderline:'underline' };
+  Object.keys(map).forEach(id=>{
+    const btn = document.getElementById(id);
+    if(!btn) return;
+    let active = false;
+    try{ active = document.queryCommandState(map[id]); }catch(e){}
+    btn.classList.toggle('wn-tool-active', active);
+  });
+}
+
+// Lie chaque lien Codex de l'éditeur (clic = ouvrir modal d'édition du lien)
+function _wnBindEditorLinks(){
+  const rich = document.getElementById('wn-rich');
+  if(!rich) return;
+  rich.querySelectorAll('.wn-codex-link').forEach(link=>{
+    link.setAttribute('contenteditable','false');
+    link.onmouseenter = (e)=> _wnShowPreview(e, link.getAttribute('data-sheet-id'));
+    link.onmousemove  = (e)=> _wnMovePreview(e);
+    link.onmouseleave = ()=> _wnHidePreview();
+  });
+}
+
+// ════════════════════════════════════════════
+//  LIENS — Sélection + recherche dans le Codex
+// ════════════════════════════════════════════
+function _wnOpenLinkModal(){
+  const sel = window.getSelection();
+  if(!sel || sel.rangeCount === 0 || sel.isCollapsed){
+    alert('Sélectionnez d\'abord le mot ou groupe de mots à transformer en lien.');
+    return;
+  }
+  const range = sel.getRangeAt(0);
+  // Vérifier que la sélection est bien dans l'éditeur
+  const rich = document.getElementById('wn-rich');
+  if(!rich || !rich.contains(range.commonAncestorContainer)){
+    alert('Sélectionnez d\'abord le texte à lier dans la zone d\'écriture.');
+    return;
+  }
+  _wnSavedRange = range.cloneRange();
+  const selText = sel.toString();
+  document.getElementById('wn-link-selected').textContent = '« ' + selText + ' »';
+  document.getElementById('wn-link-search').value = '';
+  _wnRenderLinkResults('');
+  document.getElementById('wn-link-modal').classList.add('open');
+  setTimeout(()=>document.getElementById('wn-link-search').focus(), 50);
+}
+
+function _wnCloseLinkModal(){
+  document.getElementById('wn-link-modal').classList.remove('open');
+  _wnSavedRange = null;
+}
+
+// Recherche dans la DB du Codex (toutes les fiches, catégories incluses)
+function _wnSearchCodex(query){
+  const q = (query||'').toLowerCase().trim();
+  const results = [];
+  for(const id in db){
+    const n = db[id];
+    if(!n || id === _WN_NODE_ID) continue;
+    if(n.type !== 'entry' && n.type !== 'category' && n.type !== 'gate') continue;
+    if(n.kind === 'webnovel') continue;
+    const name = (n.name||'').toLowerCase();
+    if(q && !name.includes(q)) continue;
+    results.push(_wnResolveSheet(id));
+  }
+  // Prioriser : les entrées avant les catégories, puis ordre alphabétique
+  results.sort((a,b)=>{
+    const ea = (a.entryType==='character'||a.entryType==='ability'||a.entryType==='secret'||a.entryType==='generic')?0:1;
+    const eb = (b.entryType==='character'||b.entryType==='ability'||b.entryType==='secret'||b.entryType==='generic')?0:1;
+    if(ea !== eb) return ea - eb;
+    return a.name.localeCompare(b.name);
+  });
+  return results.slice(0, 60);
+}
+
+function _wnRenderLinkResults(query){
+  const box = document.getElementById('wn-link-results');
+  if(!box) return;
+  const results = _wnSearchCodex(query);
+  if(results.length === 0){
+    box.innerHTML = '<div class="wn-link-empty">Aucune fiche trouvée dans le Codex.</div>';
+    return;
+  }
+  let html = '';
+  for(const s of results){
+    html += '<div class="wn-link-item" onclick="_wnApplyLink(\''+s.id+'\')">';
+    if(s.image){
+      html += '<img src="'+_esc(s.image)+'" alt="">';
+    } else {
+      html += '<div class="wn-li-ic">'+(s.icon||'📄')+'</div>';
+    }
+    html += '<div class="wn-li-name">'+_esc(s.name)+'</div>';
+    html += '<div class="wn-li-type">'+_wnTypeLabel(s.entryType)+'</div>';
+    html += '</div>';
+  }
+  box.innerHTML = html;
+}
+
+function _wnLinkSearchInput(val){
+  _wnRenderLinkResults(val);
+}
+
+// Applique le lien : remplace la sélection mémorisée par un span cliquable
+function _wnApplyLink(sheetId){
+  const range = _wnSavedRange;
+  if(!range){ _wnCloseLinkModal(); return; }
+  const text = range.toString() || (db[sheetId] ? db[sheetId].name : 'lien');
+  try{
+    const span = document.createElement('span');
+    span.className = 'wn-codex-link';
+    span.setAttribute('data-sheet-id', sheetId);
+    span.setAttribute('contenteditable', 'false');
+    span.textContent = text;
+    range.deleteContents();
+    range.insertNode(span);
+    // Placer le curseur juste après le lien
+    const sel = window.getSelection();
+    sel.removeAllRanges();
+    const after = document.createRange();
+    after.setStartAfter(span);
+    after.collapse(true);
+    sel.addRange(after);
+  }catch(e){
+    console.error('Erreur insertion lien:', e);
+  }
+  _wnCloseLinkModal();
+  _wnBindEditorLinks();
+  _wnFocusRich();
+}
+
+// ════════════════════════════════════════════
+//  INIT — Ajout du nœud + interception du rendu
+// ════════════════════════════════════════════
 setTimeout(() => {
   if(typeof db !== 'undefined'){
     _wnEnsureNode();
@@ -16297,8 +16705,6 @@ setTimeout(() => {
   }
 }, 600);
 
-// Intercept renderContent for webnovel kind
-const _origRenderContent = typeof renderContent === 'function' ? renderContent : null;
 setTimeout(() => {
   if(typeof renderContent === 'function' && !window._wnPatched){
     const _origRC = renderContent;
@@ -16315,9 +16721,15 @@ setTimeout(() => {
   }
 }, 200);
 
-// Keyboard shortcut: Escape to close editor
+// Échap : ferme le modal de lien en priorité, puis l'éditeur
 document.addEventListener('keydown', e => {
-  if(e.key === 'Escape' && document.getElementById('wn-editor-overlay')?.classList.contains('open')){
+  if(e.key !== 'Escape') return;
+  if(document.getElementById('wn-link-modal')?.classList.contains('open')){
+    _wnCloseLinkModal();
+    e.stopPropagation();
+    return;
+  }
+  if(document.getElementById('wn-editor-overlay')?.classList.contains('open')){
     _wnCloseEditor();
     e.stopPropagation();
   }
@@ -16326,7 +16738,9 @@ document.addEventListener('keydown', e => {
 </script>
 
 
-<!-- ══ WEBNOVEL EDITOR OVERLAY ══ -->
+
+
+<!-- ══ WEBNOVEL — ÉDITEUR D'ÉCRITURE ══ -->
 <div class="wn-editor-overlay" id="wn-editor-overlay">
   <div class="wn-editor">
     <div class="wn-editor-header">
@@ -16334,16 +16748,62 @@ document.addEventListener('keydown', e => {
       <button class="topbtn" onclick="_wnCloseEditor()">✕</button>
     </div>
     <div class="wn-editor-body">
-      <label>Numéro du chapitre</label>
-      <input type="number" id="wn-ed-num" min="1" value="1">
-      <label>Titre</label>
-      <input type="text" id="wn-ed-title" placeholder="Titre du chapitre">
-      <label>Contenu (Markdown simplifié : **gras**, *italique*, > citation, ## sous-titre)</label>
-      <textarea id="wn-ed-content" placeholder="Écrivez votre chapitre ici..."></textarea>
+      <div class="wn-editor-row">
+        <div style="flex:0 0 110px">
+          <label>Numéro</label>
+          <input type="number" id="wn-ed-num" min="1" value="1">
+        </div>
+        <div>
+          <label>Titre du chapitre</label>
+          <input type="text" id="wn-ed-title" placeholder="Titre du chapitre">
+        </div>
+      </div>
+      <label>Contenu</label>
+      <div class="wn-toolbar">
+        <button class="wn-tool-btn" id="wnBold" onmousedown="event.preventDefault()" onclick="_wnExec('bold')" title="Gras"><b>B</b></button>
+        <button class="wn-tool-btn" id="wnItalic" onmousedown="event.preventDefault()" onclick="_wnExec('italic')" title="Italique"><i>I</i></button>
+        <button class="wn-tool-btn" id="wnUnderline" onmousedown="event.preventDefault()" onclick="_wnExec('underline')" title="Souligné"><u>U</u></button>
+        <div class="wn-tool-sep"></div>
+        <button class="wn-tool-btn" onmousedown="event.preventDefault()" onclick="_wnFormatBlock('h1')" title="Titre 1">H1</button>
+        <button class="wn-tool-btn" onmousedown="event.preventDefault()" onclick="_wnFormatBlock('h2')" title="Titre 2">H2</button>
+        <button class="wn-tool-btn" onmousedown="event.preventDefault()" onclick="_wnFormatBlock('h3')" title="Titre 3">H3</button>
+        <button class="wn-tool-btn" onmousedown="event.preventDefault()" onclick="_wnFormatBlock('p')" title="Paragraphe normal">¶</button>
+        <div class="wn-tool-sep"></div>
+        <button class="wn-tool-btn" onmousedown="event.preventDefault()" onclick="_wnFormatBlock('blockquote')" title="Citation">❝</button>
+        <button class="wn-tool-btn" onmousedown="event.preventDefault()" onclick="_wnExec('insertUnorderedList')" title="Liste à puces">•≡</button>
+        <button class="wn-tool-btn" onmousedown="event.preventDefault()" onclick="_wnExec('insertOrderedList')" title="Liste numérotée">1≡</button>
+        <button class="wn-tool-btn" onmousedown="event.preventDefault()" onclick="_wnInsertHr()" title="Séparateur">―</button>
+        <div class="wn-tool-sep"></div>
+        <button class="wn-tool-btn" onmousedown="event.preventDefault()" onclick="_wnExec('undo')" title="Annuler">↶</button>
+        <button class="wn-tool-btn" onmousedown="event.preventDefault()" onclick="_wnExec('redo')" title="Rétablir">↷</button>
+        <div class="wn-tool-sep"></div>
+        <button class="wn-tool-btn wn-tool-link" onmousedown="event.preventDefault()" onclick="_wnOpenLinkModal()" title="Lier à une fiche du Codex">🔗</button>
+      </div>
+      <div class="wn-rich" id="wn-rich" contenteditable="true"
+        data-placeholder="Écrivez votre chapitre ici… Sélectionnez un mot puis cliquez sur 🔗 pour le lier à une fiche du Codex."
+        onkeyup="_wnUpdateToolbar()" onmouseup="_wnUpdateToolbar()" oninput="_wnBindEditorLinks()"></div>
+      <div style="font-size:10.5px;color:rgba(168,156,192,.4);font-style:italic">
+        Astuce : sélectionnez un mot ou groupe de mots, puis cliquez sur 🔗 pour créer un lien vers une fiche du Codex (preview au survol en lecture).
+      </div>
     </div>
     <div class="wn-editor-footer">
       <button class="topbtn" onclick="_wnCloseEditor()">Annuler</button>
       <button class="topbtn" style="background:rgba(201,168,76,.1);border-color:rgba(201,168,76,.3);color:var(--gold2)" onclick="_wnSaveChapter()">💾 Sauvegarder</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ WEBNOVEL — MODAL DE LIEN VERS UNE FICHE ══ -->
+<div class="wn-link-modal" id="wn-link-modal">
+  <div class="wn-link-box">
+    <div class="wn-link-head">
+      <h3>🔗 Lier à une fiche du Codex</h3>
+      <input type="text" id="wn-link-search" placeholder="Rechercher une fiche…" oninput="_wnLinkSearchInput(this.value)">
+    </div>
+    <div class="wn-link-results" id="wn-link-results"></div>
+    <div class="wn-link-foot">
+      <span class="wn-li-sel" id="wn-link-selected"></span>
+      <button class="topbtn" onclick="_wnCloseLinkModal()">Annuler</button>
     </div>
   </div>
 </div>
